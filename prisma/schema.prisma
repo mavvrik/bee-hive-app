@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Collector {
+  id        Int       @id @default(autoincrement())
+  name      String
+  role      String
+  groupType String
+  position  Int
+  active    Boolean   @default(true)
+  participatesInTarget Boolean      @default(true)
+  targetAdjustmentLiters Float @default(0)
+  entries   DailyEntry[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([active])
+  @@index([position])
+}
+
+model DailyEntry {
+  id          Int       @id @default(autoincrement())
+  collectorId Int
+  entryDate   DateTime
+  liters      Float
+  collector   Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([collectorId, entryDate])
+  @@index([entryDate])
+}
+
+model HiveSettings {
+  id             Int      @id @default(1)
+  centerName     String   @default("Riviera Beach 115")
+  monthlyGoal    Float    @default(3500)
+  weeksInPeriod  Float    @default(4.33)
+  currentMonth   Int
+  currentYear    Int
+  updatedAt      DateTime @updatedAt
+}
+model MonthlyBudget {
+  id                   Int      @id @default(autoincrement())
+  fiscalYear           Int
+  month                Int
+  budgetLiters         Float
+  originalBudgetLiters Float
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([fiscalYear, month])
+  @@index([fiscalYear])
+}
