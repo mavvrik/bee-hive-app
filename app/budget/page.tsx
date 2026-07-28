@@ -2,6 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { updateMonthlyBudget } from "@/app/budget/actions";
 
+export const dynamic = "force-dynamic";
+
 const monthNames: Record<number, string> = {
   1: "January",
   2: "February",

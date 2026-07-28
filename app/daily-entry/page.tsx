@@ -2,6 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import DailyEntryForm from "@/app/daily-entry/DailyEntryForm";
 
+export const dynamic = "force-dynamic";
+
 export default async function DailyEntryPage() {
   const collectors = await prisma.collector.findMany({
     orderBy: {
