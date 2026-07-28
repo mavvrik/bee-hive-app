@@ -5,6 +5,25 @@ type HiveHeaderProps = {
   reportingYear: number;
 };
 
+const primaryButtonStyle = {
+  backgroundColor: "#d4a017",
+  color: "white",
+  padding: "10px 16px",
+  borderRadius: "10px",
+  textDecoration: "none",
+  fontWeight: "bold",
+};
+
+const secondaryButtonStyle = {
+  backgroundColor: "white",
+  color: "#8a6810",
+  border: "1px solid #d4a017",
+  padding: "10px 16px",
+  borderRadius: "10px",
+  textDecoration: "none",
+  fontWeight: "bold",
+};
+
 export default function HiveHeader({
   centerName,
   reportingYear,
@@ -52,39 +71,31 @@ export default function HiveHeader({
       </div>
 
       <nav
+        aria-label="Hive navigation"
         style={{
           display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
           gap: "12px",
           flexWrap: "wrap",
         }}
       >
-        <Link
-          href="/"
-          style={{
-            backgroundColor: "#d4a017",
-            color: "white",
-            padding: "10px 16px",
-            borderRadius: "10px",
-            textDecoration: "none",
-            fontWeight: "bold",
-          }}
-        >
+        <Link href="/" style={primaryButtonStyle}>
           Dashboard
         </Link>
 
         <Link
           href="/budget"
-          style={{
-            backgroundColor: "white",
-            color: "#8a6810",
-            border: "1px solid #d4a017",
-            padding: "10px 16px",
-            borderRadius: "10px",
-            textDecoration: "none",
-            fontWeight: "bold",
-          }}
+          style={secondaryButtonStyle}
         >
           Budget Settings
+        </Link>
+
+        <Link
+          href="/settings"
+          style={secondaryButtonStyle}
+        >
+          ⚙ Settings
         </Link>
       </nav>
     </header>

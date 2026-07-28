@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import HiveHeader from "@/app/components/HiveHeader";
 import { getCurrentMonthNumber } from "@/app/lib/fiscalMonth";
@@ -206,46 +205,7 @@ export default async function Home() {
         reportingYear={reportingYear}
       />
 
-      <Link
-  href="/settings"
-  aria-label="Open Hive settings"
-  style={{
-    position: "absolute",
-    top: "20px",
-    right: "24px",
-    zIndex: 20,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "7px",
-    minHeight: "38px",
-    padding: "8px 14px",
-    border: "1px solid #c9a33b",
-    borderRadius: "10px",
-    background:
-      "linear-gradient(180deg, #fff9dc 0%, #f1d878 100%)",
-    boxShadow: "0 3px 10px rgba(77, 54, 8, 0.15)",
-    color: "#3c2a08",
-    fontSize: "0.75rem",
-    fontWeight: 900,
-    letterSpacing: "0.04em",
-    textDecoration: "none",
-    textTransform: "uppercase",
-  }}
->
-  <span
-    aria-hidden="true"
-    style={{
-      fontSize: "1rem",
-      lineHeight: 1,
-    }}
-  >
-    ⚙
-  </span>
-  Settings
-</Link>
-
-      <section
+            <section
         aria-label="Current operational week"
         style={{
           display: "grid",
