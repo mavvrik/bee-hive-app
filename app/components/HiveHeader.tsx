@@ -85,6 +85,13 @@ export default function HiveHeader({
         </Link>
 
         <Link
+          href="/daily-entry"
+          style={primaryButtonStyle}
+        >
+          🐝 Record Contributions
+        </Link>
+
+        <Link
           href="/budget"
           style={secondaryButtonStyle}
         >
