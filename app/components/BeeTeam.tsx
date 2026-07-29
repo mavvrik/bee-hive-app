@@ -12,6 +12,7 @@ type CollectorWithEntries = {
   targetAdjustmentLiters: number;
   entries: {
     liters: number;
+    sticks: number;
   }[];
 };
 
@@ -25,6 +26,8 @@ type CollectorPerformance = {
   id: number;
   name: string;
   currentLiters: number;
+  currentSticks: number;
+  litersPerStick: number;
   targetLiters: number;
   percentage: number;
   roleLabel: string;
@@ -70,6 +73,18 @@ export default function BeeTeam({
             0,
           );
 
+        const currentSticks =
+          collector.entries.reduce(
+            (total, entry) =>
+              total + entry.sticks,
+            0,
+          );
+
+        const litersPerStick =
+          currentSticks > 0
+            ? currentLiters / currentSticks
+            : 0;
+
         const targetLiters =
           targetByCollectorId.get(
             collector.id,
@@ -102,6 +117,8 @@ export default function BeeTeam({
           id: collector.id,
           name: collector.name,
           currentLiters,
+          currentSticks,
+          litersPerStick,
           targetLiters,
           percentage,
           roleLabel,
@@ -190,6 +207,12 @@ export default function BeeTeam({
               }
               currentLiters={
                 collector.currentLiters
+              }
+              currentSticks={
+                collector.currentSticks
+              }
+              litersPerStick={
+                collector.litersPerStick
               }
               targetLiters={
                 collector.targetLiters

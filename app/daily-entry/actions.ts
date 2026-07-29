@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 type DailyProductionEntry = {
   collectorId: number;
   liters: number;
+  sticks: number;
 };
 
 export async function saveDailyProduction(
@@ -24,7 +25,9 @@ export async function saveDailyProduction(
       Number.isInteger(entry.collectorId) &&
       entry.collectorId > 0 &&
       Number.isFinite(entry.liters) &&
-      entry.liters >= 0
+      entry.liters >= 0 &&
+      Number.isInteger(entry.sticks) &&
+      entry.sticks >= 0
     );
   });
 
@@ -43,11 +46,13 @@ export async function saveDailyProduction(
         },
         update: {
           liters: entry.liters,
+          sticks: entry.sticks,
         },
         create: {
           collectorId: entry.collectorId,
           entryDate,
           liters: entry.liters,
+          sticks: entry.sticks,
         },
       }),
     ),

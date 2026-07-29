@@ -6,6 +6,8 @@ type WorkerBeeCardProps = {
   name: string;
   roleLabel: string;
   currentLiters: number;
+  currentSticks: number;
+  litersPerStick: number;
   targetLiters: number;
   isTopWorker?: boolean;
   isManagement?: boolean;
@@ -15,6 +17,8 @@ export default function WorkerBeeCard({
   name,
   roleLabel,
   currentLiters,
+  currentSticks,
+  litersPerStick,
   targetLiters,
   isTopWorker = false,
   isManagement = false,
@@ -151,17 +155,37 @@ export default function WorkerBeeCard({
         </div>
 
         <div className="worker-kpi-row">
-          <WorkerMetric
-            label="Weekly Target"
-            value={targetLiters}
-          />
+  <WorkerMetric
+    label="Weekly Target"
+    value={targetLiters}
+  />
 
-          <WorkerMetric
-            label="Remaining"
-            value={remainingLiters}
-          />
-        </div>
-      </div>
+  <WorkerMetric
+    label="Remaining"
+    value={remainingLiters}
+  />
+
+  <div className="worker-kpi">
+    <span>Weekly Sticks</span>
+
+    <strong>
+      {currentSticks.toLocaleString("en-US")}
+    </strong>
+  </div>
+
+  <div className="worker-kpi">
+    <span>Liters / Stick</span>
+
+    <strong>
+      {litersPerStick.toLocaleString("en-US", {
+        minimumFractionDigits: 3,
+        maximumFractionDigits: 3,
+      })}
+    </strong>
+  </div>
+</div>
+
+</div>
 
       <style>
         {`
@@ -433,7 +457,7 @@ export default function WorkerBeeCard({
           .worker-kpi-row {
             display: grid;
             grid-template-columns:
-              repeat(2, minmax(0, 1fr));
+              repeat(4, minmax(0, 1fr));
             gap: 6px;
             margin-top: 7px;
           }

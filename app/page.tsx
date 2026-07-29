@@ -85,6 +85,7 @@ export default async function Home() {
       },
       _sum: {
         liters: true,
+        sticks: true,  
       },
     });
 
@@ -106,6 +107,7 @@ export default async function Home() {
       },
       _sum: {
         liters: true,
+        sticks: true,
       },
     });
 
@@ -131,6 +133,7 @@ export default async function Home() {
           },
           select: {
             liters: true,
+            sticks: true,
           },
         },
       },
@@ -144,6 +147,15 @@ export default async function Home() {
 
   const weeklyCurrentLiters =
     currentWeekProduction._sum.liters ?? 0;
+
+    const weeklyCurrentSticks =
+  currentWeekProduction._sum.sticks ?? 0;
+
+const weeklyLitersPerStick =
+  weeklyCurrentSticks > 0
+    ? weeklyCurrentLiters /
+      weeklyCurrentSticks
+    : 0;
 
   /*
    * Current V1 weekly goal:
@@ -210,7 +222,7 @@ export default async function Home() {
         style={{
           display: "grid",
           gridTemplateColumns:
-            "1fr auto auto",
+            "1fr auto auto auto auto",
           alignItems: "center",
           gap: "24px",
           marginTop: "12px",
@@ -327,6 +339,96 @@ export default async function Home() {
             of {formatLiters(weeklyTarget)}
           </small>
         </div>
+
+        <div
+  style={{
+    minWidth: "105px",
+    textAlign: "right",
+  }}
+>
+  <span
+    style={{
+      display: "block",
+      color: "#8b6a22",
+      fontSize: "0.58rem",
+      fontWeight: 900,
+      letterSpacing: "0.08em",
+      textTransform: "uppercase",
+    }}
+  >
+    Weekly Sticks
+  </span>
+
+  <strong
+    style={{
+      display: "block",
+      marginTop: "2px",
+      color: "#342406",
+      fontSize: "1.15rem",
+    }}
+  >
+    {weeklyCurrentSticks.toLocaleString(
+      "en-US",
+    )}
+  </strong>
+
+  <small
+    style={{
+      color: "#766239",
+      fontSize: "0.65rem",
+      fontWeight: 700,
+    }}
+  >
+    donor procedures
+  </small>
+</div>
+
+<div
+  style={{
+    minWidth: "105px",
+    textAlign: "right",
+  }}
+>
+  <span
+    style={{
+      display: "block",
+      color: "#8b6a22",
+      fontSize: "0.58rem",
+      fontWeight: 900,
+      letterSpacing: "0.08em",
+      textTransform: "uppercase",
+    }}
+  >
+    Liters / Stick
+  </span>
+
+  <strong
+    style={{
+      display: "block",
+      marginTop: "2px",
+      color: "#342406",
+      fontSize: "1.15rem",
+    }}
+  >
+    {weeklyLitersPerStick.toLocaleString(
+      "en-US",
+      {
+        minimumFractionDigits: 3,
+        maximumFractionDigits: 3,
+      },
+    )}
+  </strong>
+
+  <small
+    style={{
+      color: "#766239",
+      fontSize: "0.65rem",
+      fontWeight: 700,
+    }}
+  >
+    weekly yield
+  </small>
+</div>
 
         <div
           style={{

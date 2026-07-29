@@ -29,6 +29,7 @@ model DailyEntry {
   collectorId Int
   entryDate   DateTime
   liters      Float
+  sticks      Int       @default(0)
   collector   Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
