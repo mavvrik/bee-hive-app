@@ -1,5 +1,7 @@
 import WorkerBeeCard from "./WorkerBeeCard";
-import { calculateWeeklyTargets } from "@/app/lib/hiveTargetEngine";
+import type {
+  ContributorIntelligence,
+} from "@/app/lib/centerIntelligence";
 
 type CollectorWithEntries = {
   id: number;
@@ -9,6 +11,7 @@ type CollectorWithEntries = {
   position: number;
   active: boolean;
   participatesInTarget: boolean;
+  allocationWeight: number;
   targetAdjustmentLiters: number;
   entries: {
     liters: number;
@@ -18,8 +21,8 @@ type CollectorWithEntries = {
 
 type BeeTeamProps = {
   collectors: CollectorWithEntries[];
-  monthlyGoal: number;
-  weeksInPeriod: number;
+  contributorIntelligence:
+    ContributorIntelligence[];
 };
 
 type CollectorPerformance = {
@@ -33,44 +36,37 @@ type CollectorPerformance = {
   roleLabel: string;
   isManagement: boolean;
   participatesInTarget: boolean;
+  status:
+    | "AHEAD"
+    | "ON_TRACK"
+    | "BEHIND"
+    | "NOT_ASSIGNED";
 };
 
 export default function BeeTeam({
   collectors,
-  monthlyGoal,
-  weeksInPeriod,
+  contributorIntelligence,
 }: BeeTeamProps) {
-  const weeklyCenterTarget =
-    weeksInPeriod > 0
-      ? monthlyGoal / weeksInPeriod
-      : 0;
-
-  const targetCalculation =
-    calculateWeeklyTargets(
-      collectors,
-      weeklyCenterTarget,
+  const intelligenceByCollectorId =
+    new Map(
+      contributorIntelligence.map(
+        (contributor) => [
+          contributor.id,
+          contributor,
+        ],
+      ),
     );
 
-  const targetByCollectorId = new Map(
-    targetCalculation.participatingCollectors.map(
-      (worker) => [
-        worker.collector.id,
-        worker.calculatedTarget,
-      ],
-    ),
-  );
-
-  const collectorPerformance: CollectorPerformance[] =
+  const collectorPerformance:
+    CollectorPerformance[] =
     collectors
       .filter(
         (collector) => collector.active,
       )
       .map((collector) => {
-        const currentLiters =
-          collector.entries.reduce(
-            (total, entry) =>
-              total + entry.liters,
-            0,
+        const intelligence =
+          intelligenceByCollectorId.get(
+            collector.id,
           );
 
         const currentSticks =
@@ -80,22 +76,21 @@ export default function BeeTeam({
             0,
           );
 
+        const currentLiters =
+          intelligence?.currentLiters ?? 0;
+
         const litersPerStick =
           currentSticks > 0
             ? currentLiters / currentSticks
             : 0;
 
         const targetLiters =
-          targetByCollectorId.get(
-            collector.id,
-          ) ?? 0;
+          intelligence
+            ?.dailyTargetLiters ?? 0;
 
         const percentage =
-          targetLiters > 0
-            ? (currentLiters /
-                targetLiters) *
-              100
-            : 0;
+          intelligence
+            ?.completionPercentage ?? 0;
 
         const isManagement =
           collector.role ===
@@ -125,6 +120,9 @@ export default function BeeTeam({
           isManagement,
           participatesInTarget:
             collector.participatesInTarget,
+          status:
+            intelligence?.status ??
+            "NOT_ASSIGNED",
         };
       });
 
@@ -175,7 +173,7 @@ export default function BeeTeam({
                 {Math.round(
                   topWorker.percentage,
                 )}
-                % of weekly target
+                % of today&apos;s target
               </small>
             </>
           ) : (
@@ -185,7 +183,7 @@ export default function BeeTeam({
               </span>
 
               <strong>
-                Week Starting
+                Day Starting
               </strong>
 
               <small>

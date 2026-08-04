@@ -1,6 +1,11 @@
+import ProjectionExecutiveCard from "./components/ProjectionExecutiveCard";
 import { prisma } from "@/lib/prisma";
 import HiveHeader from "@/app/components/HiveHeader";
+import ExecutiveStatusBar from "@/app/components/ExecutiveStatusBar";
 import { getCurrentMonthNumber } from "@/app/lib/fiscalMonth";
+import { getCenterIntelligence } from "@/app/lib/centerIntelligence";
+import DashboardRotator from "./components/DashboardRotator";
+import DashboardPage from "./components/DashboardPage";
 import {
   formatOperationalWeekRange,
   getHivePerformanceStatus,
@@ -49,6 +54,18 @@ export default async function Home() {
     1,
   );
 
+  const startOfToday = new Date(
+  today.getFullYear(),
+  today.getMonth(),
+  today.getDate(),
+);
+
+const startOfTomorrow = new Date(
+  today.getFullYear(),
+  today.getMonth(),
+  today.getDate() + 1,
+);
+
   const settings =
     await prisma.hiveSettings.findUnique({
       where: {
@@ -61,6 +78,9 @@ export default async function Home() {
 
   const weeksInPeriod =
     settings?.weeksInPeriod ?? 4.33;
+
+  const collectionDaysPerWeek =
+    settings?.collectionDaysPerWeek ?? 6;
 
   const currentBudget =
     await prisma.monthlyBudget.findUnique({
@@ -85,9 +105,66 @@ export default async function Home() {
       },
       _sum: {
         liters: true,
-        sticks: true,  
+        sticks: true,
       },
     });
+
+    /*
+ * Total center production for today.
+ */
+const currentDayProduction =
+  await prisma.dailyEntry.aggregate({
+    where: {
+      entryDate: {
+        gte: startOfToday,
+        lt: startOfTomorrow,
+      },
+    },
+    _sum: {
+      liters: true,
+      sticks: true,
+    },
+  });
+
+  const hourlyOperationalSummary =
+  await prisma.hourlyOperationalEntry.aggregate({
+    where: {
+      entryDate: {
+        gte: startOfToday,
+        lt: startOfTomorrow,
+      },
+    },
+    _sum: {
+      successfulSticks: true,
+      unsuccessfulSticks: true,
+      lostVolumeMl: true,
+    },
+  });
+
+  const successfulSticks =
+  hourlyOperationalSummary._sum
+    .successfulSticks ?? 0;
+
+const unsuccessfulSticks =
+  hourlyOperationalSummary._sum
+    .unsuccessfulSticks ?? 0;
+
+/*
+ * Projection engine expects liters.
+ * Database stores milliliters.
+ */
+const lostVolume =
+  (hourlyOperationalSummary._sum
+    .lostVolumeMl ?? 0) / 1000;
+
+const currentHour =
+  today.getHours();
+
+const openingHour =
+  settings?.openingHour ?? 6;
+
+const closingHour =
+  settings?.closingHour ?? 19;
 
   /*
    * Total center liters collected during the
@@ -139,38 +216,112 @@ export default async function Home() {
       },
     });
 
+    /*
+ * Individual contributor production for today.
+ */
+const currentDayContributorProduction =
+  await prisma.dailyEntry.groupBy({
+    by: ["collectorId"],
+    where: {
+      entryDate: {
+        gte: startOfToday,
+        lt: startOfTomorrow,
+      },
+    },
+    _sum: {
+      liters: true,
+      sticks: true,
+    },
+  });
+
   const monthlyGoal =
     currentBudget?.budgetLiters ?? 0;
 
+  const monthlyGoalDonors =
+    currentBudget?.budgetDonors ?? 0;
+
+  /*
+   * The Goal Engine is now the single source
+   * of truth for center targets.
+   */
+  
   const currentLiters =
     monthToDateProduction._sum.liters ?? 0;
 
   const weeklyCurrentLiters =
     currentWeekProduction._sum.liters ?? 0;
 
-    const weeklyCurrentSticks =
-  currentWeekProduction._sum.sticks ?? 0;
+    const dailyCurrentLiters =
+  currentDayProduction._sum.liters ?? 0;
 
-const weeklyLitersPerStick =
-  weeklyCurrentSticks > 0
-    ? weeklyCurrentLiters /
-      weeklyCurrentSticks
-    : 0;
+const dailyCurrentDonors =
+  currentDayProduction._sum.sticks ?? 0;
 
-  /*
-   * Current V1 weekly goal:
-   *
-   * Monthly budget divided by the configured
-   * number of operational weeks in the period.
-   */
-  const weeklyTarget =
-    weeksInPeriod > 0
-      ? monthlyGoal / weeksInPeriod
+  const weeklyCurrentSticks =
+    currentWeekProduction._sum.sticks ?? 0;
+
+  const weeklyLitersPerStick =
+    weeklyCurrentSticks > 0
+      ? weeklyCurrentLiters /
+        weeklyCurrentSticks
       : 0;
 
+      /*
+ * Use current week's average until we have
+ * a dedicated historical rolling average.
+ */
+      const historicalLitersPerStick =
+  weeklyLitersPerStick;
+
+      const intelligence =
+  getCenterIntelligence({
+    monthlyGoalLiters: monthlyGoal,
+    monthlyGoalDonors,
+    weeksInPeriod,
+    collectionDaysPerWeek,
+
+    currentMonthLiters: currentLiters,
+    currentWeekLiters: weeklyCurrentLiters,
+    currentDayLiters: dailyCurrentLiters,
+    currentDayDonors: dailyCurrentDonors,
+
+    successfulSticks,
+unsuccessfulSticks,
+lostVolume,
+historicalLitersPerStick,
+currentHour,
+openingHour,
+closingHour,
+
+    contributors: collectors
+      .filter(
+        (collector) =>
+          collector.participatesInTarget,
+      )
+      .map((collector) => {
+        const today =
+          currentDayContributorProduction.find(
+            (entry) =>
+              entry.collectorId ===
+              collector.id,
+          );
+
+        return {
+          id: collector.id,
+          name: collector.name,
+          weight:
+            collector.allocationWeight,
+          currentLiters:
+            today?._sum.liters ?? 0,
+        };
+      }),
+  });
+
+  const weeklyTarget =
+  intelligence.goals.weeklyLiters;
+
   /*
-   * One performance object will eventually
-   * control:
+   * One performance object controls:
    *
    * - flower bloom count
    * - bee activity
@@ -178,327 +329,131 @@ const weeklyLitersPerStick =
    * - weekly celebration
    */
   const hivePerformance =
-    getHivePerformanceStatus(
-      weeklyCurrentLiters,
-      weeklyTarget,
-    );
+  getHivePerformanceStatus(
+    intelligence.center.currentWeekLiters,
+    intelligence.goals.weeklyLiters,
+  );
 
   const weekRange =
     formatOperationalWeekRange(today);
 
-  /*
-   * Donor placeholders remain separate for now.
-   *
-   * They will be removed from the Meadow during
-   * the next step because V1 will use liters as
-   * the only ecosystem driver.
-   */
-  
   return (
-    <main
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "0",
-        width: "100vw",
-        height: "100vh",
-        overflow: "hidden",
-        backgroundColor: "#f7f4e9",
-        padding: "18px 24px",
-        fontFamily: "Arial, sans-serif",
-        boxSizing: "border-box",
-      }}
-    >
-      <HiveHeader
-        centerName={
-          settings?.centerName ??
-          "Riviera Beach 115"
-        }
-        reportingYear={reportingYear}
-      />
-
-            <section
-        aria-label="Current operational week"
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "1fr auto auto auto auto",
-          alignItems: "center",
-          gap: "24px",
-          marginTop: "12px",
-          padding: "10px 18px",
-          border: hivePerformance.goalAchieved
-            ? "1px solid #d99b0b"
-            : "1px solid #dfc36c",
-          borderRadius: "14px",
-          background:
-            hivePerformance.goalAchieved
-              ? "linear-gradient(90deg, #fff5bd, #ffe28a)"
-              : "linear-gradient(90deg, #fffdf4, #fff4c7)",
-          boxShadow:
-            hivePerformance.goalAchieved
-              ? "0 5px 18px rgba(203, 139, 6, 0.18)"
-              : "0 4px 12px rgba(98, 70, 10, 0.08)",
-          boxSizing: "border-box",
-        }}
-      >
-        <div style={{ minWidth: 0 }}>
-          <p
-            style={{
-              margin: "0 0 3px",
-              color: "#98701d",
-              fontSize: "0.65rem",
-              fontWeight: 900,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-            }}
-          >
-            Sunday–Saturday Operational Week
-          </p>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              flexWrap: "wrap",
-              gap: "8px",
-            }}
-          >
-            <strong
-              style={{
-                color: "#3c2a08",
-                fontSize: "1.05rem",
-              }}
-            >
-              {hiveWeek.dayName}:{" "}
-              {hiveWeek.stageLabel}
-            </strong>
-
-            <span
-              style={{
-                color: "#7a6538",
-                fontSize: "0.75rem",
-                fontWeight: 700,
-              }}
-            >
-              {weekRange}
-            </span>
-          </div>
-
-          <p
-            style={{
-              margin: "3px 0 0",
-              color: "#69562e",
-              fontSize: "0.7rem",
-              fontWeight: 600,
-            }}
-          >
-            {hivePerformance.message}
-          </p>
-        </div>
-
-        <div
-          style={{
-            minWidth: "150px",
-            textAlign: "right",
-          }}
-        >
-          <span
-            style={{
-              display: "block",
-              color: "#8b6a22",
-              fontSize: "0.58rem",
-              fontWeight: 900,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-            }}
-          >
-            Weekly Liters
-          </span>
-
-          <strong
-            style={{
-              display: "block",
-              marginTop: "2px",
-              color: "#342406",
-              fontSize: "1.15rem",
-            }}
-          >
-            {formatLiters(
-              weeklyCurrentLiters,
-            )}
-          </strong>
-
-          <small
-            style={{
-              color: "#766239",
-              fontSize: "0.65rem",
-              fontWeight: 700,
-            }}
-          >
-            of {formatLiters(weeklyTarget)}
-          </small>
-        </div>
-
-        <div
-  style={{
-    minWidth: "105px",
-    textAlign: "right",
-  }}
->
-  <span
+  <main
     style={{
-      display: "block",
-      color: "#8b6a22",
-      fontSize: "0.58rem",
-      fontWeight: 900,
-      letterSpacing: "0.08em",
-      textTransform: "uppercase",
+      width: "100vw",
+      height: "100vh",
+      overflow: "hidden",
+      backgroundColor: "#f7f4e9",
+      fontFamily: "Arial, sans-serif",
+      boxSizing: "border-box",
     }}
   >
-    Weekly Sticks
-  </span>
-
-  <strong
-    style={{
-      display: "block",
-      marginTop: "2px",
-      color: "#342406",
-      fontSize: "1.15rem",
-    }}
-  >
-    {weeklyCurrentSticks.toLocaleString(
-      "en-US",
-    )}
-  </strong>
-
-  <small
-    style={{
-      color: "#766239",
-      fontSize: "0.65rem",
-      fontWeight: 700,
-    }}
-  >
-    donor procedures
-  </small>
-</div>
-
-<div
-  style={{
-    minWidth: "105px",
-    textAlign: "right",
-  }}
->
-  <span
-    style={{
-      display: "block",
-      color: "#8b6a22",
-      fontSize: "0.58rem",
-      fontWeight: 900,
-      letterSpacing: "0.08em",
-      textTransform: "uppercase",
-    }}
-  >
-    Liters / Stick
-  </span>
-
-  <strong
-    style={{
-      display: "block",
-      marginTop: "2px",
-      color: "#342406",
-      fontSize: "1.15rem",
-    }}
-  >
-    {weeklyLitersPerStick.toLocaleString(
-      "en-US",
-      {
-        minimumFractionDigits: 3,
-        maximumFractionDigits: 3,
-      },
-    )}
-  </strong>
-
-  <small
-    style={{
-      color: "#766239",
-      fontSize: "0.65rem",
-      fontWeight: 700,
-    }}
-  >
-    weekly yield
-  </small>
-</div>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "72px",
-            height: "72px",
-            border:
-              "2px solid rgba(191, 137, 16, 0.58)",
-            borderRadius: "50%",
-            background:
-              hivePerformance.goalAchieved
-                ? "linear-gradient(180deg, #ffd94f, #e8a713)"
-                : "linear-gradient(180deg, #fff4b0, #e9c353)",
-            boxShadow:
-              hivePerformance.goalAchieved
-                ? "0 0 18px rgba(230, 164, 23, 0.45)"
-                : "none",
-            color: "#3d2a05",
-            fontSize: "1.13rem",
-            fontWeight: 900,
-          }}
-        >
-          {Math.round(
-            hivePerformance.percentage,
-          )}
-          %
-        </div>
-      </section>
-
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "0.9fr 1.1fr",
-          gap: "18px",
-          marginTop: "12px",
-          height: "27vh",
-          flex: "0 0 27vh",
-          minHeight: "220px",
-        }}
-      >
-        <HoneyPotExecutive
-          monthlyGoal={monthlyGoal}
-          currentLiters={currentLiters}
+    <DashboardRotator intervalMs={20000}>
+      <DashboardPage>
+        <HiveHeader
+          centerName={
+            settings?.centerName ??
+            "Riviera Beach 115"
+          }
+          reportingYear={reportingYear}
         />
 
-        <DonorMeadow
+        <ExecutiveStatusBar
+          dayName={hiveWeek.dayName}
+          stageLabel={hiveWeek.stageLabel}
+          weekRange={weekRange}
+          hivePerformance={hivePerformance}
           weeklyCurrentLiters={
-          weeklyCurrentLiters
-            }
-  weeklyTarget={weeklyTarget}
-  dayName={hiveWeek.dayName}
-  totalFlowers={12}
+            intelligence.center
+              .currentWeekLiters
+          }
+          weeklyTarget={
+            intelligence.goals.weeklyLiters
+          }
+          weeklyCurrentSticks={
+            weeklyCurrentSticks
+          }
+          weeklyLitersPerStick={
+            weeklyLitersPerStick
+          }
         />
-      </section>
 
-      <BeeTeam
-        collectors={collectors}
-        monthlyGoal={monthlyGoal}
-        weeksInPeriod={weeksInPeriod}
-      />
-    </main>
-  );
-}
+        <section
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "0.9fr 1.2fr 1.3fr",
+            gap: "18px",
+            marginTop: "12px",
+            height: "31vh",
+            flex: "0 0 31vh",
+            minHeight: "270px",
+          }}
+        >
+          <HoneyPotExecutive
+            monthlyGoal={
+              intelligence.goals.monthlyLiters
+            }
+            currentLiters={
+              intelligence.center
+                .currentMonthLiters
+            }
+          />
 
-function formatLiters(value: number) {
-  return `${value.toLocaleString("en-US", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  })} L`;
+          <DonorMeadow
+            weeklyCurrentLiters={
+              intelligence.center
+                .currentWeekLiters
+            }
+            weeklyTarget={
+              intelligence.goals.weeklyLiters
+            }
+            dayName={hiveWeek.dayName}
+            totalFlowers={12}
+          />
+
+          <ProjectionExecutiveCard
+            currentLiters={
+              intelligence.projection
+                .currentLiters
+            }
+            projectedFinish={
+              intelligence.projection
+                .projectedFinish
+            }
+            dailyGoal={
+              intelligence.goals.dailyLiters
+            }
+            confidence={
+              intelligence.projection.confidence
+            }
+            projectedVariance={
+              intelligence.projection
+                .projectedVariance
+            }
+            additionalDonorsNeeded={
+              intelligence.projection
+                .additionalDonorsNeeded
+            }
+            currentHourlyPace={
+              intelligence.projection
+                .currentHourlyPace
+            }
+            hoursRemaining={
+              intelligence.projection
+                .hoursRemaining
+            }
+          />
+        </section>
+
+        <BeeTeam
+          collectors={collectors}
+          contributorIntelligence={
+            intelligence.contributors
+          }
+        />
+      </DashboardPage>
+    </DashboardRotator>
+  </main>
+);
 }

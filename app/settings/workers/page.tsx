@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import AdminShell from "../components/AdminShell";
 import {
   createCollector,
   deactivateCollector,
@@ -52,646 +52,495 @@ export default async function WorkerRosterPage() {
       : 1;
 
   return (
-    <main className="roster-page">
-      <div className="roster-shell">
-        <nav className="page-navigation">
-          <Link
-            href="/settings"
-            className="back-link"
-          >
-            ← Hive Administration
-          </Link>
+    <AdminShell
+      pageTitle="Worker Bees"
+      pageDescription="Add worker bees, manage active status, control target participation, update display order, and adjust individual weekly targets."
+      activePath="/settings/workers"
+    >
+      <section className="roster-summary">
+        <article className="summary-card">
+          <span>Active Worker Bees</span>
 
-          <Link
-            href="/"
-            className="dashboard-link"
-          >
-            Return to The Hive
-          </Link>
-        </nav>
+          <strong>
+            {activeCollectors.length}
+          </strong>
 
-        <header className="roster-header">
+          <small>
+            Visible on the dashboard
+          </small>
+        </article>
+
+        <article className="summary-card">
+          <span>
+            Target Participants
+          </span>
+
+          <strong>
+            {targetParticipants.length}
+          </strong>
+
+          <small>
+            Sharing the weekly target
+          </small>
+        </article>
+
+        <article className="summary-card">
+          <span>Inactive Records</span>
+
+          <strong>
+            {inactiveCollectors.length}
+          </strong>
+
+          <small>
+            Retained for history
+          </small>
+        </article>
+      </section>
+
+      <section className="add-worker-section">
+        <div className="section-heading">
           <div>
-            <p className="roster-eyebrow">
-              Workforce Administration
+            <p className="section-eyebrow">
+              New Hire
             </p>
 
-            <h1>Worker Bee Roster</h1>
-
-            <p className="roster-description">
-              Add worker bees, control target
-              participation, update display
-              order, and adjust individual
-              weekly targets.
-            </p>
+            <h2>Add Worker Bee</h2>
           </div>
 
-          <div className="header-icon">
-            🐝
-          </div>
-        </header>
+          <span className="section-badge">
+            Roster Management
+          </span>
+        </div>
 
-        <section className="roster-summary">
-          <article className="summary-card">
-            <span>Active Worker Bees</span>
+        <form
+          action={createCollector}
+          className="add-worker-form"
+        >
+          <label className="form-field">
+            <span>Name</span>
 
-            <strong>
-              {activeCollectors.length}
-            </strong>
+            <input
+              type="text"
+              name="name"
+              placeholder="Worker bee name"
+              required
+            />
+          </label>
 
-            <small>
-              Visible on the dashboard
-            </small>
-          </article>
+          <label className="form-field">
+            <span>Role</span>
 
-          <article className="summary-card">
-            <span>
-              Target Participants
-            </span>
-
-            <strong>
-              {targetParticipants.length}
-            </strong>
-
-            <small>
-              Sharing the weekly target
-            </small>
-          </article>
-
-          <article className="summary-card">
-            <span>Inactive Records</span>
-
-            <strong>
-              {inactiveCollectors.length}
-            </strong>
-
-            <small>
-              Retained for history
-            </small>
-          </article>
-        </section>
-
-        <section className="add-worker-section">
-          <div className="section-heading">
-            <div>
-              <p className="section-eyebrow">
-                New Hire
-              </p>
-
-              <h2>Add Worker Bee</h2>
-            </div>
-
-            <span className="section-badge">
-              Ready for Ashley
-            </span>
-          </div>
-
-          <form
-            action={createCollector}
-            className="add-worker-form"
-          >
-            <label className="form-field">
-              <span>Name</span>
-
-              <input
-                type="text"
-                name="name"
-                placeholder="Ashley"
-                required
-              />
-            </label>
-
-            <label className="form-field">
-              <span>Role</span>
-
-              <select
-                name="role"
-                defaultValue="Phlebotomist"
-                required
-              >
-                <option value="Phlebotomist">
-                  Phlebotomist
-                </option>
-
-                <option value="Group Lead">
-                  Group Lead
-                </option>
-
-                <option value="Management">
-                  Management
-                </option>
-
-                <option value="Other">
-                  Other
-                </option>
-              </select>
-            </label>
-
-            <label className="form-field">
-              <span>Group Type</span>
-
-              <select
-                name="groupType"
-                defaultValue="Individual"
-                required
-              >
-                <option value="Individual">
-                  Individual
-                </option>
-
-                <option value="Group">
-                  Group
-                </option>
-              </select>
-            </label>
-
-            <label className="form-field">
-              <span>Display Order</span>
-
-              <input
-                type="number"
-                name="position"
-                min="1"
-                step="1"
-                defaultValue={nextPosition}
-                required
-              />
-            </label>
-
-            <div className="add-worker-options">
-              <label className="checkbox-field">
-                <input
-                  type="checkbox"
-                  name="active"
-                  defaultChecked
-                />
-
-                <span>
-                  Active on dashboard
-                </span>
-              </label>
-
-              <label className="checkbox-field">
-                <input
-                  type="checkbox"
-                  name="participatesInTarget"
-                  defaultChecked
-                />
-
-                <span>
-                  Participates in weekly
-                  target
-                </span>
-              </label>
-            </div>
-
-            <button
-              type="submit"
-              className="primary-button"
+            <select
+              name="role"
+              defaultValue="Phlebotomist"
+              required
             >
-              + Add Worker Bee
-            </button>
-          </form>
-        </section>
+              <option value="Phlebotomist">
+                Phlebotomist
+              </option>
 
-        <section className="active-roster-section">
+              <option value="Group Lead">
+                Group Lead
+              </option>
+
+              <option value="Management">
+                Management
+              </option>
+
+              <option value="Other">
+                Other
+              </option>
+            </select>
+          </label>
+
+          <label className="form-field">
+            <span>Group Type</span>
+
+            <select
+              name="groupType"
+              defaultValue="Individual"
+              required
+            >
+              <option value="Individual">
+                Individual
+              </option>
+
+              <option value="Group">
+                Group
+              </option>
+            </select>
+          </label>
+
+          <label className="form-field">
+            <span>Display Order</span>
+
+            <input
+              type="number"
+              name="position"
+              min="1"
+              step="1"
+              defaultValue={nextPosition}
+              required
+            />
+          </label>
+
+          <div className="add-worker-options">
+            <label className="checkbox-field">
+              <input
+                type="checkbox"
+                name="active"
+                defaultChecked
+              />
+
+              <span>
+                Active on dashboard
+              </span>
+            </label>
+
+            <label className="checkbox-field">
+              <input
+                type="checkbox"
+                name="participatesInTarget"
+                defaultChecked
+              />
+
+              <span>
+                Participates in weekly
+                target
+              </span>
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            className="primary-button"
+          >
+            + Add Worker Bee
+          </button>
+        </form>
+      </section>
+
+      <section className="active-roster-section">
+        <div className="section-heading">
+          <div>
+            <p className="section-eyebrow">
+              Active Team
+            </p>
+
+            <h2>
+              Current Worker Bees
+            </h2>
+          </div>
+
+          <span className="section-badge">
+            {activeCollectors.length} Active
+          </span>
+        </div>
+
+        {activeCollectors.length > 0 ? (
+          <div className="worker-grid">
+            {activeCollectors.map(
+              (collector) => (
+                <article
+                  key={collector.id}
+                  className={`worker-card ${
+                    collector.participatesInTarget
+                      ? "target-worker"
+                      : "support-worker"
+                  }`}
+                >
+                  <div className="worker-card-header">
+                    <div className="worker-identity">
+                      <div className="worker-avatar">
+                        🐝
+                      </div>
+
+                      <div>
+                        <p>
+                          {collector.role}
+                        </p>
+
+                        <h3>
+                          {collector.name}
+                        </h3>
+                      </div>
+                    </div>
+
+                    <span
+                      className={`worker-status ${
+                        collector.participatesInTarget
+                          ? "participant"
+                          : "support"
+                      }`}
+                    >
+                      {collector.participatesInTarget
+                        ? "Target Participant"
+                        : "Support Role"}
+                    </span>
+                  </div>
+
+                  <form
+                    action={updateCollector}
+                    className="worker-form"
+                  >
+                    <input
+                      type="hidden"
+                      name="collectorId"
+                      value={collector.id}
+                    />
+
+                    <div className="worker-form-grid">
+                      <label className="form-field">
+                        <span>Name</span>
+
+                        <input
+                          type="text"
+                          name="name"
+                          defaultValue={
+                            collector.name
+                          }
+                          required
+                        />
+                      </label>
+
+                      <label className="form-field">
+                        <span>Role</span>
+
+                        <select
+                          name="role"
+                          defaultValue={
+                            collector.role
+                          }
+                          required
+                        >
+                          <option value="Phlebotomist">
+                            Phlebotomist
+                          </option>
+
+                          <option value="Group Lead">
+                            Group Lead
+                          </option>
+
+                          <option value="Management">
+                            Management
+                          </option>
+
+                          <option value="Other">
+                            Other
+                          </option>
+                        </select>
+                      </label>
+
+                      <label className="form-field">
+                        <span>
+                          Group Type
+                        </span>
+
+                        <select
+                          name="groupType"
+                          defaultValue={
+                            collector.groupType
+                          }
+                          required
+                        >
+                          <option value="Individual">
+                            Individual
+                          </option>
+
+                          <option value="Group">
+                            Group
+                          </option>
+                        </select>
+                      </label>
+
+                      <label className="form-field">
+                        <span>
+                          Display Order
+                        </span>
+
+                        <input
+                          type="number"
+                          name="position"
+                          min="1"
+                          step="1"
+                          defaultValue={
+                            collector.position
+                          }
+                          required
+                        />
+                      </label>
+                    </div>
+
+                    <div className="target-adjustment-panel">
+                      <div>
+                        <span className="adjustment-label">
+                          Weekly Target
+                          Adjustment
+                        </span>
+
+                        <small>
+                          Use a negative number
+                          to reduce the target or
+                          a positive number to
+                          increase it.
+                        </small>
+                      </div>
+
+                      <div className="adjustment-input">
+                        <input
+                          type="number"
+                          name="targetAdjustmentLiters"
+                          step="0.01"
+                          defaultValue={
+                            collector.targetAdjustmentLiters
+                          }
+                          disabled={
+                            !collector.participatesInTarget
+                          }
+                        />
+
+                        <span>L</span>
+                      </div>
+                    </div>
+
+                    <div className="worker-options">
+                      <label className="checkbox-field">
+                        <input
+                          type="checkbox"
+                          name="active"
+                          defaultChecked={
+                            collector.active
+                          }
+                        />
+
+                        <span>Active</span>
+                      </label>
+
+                      <label className="checkbox-field">
+                        <input
+                          type="checkbox"
+                          name="participatesInTarget"
+                          defaultChecked={
+                            collector.participatesInTarget
+                          }
+                        />
+
+                        <span>
+                          Participates in
+                          weekly target
+                        </span>
+                      </label>
+                    </div>
+
+                    <div className="worker-actions">
+                      <button
+                        type="submit"
+                        className="save-button"
+                      >
+                        Save Changes
+                      </button>
+                    </div>
+                  </form>
+
+                  <form
+                    action={deactivateCollector}
+                    className="deactivate-form"
+                  >
+                    <input
+                      type="hidden"
+                      name="collectorId"
+                      value={collector.id}
+                    />
+
+                    <button
+                      type="submit"
+                      className="deactivate-button"
+                    >
+                      Deactivate Worker Bee
+                    </button>
+                  </form>
+                </article>
+              ),
+            )}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <span>🐝</span>
+
+            <h3>
+              No active worker bees
+            </h3>
+
+            <p>
+              Add the first worker bee
+              using the form above.
+            </p>
+          </div>
+        )}
+      </section>
+
+      {inactiveCollectors.length > 0 && (
+        <section className="inactive-section">
           <div className="section-heading">
             <div>
               <p className="section-eyebrow">
-                Active Team
+                Historical Records
               </p>
 
               <h2>
-                Current Worker Bees
+                Inactive Worker Bees
               </h2>
             </div>
 
-            <span className="section-badge">
-              {activeCollectors.length} Active
+            <span className="section-badge inactive">
+              {inactiveCollectors.length} Inactive
             </span>
           </div>
 
-          {activeCollectors.length > 0 ? (
-            <div className="worker-grid">
-              {activeCollectors.map(
-                (collector) => (
-                  <article
-                    key={collector.id}
-                    className={`worker-card ${
-                      collector.participatesInTarget
-                        ? "target-worker"
-                        : "support-worker"
-                    }`}
+          <div className="inactive-list">
+            {inactiveCollectors.map(
+              (collector) => (
+                <article
+                  key={collector.id}
+                  className="inactive-card"
+                >
+                  <div>
+                    <strong>
+                      {collector.name}
+                    </strong>
+
+                    <span>
+                      {collector.role}
+                    </span>
+                  </div>
+
+                  <form
+                    action={reactivateCollector}
                   >
-                    <div className="worker-card-header">
-                      <div className="worker-identity">
-                        <div className="worker-avatar">
-                          🐝
-                        </div>
+                    <input
+                      type="hidden"
+                      name="collectorId"
+                      value={collector.id}
+                    />
 
-                        <div>
-                          <p>
-                            {collector.role}
-                          </p>
-
-                          <h3>
-                            {collector.name}
-                          </h3>
-                        </div>
-                      </div>
-
-                      <span
-                        className={`worker-status ${
-                          collector.participatesInTarget
-                            ? "participant"
-                            : "support"
-                        }`}
-                      >
-                        {collector.participatesInTarget
-                          ? "Target Participant"
-                          : "Support Role"}
-                      </span>
-                    </div>
-
-                    <form
-                      action={updateCollector}
-                      className="worker-form"
+                    <button
+                      type="submit"
+                      className="reactivate-button"
                     >
-                      <input
-                        type="hidden"
-                        name="collectorId"
-                        value={collector.id}
-                      />
-
-                      <div className="worker-form-grid">
-                        <label className="form-field">
-                          <span>Name</span>
-
-                          <input
-                            type="text"
-                            name="name"
-                            defaultValue={
-                              collector.name
-                            }
-                            required
-                          />
-                        </label>
-
-                        <label className="form-field">
-                          <span>Role</span>
-
-                          <select
-                            name="role"
-                            defaultValue={
-                              collector.role
-                            }
-                            required
-                          >
-                            <option value="Phlebotomist">
-                              Phlebotomist
-                            </option>
-
-                            <option value="Group Lead">
-                              Group Lead
-                            </option>
-
-                            <option value="Management">
-                              Management
-                            </option>
-
-                            <option value="Other">
-                              Other
-                            </option>
-                          </select>
-                        </label>
-
-                        <label className="form-field">
-                          <span>
-                            Group Type
-                          </span>
-
-                          <select
-                            name="groupType"
-                            defaultValue={
-                              collector.groupType
-                            }
-                            required
-                          >
-                            <option value="Individual">
-                              Individual
-                            </option>
-
-                            <option value="Group">
-                              Group
-                            </option>
-                          </select>
-                        </label>
-
-                        <label className="form-field">
-                          <span>
-                            Display Order
-                          </span>
-
-                          <input
-                            type="number"
-                            name="position"
-                            min="1"
-                            step="1"
-                            defaultValue={
-                              collector.position
-                            }
-                            required
-                          />
-                        </label>
-                      </div>
-
-                      <div className="target-adjustment-panel">
-                        <div>
-                          <span className="adjustment-label">
-                            Weekly Target
-                            Adjustment
-                          </span>
-
-                          <small>
-                            Use a negative number
-                            to reduce the target or
-                            a positive number to
-                            increase it.
-                          </small>
-                        </div>
-
-                        <div className="adjustment-input">
-                          <input
-                            type="number"
-                            name="targetAdjustmentLiters"
-                            step="0.01"
-                            defaultValue={
-                              collector.targetAdjustmentLiters
-                            }
-                            disabled={
-                              !collector.participatesInTarget
-                            }
-                          />
-
-                          <span>L</span>
-                        </div>
-                      </div>
-
-                      <div className="worker-options">
-                        <label className="checkbox-field">
-                          <input
-                            type="checkbox"
-                            name="active"
-                            defaultChecked={
-                              collector.active
-                            }
-                          />
-
-                          <span>Active</span>
-                        </label>
-
-                        <label className="checkbox-field">
-                          <input
-                            type="checkbox"
-                            name="participatesInTarget"
-                            defaultChecked={
-                              collector.participatesInTarget
-                            }
-                          />
-
-                          <span>
-                            Participates in
-                            weekly target
-                          </span>
-                        </label>
-                      </div>
-
-                      <div className="worker-actions">
-                        <button
-                          type="submit"
-                          className="save-button"
-                        >
-                          Save Changes
-                        </button>
-                      </div>
-                    </form>
-
-                    <form
-                      action={deactivateCollector}
-                      className="deactivate-form"
-                    >
-                      <input
-                        type="hidden"
-                        name="collectorId"
-                        value={collector.id}
-                      />
-
-                      <button
-                        type="submit"
-                        className="deactivate-button"
-                      >
-                        Deactivate Worker Bee
-                      </button>
-                    </form>
-                  </article>
-                ),
-              )}
-            </div>
-          ) : (
-            <div className="empty-state">
-              <span>🐝</span>
-
-              <h3>
-                No active worker bees
-              </h3>
-
-              <p>
-                Add the first worker bee
-                using the form above.
-              </p>
-            </div>
-          )}
+                      Reactivate
+                    </button>
+                  </form>
+                </article>
+              ),
+            )}
+          </div>
         </section>
-
-        {inactiveCollectors.length > 0 && (
-          <section className="inactive-section">
-            <div className="section-heading">
-              <div>
-                <p className="section-eyebrow">
-                  Historical Records
-                </p>
-
-                <h2>
-                  Inactive Worker Bees
-                </h2>
-              </div>
-
-              <span className="section-badge inactive">
-                {inactiveCollectors.length} Inactive
-              </span>
-            </div>
-
-            <div className="inactive-list">
-              {inactiveCollectors.map(
-                (collector) => (
-                  <article
-                    key={collector.id}
-                    className="inactive-card"
-                  >
-                    <div>
-                      <strong>
-                        {collector.name}
-                      </strong>
-
-                      <span>
-                        {collector.role}
-                      </span>
-                    </div>
-
-                    <form
-                      action={reactivateCollector}
-                    >
-                      <input
-                        type="hidden"
-                        name="collectorId"
-                        value={collector.id}
-                      />
-
-                      <button
-                        type="submit"
-                        className="reactivate-button"
-                      >
-                        Reactivate
-                      </button>
-                    </form>
-                  </article>
-                ),
-              )}
-            </div>
-          </section>
-        )}
-      </div>
+      )}
 
       <style>
         {`
           * {
             box-sizing: border-box;
-          }
-
-          body {
-            margin: 0;
-          }
-
-          .roster-page {
-            min-height: 100vh;
-            padding: 36px 24px 60px;
-            background:
-              radial-gradient(
-                circle at top right,
-                rgba(255, 215, 84, 0.24),
-                transparent 30%
-              ),
-              linear-gradient(
-                180deg,
-                #fbf8ed,
-                #f1ead2
-              );
-            font-family:
-              Arial,
-              Helvetica,
-              sans-serif;
-          }
-
-          .roster-shell {
-            width: 100%;
-            max-width: 1280px;
-            margin: 0 auto;
-          }
-
-          .page-navigation {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-            margin-bottom: 22px;
-          }
-
-          .back-link,
-          .dashboard-link {
-            color: #795807;
-            font-size: 0.9rem;
-            font-weight: 800;
-            text-decoration: none;
-          }
-
-          .back-link:hover,
-          .dashboard-link:hover {
-            color: #b17d00;
-          }
-
-          .roster-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 24px;
-            margin-bottom: 20px;
-            padding: 28px 30px;
-            border: 1px solid #dfc36c;
-            border-radius: 24px;
-            background:
-              linear-gradient(
-                135deg,
-                rgba(255, 255, 255, 0.98),
-                rgba(255, 244, 195, 0.96)
-              );
-            box-shadow:
-              0 14px 34px
-              rgba(81, 57, 6, 0.11);
-          }
-
-          .roster-eyebrow,
-          .section-eyebrow {
-            margin: 0 0 6px;
-            color: #9b6c09;
-            font-size: 0.68rem;
-            font-weight: 900;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-          }
-
-          .roster-header h1 {
-            margin: 0;
-            color: #3d2a07;
-            font-size: clamp(
-              2rem,
-              4vw,
-              3rem
-            );
-            line-height: 1;
-          }
-
-          .roster-description {
-            max-width: 700px;
-            margin: 12px 0 0;
-            color: #746742;
-            line-height: 1.55;
-          }
-
-          .header-icon {
-            display: grid;
-            flex: 0 0 auto;
-            width: 82px;
-            height: 82px;
-            place-items: center;
-            border: 1px solid #dca916;
-            border-radius: 24px;
-            background:
-              linear-gradient(
-                135deg,
-                #fff8cb,
-                #ffe168
-              );
-            font-size: 2.7rem;
           }
 
           .roster-summary {
@@ -714,7 +563,7 @@ export default async function WorkerRosterPage() {
               255,
               255,
               255,
-              0.94
+              0.96
             );
             box-shadow:
               0 8px 20px
@@ -763,6 +612,15 @@ export default async function WorkerRosterPage() {
             justify-content: space-between;
             gap: 18px;
             margin-bottom: 20px;
+          }
+
+          .section-eyebrow {
+            margin: 0 0 6px;
+            color: #9b6c09;
+            font-size: 0.68rem;
+            font-weight: 900;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
           }
 
           .section-heading h2 {
@@ -1126,7 +984,7 @@ export default async function WorkerRosterPage() {
             color: #776d54;
           }
 
-          @media (max-width: 980px) {
+          @media (max-width: 1100px) {
             .add-worker-form {
               grid-template-columns:
                 repeat(2, minmax(0, 1fr));
@@ -1146,23 +1004,11 @@ export default async function WorkerRosterPage() {
           }
 
           @media (max-width: 700px) {
-            .roster-page {
-              padding: 22px 14px 40px;
-            }
-
-            .page-navigation,
-            .roster-header,
             .section-heading,
             .worker-card-header,
             .target-adjustment-panel {
               align-items: flex-start;
               flex-direction: column;
-            }
-
-            .header-icon {
-              width: 64px;
-              height: 64px;
-              font-size: 2rem;
             }
 
             .roster-summary,
@@ -1193,6 +1039,6 @@ export default async function WorkerRosterPage() {
           }
         `}
       </style>
-    </main>
+    </AdminShell>
   );
 }

@@ -7,21 +7,30 @@ datasource db {
   provider = "postgresql"
 }
 
+enum MetricSource {
+  CSL
+  HIVE
+  MANUAL
+}
+
 model Collector {
-  id        Int       @id @default(autoincrement())
-  name      String
-  role      String
-  groupType String
-  position  Int
-  active    Boolean   @default(true)
-  participatesInTarget Boolean      @default(true)
-  targetAdjustmentLiters Float @default(0)
-  entries   DailyEntry[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id                     Int                      @id @default(autoincrement())
+  name                   String
+  role                   String
+  groupType              String
+  position               Int
+  active                 Boolean                  @default(true)
+  participatesInTarget   Boolean                  @default(true)
+  allocationWeight       Float                    @default(1)
+  targetAdjustmentLiters Float                    @default(0)
+  entries                DailyEntry[]
+  hourlyEntries          HourlyOperationalEntry[]
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
 
   @@index([active])
   @@index([position])
+  @@index([participatesInTarget])
 }
 
 model DailyEntry {
@@ -38,24 +47,79 @@ model DailyEntry {
   @@index([entryDate])
 }
 
-model HiveSettings {
-  id             Int      @id @default(1)
-  centerName     String   @default("Riviera Beach 115")
-  monthlyGoal    Float    @default(3500)
-  weeksInPeriod  Float    @default(4.33)
-  currentMonth   Int
-  currentYear    Int
-  updatedAt      DateTime @updatedAt
+model HourlyOperationalEntry {
+  id                 Int       @id @default(autoincrement())
+  collectorId        Int
+  entryDate          DateTime
+  operationalHour    Int
+  successfulSticks   Int       @default(0)
+  unsuccessfulSticks Int       @default(0)
+  lostVolumeMl       Float     @default(0)
+  collector          Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([collectorId, entryDate, operationalHour])
+  @@index([entryDate])
+  @@index([entryDate, operationalHour])
 }
+
+model HiveSettings {
+  id                       Int      @id @default(1)
+  centerName               String   @default("Riviera Beach 115")
+  monthlyGoal              Float    @default(3500)
+  weeksInPeriod            Float    @default(4.33)
+  collectionDaysPerWeek    Int      @default(6)
+  openingHour              Int      @default(6)
+  closingHour              Int      @default(19)
+  currentMonth             Int
+  currentYear              Int
+  dashboardRotationSeconds Int      @default(120)
+  updatedAt                DateTime @updatedAt
+}
+
 model MonthlyBudget {
   id                   Int      @id @default(autoincrement())
   fiscalYear           Int
   month                Int
   budgetLiters         Float
   originalBudgetLiters Float
+  budgetDonors         Int      @default(0)
+  originalBudgetDonors Int      @default(0)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
   @@unique([fiscalYear, month])
   @@index([fiscalYear])
+}
+
+model DashboardMetric {
+  id            Int             @id @default(autoincrement())
+  key           String          @unique
+  displayName   String
+  description   String?
+  unit          String?
+  decimalPlaces Int             @default(2)
+  publicSource  MetricSource    @default(CSL)
+  isVisible     Boolean         @default(true)
+  displayOrder  Int             @default(0)
+  readings      MetricReading[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([isVisible, displayOrder])
+}
+
+model MetricReading {
+  id         Int             @id @default(autoincrement())
+  metricId   Int
+  source     MetricSource
+  value      Float
+  recordedAt DateTime        @default(now())
+  metric     DashboardMetric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([metricId, source, recordedAt])
+  @@index([recordedAt])
 }
