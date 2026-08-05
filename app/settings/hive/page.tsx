@@ -233,21 +233,37 @@ export default async function HiveSettingsPage() {
             </span>
 
             <small>
-              The standard two-minute rotation is
-              120 seconds. The minimum is 30
-              seconds.
-            </small>
+  Select how long each dashboard view
+  remains visible before rotating.
+</small>
 
-            <input
-              name="dashboardRotationSeconds"
-              type="number"
-              min="30"
-              step="1"
-              defaultValue={
-                settings.dashboardRotationSeconds
-              }
-              required
-            />
+            <select
+  name="dashboardRotationSeconds"
+  defaultValue={
+    settings.dashboardRotationSeconds
+  }
+  required
+>
+  <option value="30">
+    30 seconds
+  </option>
+
+  <option value="45">
+    45 seconds
+  </option>
+
+  <option value="60">
+    60 seconds
+  </option>
+
+  <option value="90">
+    90 seconds
+  </option>
+
+  <option value="120">
+    120 seconds
+  </option>
+</select>
           </label>
         </section>
 

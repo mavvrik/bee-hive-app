@@ -65,16 +65,19 @@ model HourlyOperationalEntry {
 }
 
 model HiveSettings {
-  id                       Int      @id @default(1)
-  centerName               String   @default("Riviera Beach 115")
-  monthlyGoal              Float    @default(3500)
-  weeksInPeriod            Float    @default(4.33)
-  collectionDaysPerWeek    Int      @default(6)
+  id            Int    @id @default(1)
+  centerName    String @default("Riviera Beach 115")
+  monthlyGoal   Float  @default(3500)
+  weeksInPeriod Float  @default(4.33)
+
+  centerOperatingDaysPerWeek Int @default(7)
+  workerDaysPerWeek          Int @default(5)
+
   openingHour              Int      @default(6)
   closingHour              Int      @default(19)
   currentMonth             Int
   currentYear              Int
-  dashboardRotationSeconds Int      @default(120)
+  dashboardRotationSeconds Int      @default(45)
   updatedAt                DateTime @updatedAt
 }
 

@@ -1,14 +1,32 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 type WorkerBeeCardProps = {
   name: string;
   roleLabel: string;
+
+  /*
+   * Production recorded for today.
+   */
   currentLiters: number;
+
+  /*
+   * Weekly stick total remains a supporting KPI.
+   */
   currentSticks: number;
   litersPerStick: number;
-  targetLiters: number;
+
+  /*
+   * Individual weighted targets.
+   */
+  dailyTargetLiters: number;
+  weeklyTargetLiters: number;
+
   isTopWorker?: boolean;
   isManagement?: boolean;
 };
@@ -19,33 +37,29 @@ export default function WorkerBeeCard({
   currentLiters,
   currentSticks,
   litersPerStick,
-  targetLiters,
+  dailyTargetLiters,
+  weeklyTargetLiters,
   isTopWorker = false,
   isManagement = false,
 }: WorkerBeeCardProps) {
-  const targetPercent = useMemo(() => {
-    if (targetLiters <= 0) {
-      return 0;
-    }
-
-    return Math.min(
-      Math.max(
-        (currentLiters / targetLiters) * 100,
-        0,
-      ),
-      100,
-    );
-  }, [currentLiters, targetLiters]);
-
   const rawPercent =
-    targetLiters > 0
-      ? (currentLiters / targetLiters) * 100
+    dailyTargetLiters > 0
+      ? (currentLiters /
+          dailyTargetLiters) *
+        100
       : 0;
 
-  const remainingLiters = Math.max(
-    targetLiters - currentLiters,
-    0,
-  );
+  /*
+   * The progress bar visually stops at 100%,
+   * while the displayed percentage may exceed
+   * 100% when a contributor surpasses goal.
+   */
+  const targetPercent = useMemo(() => {
+    return Math.min(
+      Math.max(rawPercent, 0),
+      100,
+    );
+  }, [rawPercent]);
 
   const [animatedPercent, setAnimatedPercent] =
     useState(0);
@@ -88,14 +102,23 @@ export default function WorkerBeeCard({
     };
   }, [targetPercent]);
 
+  const performanceClass =
+    rawPercent >= 100
+      ? "goal-achieved"
+      : rawPercent >= 90
+        ? "near-goal"
+        : "goal-in-progress";
+
   return (
     <article
-      className={`worker-bee-card ${
-        isTopWorker ? "top-worker-card" : ""
+      className={`worker-bee-card ${performanceClass} ${
+        isTopWorker
+          ? "top-worker-card"
+          : ""
       }`}
       aria-label={`${name}, ${rawPercent.toFixed(
         0,
-      )}% of weekly target`}
+      )}% of daily goal`}
     >
       {isTopWorker && (
         <div className="top-worker-ribbon">
@@ -124,24 +147,40 @@ export default function WorkerBeeCard({
       <div className="worker-right-panel">
         <div className="worker-progress-heading">
           <div
-            className="worker-honeycomb"
+            className="worker-progress-ring"
+            style={{
+              background: `conic-gradient(
+                #d99b0b ${targetPercent}%,
+                #f1e7c3 ${targetPercent}% 100%
+              )`,
+            }}
             aria-hidden="true"
           >
-            <div className="worker-honeycomb-inner">
+            <div className="worker-progress-ring-inner">
               <strong>
                 {rawPercent.toFixed(0)}%
               </strong>
 
-              <span>of target</span>
+              <span>Daily Goal</span>
             </div>
           </div>
 
           <div className="worker-liter-summary">
+            <span className="worker-production-label">
+              Today&apos;s Production
+            </span>
+
             <strong>
               {formatLiters(currentLiters)}
             </strong>
 
-            <span>collected this week</span>
+            <small>
+              of{" "}
+              {formatLiters(
+                dailyTargetLiters,
+              )}{" "}
+              daily goal
+            </small>
           </div>
         </div>
 
@@ -155,37 +194,39 @@ export default function WorkerBeeCard({
         </div>
 
         <div className="worker-kpi-row">
-  <WorkerMetric
-    label="Weekly Target"
-    value={targetLiters}
-  />
+          <WorkerMetric
+            label="Daily Goal"
+            value={formatLiters(
+              dailyTargetLiters,
+            )}
+          />
 
-  <WorkerMetric
-    label="Remaining"
-    value={remainingLiters}
-  />
+          <WorkerMetric
+            label="Weekly Goal"
+            value={formatLiters(
+              weeklyTargetLiters,
+            )}
+          />
 
-  <div className="worker-kpi">
-    <span>Weekly Sticks</span>
+          <WorkerMetric
+            label="Weekly Sticks"
+            value={currentSticks.toLocaleString(
+              "en-US",
+            )}
+          />
 
-    <strong>
-      {currentSticks.toLocaleString("en-US")}
-    </strong>
-  </div>
-
-  <div className="worker-kpi">
-    <span>Liters / Stick</span>
-
-    <strong>
-      {litersPerStick.toLocaleString("en-US", {
-        minimumFractionDigits: 3,
-        maximumFractionDigits: 3,
-      })}
-    </strong>
-  </div>
-</div>
-
-</div>
+          <WorkerMetric
+            label="Liters / Stick"
+            value={litersPerStick.toLocaleString(
+              "en-US",
+              {
+                minimumFractionDigits: 3,
+                maximumFractionDigits: 3,
+              },
+            )}
+          />
+        </div>
+      </div>
 
       <style>
         {`
@@ -204,8 +245,8 @@ export default function WorkerBeeCard({
             background:
               linear-gradient(
                 135deg,
-                rgba(255, 255, 255, 0.94),
-                rgba(255, 249, 224, 0.84)
+                rgba(255, 255, 255, 0.97),
+                rgba(255, 249, 224, 0.9)
               );
             box-shadow:
               0 5px 12px
@@ -222,6 +263,16 @@ export default function WorkerBeeCard({
                 rgba(211, 145, 7, 0.16),
               inset 0 0 0 2px
                 rgba(217, 155, 11, 0.11);
+          }
+
+          .worker-bee-card.goal-achieved {
+            border-color:
+              rgba(74, 145, 72, 0.72);
+          }
+
+          .worker-bee-card.near-goal {
+            border-color:
+              rgba(214, 156, 20, 0.8);
           }
 
           .top-worker-ribbon {
@@ -262,8 +313,8 @@ export default function WorkerBeeCard({
             background:
               linear-gradient(
                 180deg,
-                rgba(255, 251, 230, 0.88),
-                rgba(243, 220, 139, 0.26)
+                rgba(255, 251, 230, 0.9),
+                rgba(243, 220, 139, 0.28)
               );
           }
 
@@ -325,73 +376,56 @@ export default function WorkerBeeCard({
           .worker-progress-heading {
             display: grid;
             grid-template-columns:
-              68px minmax(0, 1fr);
+              64px minmax(0, 1fr);
             align-items: center;
-            gap: 8px;
+            gap: 9px;
             min-width: 0;
           }
 
-          .worker-honeycomb {
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 66px;
-            height: 58px;
-            background:
-              linear-gradient(
-                180deg,
-                #fff5be,
-                #e7bd45
-              );
-            clip-path: polygon(
-              25% 6%,
-              75% 6%,
-              100% 50%,
-              75% 94%,
-              25% 94%,
-              0 50%
-            );
+          .worker-progress-ring {
+            display: grid;
+            width: 60px;
+            height: 60px;
+            place-items: center;
+            border-radius: 50%;
             filter:
               drop-shadow(
                 0 3px 4px
-                rgba(106, 74, 7, 0.14)
+                rgba(106, 74, 7, 0.13)
               );
           }
 
-          .worker-honeycomb::before {
-            content: "";
-            position: absolute;
-            inset: 4px;
+          .worker-progress-ring-inner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
             background:
               linear-gradient(
                 180deg,
-                rgba(255, 255, 255, 0.64),
-                rgba(255, 234, 143, 0.36)
+                #fffdf4,
+                #fff5cd
               );
-            clip-path: inherit;
           }
 
-          .worker-honeycomb-inner {
-            position: relative;
-            z-index: 2;
-            text-align: center;
-          }
-
-          .worker-honeycomb-inner strong {
+          .worker-progress-ring-inner strong {
             display: block;
             color: #4a3205;
-            font-size: 1.06rem;
+            font-size: 0.92rem;
             line-height: 1;
           }
 
-          .worker-honeycomb-inner span {
+          .worker-progress-ring-inner span {
             display: block;
             margin-top: 3px;
             color: #705316;
-            font-size: 0.42rem;
+            font-size: 0.36rem;
             font-weight: 900;
             letter-spacing: 0.04em;
+            text-align: center;
             text-transform: uppercase;
           }
 
@@ -399,26 +433,40 @@ export default function WorkerBeeCard({
             min-width: 0;
           }
 
+          .worker-production-label {
+            display: block;
+            margin: 0 0 3px;
+            color: #82661c;
+            font-size: 0.45rem;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+          }
+
           .worker-liter-summary strong {
             display: block;
             overflow: hidden;
             color: #342406;
             font-size: clamp(
-              0.85rem,
-              1vw,
-              1.05rem
+              1.05rem,
+              1.35vw,
+              1.45rem
             );
-            line-height: 1.05;
+            line-height: 1;
             text-overflow: ellipsis;
             white-space: nowrap;
           }
 
-          .worker-liter-summary span {
+          .worker-liter-summary small {
             display: block;
-            margin-top: 3px;
+            margin-top: 4px;
+            overflow: hidden;
             color: #7e6b43;
-            font-size: 0.5rem;
+            font-size: 0.48rem;
             font-weight: 700;
+            line-height: 1.2;
+            text-overflow: ellipsis;
+            white-space: nowrap;
           }
 
           .worker-progress-track {
@@ -454,6 +502,17 @@ export default function WorkerBeeCard({
                 );
           }
 
+          .worker-bee-card.goal-achieved
+          .worker-progress-fill {
+            background:
+              linear-gradient(
+                90deg,
+                #4f9a51,
+                #78bd67,
+                #b0db80
+              );
+          }
+
           .worker-kpi-row {
             display: grid;
             grid-template-columns:
@@ -463,35 +522,43 @@ export default function WorkerBeeCard({
           }
 
           .worker-kpi {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
             min-width: 0;
-            padding: 5px 6px;
+            min-height: 48px;
+            padding: 6px;
             border: 1px solid
               rgba(189, 151, 45, 0.22);
             border-radius: 8px;
             background:
-              rgba(255, 255, 255, 0.66);
+              rgba(255, 255, 255, 0.7);
+            text-align: center;
+            box-sizing: border-box;
           }
 
           .worker-kpi span {
             display: block;
-            overflow: hidden;
+            min-height: 20px;
+            overflow: visible;
             color: #897341;
-            font-size: 0.41rem;
+            font-size: 0.4rem;
             font-weight: 900;
-            letter-spacing: 0.05em;
-            text-overflow: ellipsis;
+            letter-spacing: 0.035em;
+            line-height: 1.15;
+            text-overflow: unset;
             text-transform: uppercase;
-            white-space: nowrap;
+            white-space: normal;
           }
 
           .worker-kpi strong {
             display: block;
-            margin-top: 2px;
-            overflow: hidden;
+            margin-top: 3px;
+            overflow: visible;
             color: #3b2a08;
-            font-size: 0.62rem;
+            font-size: 0.64rem;
             line-height: 1.05;
-            text-overflow: ellipsis;
+            text-overflow: unset;
             white-space: nowrap;
           }
 
@@ -682,17 +749,43 @@ export default function WorkerBeeCard({
 
             .worker-progress-heading {
               grid-template-columns:
-                60px minmax(0, 1fr);
+                56px minmax(0, 1fr);
               gap: 6px;
             }
 
-            .worker-honeycomb {
-              width: 58px;
-              height: 52px;
+            .worker-progress-ring {
+              width: 54px;
+              height: 54px;
+            }
+
+            .worker-progress-ring-inner {
+              width: 41px;
+              height: 41px;
             }
 
             .bee-illustration {
               transform: scale(0.9);
+            }
+
+            .worker-kpi {
+              padding: 5px 4px;
+            }
+          }
+
+          @media (max-width: 700px) {
+            .worker-bee-card {
+              grid-template-columns:
+                minmax(100px, 0.8fr)
+                minmax(0, 1.2fr);
+            }
+
+            .worker-kpi-row {
+              grid-template-columns:
+                repeat(2, minmax(0, 1fr));
+            }
+
+            .worker-kpi {
+              min-height: 52px;
             }
           }
 
@@ -716,7 +809,7 @@ export default function WorkerBeeCard({
 
 type WorkerMetricProps = {
   label: string;
-  value: number;
+  value: string;
 };
 
 function WorkerMetric({
@@ -726,8 +819,7 @@ function WorkerMetric({
   return (
     <div className="worker-kpi">
       <span>{label}</span>
-
-      <strong>{formatLiters(value)}</strong>
+      <strong>{value}</strong>
     </div>
   );
 }

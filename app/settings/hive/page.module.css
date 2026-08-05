@@ -193,7 +193,8 @@
   line-height: 1.4;
 }
 
-.field input {
+.field input,
+.field select {
   width: 100%;
   padding: 13px 14px;
   border: 1px solid #dbc77f;
@@ -204,7 +205,8 @@
   font-weight: 800;
 }
 
-.field input:focus {
+.field input:focus,
+.field select:focus {
   border-color: #c9900b;
   outline: 3px solid rgba(221, 167, 26, 0.17);
 }

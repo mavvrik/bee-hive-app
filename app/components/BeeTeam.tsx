@@ -1,4 +1,5 @@
 import WorkerBeeCard from "./WorkerBeeCard";
+
 import type {
   ContributorIntelligence,
 } from "@/app/lib/centerIntelligence";
@@ -13,6 +14,11 @@ type CollectorWithEntries = {
   participatesInTarget: boolean;
   allocationWeight: number;
   targetAdjustmentLiters: number;
+
+  /*
+   * Weekly official production entries supplied
+   * by the collectors query in app/page.tsx.
+   */
   entries: {
     liters: number;
     sticks: number;
@@ -21,21 +27,35 @@ type CollectorWithEntries = {
 
 type BeeTeamProps = {
   collectors: CollectorWithEntries[];
+
+  /*
+   * Contains today's production and each
+   * contributor's weighted daily target.
+   */
   contributorIntelligence:
     ContributorIntelligence[];
+
+  workerDaysPerWeek: number;
 };
 
 type CollectorPerformance = {
   id: number;
   name: string;
-  currentLiters: number;
-  currentSticks: number;
-  litersPerStick: number;
-  targetLiters: number;
-  percentage: number;
+
+  dailyCurrentLiters: number;
+  weeklyCurrentLiters: number;
+  weeklyCurrentSticks: number;
+  weeklyLitersPerStick: number;
+
+  dailyTargetLiters: number;
+  weeklyTargetLiters: number;
+
+  dailyPercentage: number;
+
   roleLabel: string;
   isManagement: boolean;
   participatesInTarget: boolean;
+
   status:
     | "AHEAD"
     | "ON_TRACK"
@@ -46,6 +66,7 @@ type CollectorPerformance = {
 export default function BeeTeam({
   collectors,
   contributorIntelligence,
+  workerDaysPerWeek,
 }: BeeTeamProps) {
   const intelligenceByCollectorId =
     new Map(
@@ -69,26 +90,48 @@ export default function BeeTeam({
             collector.id,
           );
 
-        const currentSticks =
+        /*
+         * Official weekly production.
+         */
+        const weeklyCurrentLiters =
+          collector.entries.reduce(
+            (total, entry) =>
+              total + entry.liters,
+            0,
+          );
+
+        const weeklyCurrentSticks =
           collector.entries.reduce(
             (total, entry) =>
               total + entry.sticks,
             0,
           );
 
-        const currentLiters =
-          intelligence?.currentLiters ?? 0;
-
-        const litersPerStick =
-          currentSticks > 0
-            ? currentLiters / currentSticks
+        const weeklyLitersPerStick =
+          weeklyCurrentSticks > 0
+            ? weeklyCurrentLiters /
+              weeklyCurrentSticks
             : 0;
 
-        const targetLiters =
+        /*
+         * Today's official liters are supplied
+         * through Center Intelligence.
+         */
+        const dailyCurrentLiters =
+          intelligence?.currentLiters ?? 0;
+
+        const dailyTargetLiters =
           intelligence
             ?.dailyTargetLiters ?? 0;
 
-        const percentage =
+        const weeklyTargetLiters =
+  dailyTargetLiters *
+  Math.max(
+    workerDaysPerWeek,
+    0,
+  );
+
+        const dailyPercentage =
           intelligence
             ?.completionPercentage ?? 0;
 
@@ -111,35 +154,47 @@ export default function BeeTeam({
         return {
           id: collector.id,
           name: collector.name,
-          currentLiters,
-          currentSticks,
-          litersPerStick,
-          targetLiters,
-          percentage,
+
+          dailyCurrentLiters,
+          weeklyCurrentLiters,
+          weeklyCurrentSticks,
+          weeklyLitersPerStick,
+
+          dailyTargetLiters,
+          weeklyTargetLiters,
+
+          dailyPercentage,
+
           roleLabel,
           isManagement,
+
           participatesInTarget:
             collector.participatesInTarget,
+
           status:
             intelligence?.status ??
             "NOT_ASSIGNED",
         };
       });
 
+  /*
+   * Lead Forager is based on today's percentage
+   * of the assigned weighted daily goal.
+   */
   const eligibleWorkers =
     collectorPerformance.filter(
       (collector) =>
         collector.participatesInTarget &&
-        collector.targetLiters > 0 &&
-        collector.currentLiters > 0,
+        collector.dailyTargetLiters > 0 &&
+        collector.dailyCurrentLiters > 0,
     );
 
   const topWorker =
     eligibleWorkers.length > 0
       ? eligibleWorkers.reduce(
           (leader, collector) =>
-            collector.percentage >
-            leader.percentage
+            collector.dailyPercentage >
+            leader.dailyPercentage
               ? collector
               : leader,
         )
@@ -171,7 +226,7 @@ export default function BeeTeam({
 
               <small>
                 {Math.round(
-                  topWorker.percentage,
+                  topWorker.dailyPercentage,
                 )}
                 % of today&apos;s target
               </small>
@@ -204,16 +259,19 @@ export default function BeeTeam({
                 collector.roleLabel
               }
               currentLiters={
-                collector.currentLiters
+                collector.dailyCurrentLiters
               }
               currentSticks={
-                collector.currentSticks
+                collector.weeklyCurrentSticks
               }
               litersPerStick={
-                collector.litersPerStick
+                collector.weeklyLitersPerStick
               }
-              targetLiters={
-                collector.targetLiters
+              dailyTargetLiters={
+                collector.dailyTargetLiters
+              }
+              weeklyTargetLiters={
+                collector.weeklyTargetLiters
               }
               isTopWorker={
                 topWorker?.id ===

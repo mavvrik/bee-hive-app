@@ -6,6 +6,7 @@ import { getCurrentMonthNumber } from "@/app/lib/fiscalMonth";
 import { getCenterIntelligence } from "@/app/lib/centerIntelligence";
 import DashboardRotator from "./components/DashboardRotator";
 import DashboardPage from "./components/DashboardPage";
+import ExecutiveIntelligencePage from "./components/ExecutiveIntelligencePage";
 import {
   formatOperationalWeekRange,
   getHivePerformanceStatus,
@@ -79,8 +80,15 @@ const startOfTomorrow = new Date(
   const weeksInPeriod =
     settings?.weeksInPeriod ?? 4.33;
 
-  const collectionDaysPerWeek =
-    settings?.collectionDaysPerWeek ?? 6;
+  const centerOperatingDaysPerWeek =
+  settings?.centerOperatingDaysPerWeek ?? 7;
+
+const workerDaysPerWeek =
+  settings?.workerDaysPerWeek ?? 5;
+
+    const dashboardRotationMs =
+  (settings?.dashboardRotationSeconds ?? 45) *
+  1000;
 
   const currentBudget =
     await prisma.monthlyBudget.findUnique({
@@ -273,12 +281,57 @@ const dailyCurrentDonors =
       const historicalLitersPerStick =
   weeklyLitersPerStick;
 
+  const visibleDashboardMetrics =
+  await prisma.dashboardMetric.findMany({
+    where: {
+      isVisible: true,
+    },
+    orderBy: [
+      {
+        displayOrder: "asc",
+      },
+      {
+        displayName: "asc",
+      },
+    ],
+    include: {
+      readings: {
+        orderBy: {
+          recordedAt: "desc",
+        },
+        take: 50,
+      },
+    },
+  });
+
+const executiveMetrics =
+  visibleDashboardMetrics.map((metric) => {
+    const publicReading =
+      metric.readings.find(
+        (reading) =>
+          reading.source ===
+          metric.publicSource,
+      );
+
+    return {
+      id: metric.id,
+      displayName: metric.displayName,
+      description: metric.description,
+      unit: metric.unit,
+      decimalPlaces:
+        metric.decimalPlaces,
+      value: publicReading?.value ?? null,
+      source: metric.publicSource,
+    };
+  });
+
       const intelligence =
   getCenterIntelligence({
     monthlyGoalLiters: monthlyGoal,
     monthlyGoalDonors,
     weeksInPeriod,
-    collectionDaysPerWeek,
+    collectionDaysPerWeek:
+  centerOperatingDaysPerWeek,
 
     currentMonthLiters: currentLiters,
     currentWeekLiters: weeklyCurrentLiters,
@@ -317,6 +370,18 @@ closingHour,
       }),
   });
 
+  const executiveTopWorker =
+  intelligence.contributors
+    .filter(
+      (contributor) =>
+        contributor.currentLiters > 0,
+    )
+    .sort(
+      (a, b) =>
+        b.completionPercentage -
+        a.completionPercentage,
+    )[0] ?? null;
+
   const weeklyTarget =
   intelligence.goals.weeklyLiters;
 
@@ -348,7 +413,9 @@ closingHour,
       boxSizing: "border-box",
     }}
   >
-    <DashboardRotator intervalMs={20000}>
+    <DashboardRotator
+  intervalMs={dashboardRotationMs}
+>
       <DashboardPage>
         <HiveHeader
           centerName={
@@ -447,12 +514,55 @@ closingHour,
         </section>
 
         <BeeTeam
-          collectors={collectors}
-          contributorIntelligence={
-            intelligence.contributors
-          }
-        />
+  collectors={collectors}
+  contributorIntelligence={
+    intelligence.contributors
+  }
+  workerDaysPerWeek={
+  workerDaysPerWeek
+}
+/>
       </DashboardPage>
+      <DashboardPage>
+  <ExecutiveIntelligencePage
+    centerName={
+      settings?.centerName ??
+      "Riviera Beach 115"
+    }
+    metrics={executiveMetrics}
+    projectedFinish={
+      intelligence.projection
+        .projectedFinish
+    }
+    projectedVariance={
+      intelligence.projection
+        .projectedVariance
+    }
+    confidence={
+      intelligence.projection.confidence
+    }
+    additionalDonorsNeeded={
+      intelligence.projection
+        .additionalDonorsNeeded
+    }
+    successfulSticks={
+      successfulSticks
+    }
+    unsuccessfulSticks={
+      unsuccessfulSticks
+    }
+    lostVolumeLiters={
+      lostVolume
+    }
+    topWorkerName={
+      executiveTopWorker?.name ?? null
+    }
+    topWorkerPercentage={
+      executiveTopWorker
+        ?.completionPercentage ?? null
+    }
+  />
+</DashboardPage>
     </DashboardRotator>
   </main>
 );
