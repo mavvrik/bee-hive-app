@@ -159,3 +159,10 @@ export async function isAdminAuthenticated(): Promise<boolean> {
 
   return isValidSessionValue(sessionValue);
 }
+
+export function isAdminConfigured(): boolean {
+  return Boolean(
+    process.env.ADMIN_PASSWORD &&
+    process.env.ADMIN_SESSION_SECRET
+  );
+}

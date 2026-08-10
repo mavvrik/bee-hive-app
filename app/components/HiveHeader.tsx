@@ -80,15 +80,18 @@ export default function HiveHeader({
           flexWrap: "wrap",
         }}
       >
-        <Link href="/" style={primaryButtonStyle}>
+        <Link
+          href="/"
+          style={primaryButtonStyle}
+        >
           Dashboard
         </Link>
 
         <Link
-          href="/daily-entry"
+          href="/daily-center-production"
           style={primaryButtonStyle}
         >
-          🐝 Record Contributions
+          🐝 Record Center Production
         </Link>
 
         <Link

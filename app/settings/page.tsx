@@ -3,13 +3,23 @@ import AdminShell from "./components/AdminShell";
 
 const adminSections = [
   {
-    title: "Dashboard & KPIs",
+    title: "Performance Intelligence",
     description:
-      "Manage the official CSL metrics displayed on the public dashboard.",
+      "Manage official CSL metrics, dashboard KPIs, rotation timing, and performance intelligence.",
     href: "/settings/hive",
     icon: "📊",
     status: "Active",
   },
+
+  {
+    title: "Daily Center Production",
+    description:
+      "Enter the official daily center totals for liters collected and donors processed.",
+    href: "/daily-center-production",
+    icon: "📥",
+    status: "Active",
+  },
+
   {
     title: "Hive Analytics",
     description:
@@ -18,34 +28,38 @@ const adminSections = [
     icon: "📈",
     status: "Coming Soon",
   },
+
   {
     title: "Worker Bees",
     description:
-      "Manage collectors, management participation, and worker bee targets.",
+      "Manage collectors, management participation, worker targets, and future Bee profiles.",
     href: "/settings/workers",
     icon: "🐝",
     status: "Active",
   },
+
   {
     title: "Budget Management",
     description:
-      "Review annual budgets, monthly targets, and forecasting information.",
+      "Review annual budgets, monthly targets, donor targets, and forecasting information.",
     href: "/budget",
     icon: "💰",
     status: "Active",
   },
+
   {
     title: "Center Settings",
     description:
-      "Configure center preferences and Hive operational settings.",
+      "Configure center operating days, worker schedules, hours, and Hive preferences.",
     href: "/settings/center",
     icon: "🏢",
     status: "Planned",
   },
+
   {
     title: "Security",
     description:
-      "Administrator accounts, passwords, and audit history.",
+      "Administrator accounts, passwords, access controls, and audit history.",
     href: "/settings/security",
     icon: "🔐",
     status: "Planned",
@@ -56,13 +70,14 @@ export default function SettingsPage() {
   return (
     <AdminShell
       pageTitle="Hive Administration"
-      pageDescription="Manage every operational component of The Hive from a single administration console."
+      pageDescription="Manage the operational systems, performance intelligence, and configuration that power The Hive."
       activePath="/settings"
     >
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(300px,1fr))",
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(300px, 1fr))",
           gap: 20,
         }}
       >
@@ -80,10 +95,15 @@ export default function SettingsPage() {
                 background: "#fff",
                 borderRadius: 18,
                 padding: 24,
-                border: "1px solid #e4d28a",
-                boxShadow: "0 10px 24px rgba(0,0,0,.08)",
+                border:
+                  "1px solid #e4d28a",
+                boxShadow:
+                  "0 10px 24px rgba(0,0,0,.08)",
                 height: "100%",
-                transition: "all .15s ease",
+                transition:
+                  "all .15s ease",
+                boxSizing:
+                  "border-box",
               }}
             >
               <div
@@ -118,8 +138,10 @@ export default function SettingsPage() {
                 style={{
                   marginTop: 24,
                   display: "flex",
-                  justifyContent: "space-between",
+                  justifyContent:
+                    "space-between",
                   alignItems: "center",
+                  gap: 12,
                 }}
               >
                 <strong
@@ -127,7 +149,10 @@ export default function SettingsPage() {
                     color: "#996b00",
                   }}
                 >
-                  Open →
+                  {section.status ===
+                  "Active"
+                    ? "Open →"
+                    : "View →"}
                 </strong>
 
                 <span
@@ -135,7 +160,8 @@ export default function SettingsPage() {
                     fontSize: 12,
                     fontWeight: 700,
                     color:
-                      section.status === "Active"
+                      section.status ===
+                      "Active"
                         ? "#2d8c46"
                         : "#9b7b00",
                   }}

@@ -3,67 +3,48 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-type GroupedDay = {
-  date: Date;
-  entries: {
-    id: number;
-    collectorName: string;
-    liters: number;
-  }[];
-  totalLiters: number;
-};
+function formatLiters(value: number) {
+  return `${value.toLocaleString("en-US", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })} L`;
+}
+
+function formatDate(date: Date) {
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 export default async function ProductionHistoryPage() {
-  const dailyEntries = await prisma.dailyEntry.findMany({
-    include: {
-      collector: {
-        select: {
-          name: true,
-        },
-      },
-    },
-    orderBy: [
-      {
+  const productionEntries =
+    await prisma.dailyCenterProduction.findMany({
+      orderBy: {
         entryDate: "desc",
       },
-      {
-        collector: {
-          position: "asc",
-        },
-      },
-    ],
-  });
+    });
 
-  const groupedDays = dailyEntries.reduce<GroupedDay[]>(
-    (days, entry) => {
-      const dateKey = entry.entryDate.toISOString();
+  const totalLiters =
+    productionEntries.reduce(
+      (total, entry) =>
+        total + entry.liters,
+      0,
+    );
 
-      let existingDay = days.find(
-        (day) => day.date.toISOString() === dateKey,
-      );
+  const totalDonors =
+    productionEntries.reduce(
+      (total, entry) =>
+        total + entry.donors,
+      0,
+    );
 
-      if (!existingDay) {
-        existingDay = {
-          date: entry.entryDate,
-          entries: [],
-          totalLiters: 0,
-        };
-
-        days.push(existingDay);
-      }
-
-      existingDay.entries.push({
-        id: entry.id,
-        collectorName: entry.collector.name,
-        liters: entry.liters,
-      });
-
-      existingDay.totalLiters += entry.liters;
-
-      return days;
-    },
-    [],
-  );
+  const litersPerDonor =
+    totalDonors > 0
+      ? totalLiters / totalDonors
+      : 0;
 
   return (
     <main
@@ -72,12 +53,14 @@ export default async function ProductionHistoryPage() {
         background:
           "linear-gradient(180deg, #fff9e8 0%, #f5e5a8 100%)",
         padding: "32px 20px",
+        fontFamily: "Arial, sans-serif",
+        boxSizing: "border-box",
       }}
     >
       <div
         style={{
           width: "100%",
-          maxWidth: "900px",
+          maxWidth: "1000px",
           margin: "0 auto",
         }}
       >
@@ -94,189 +77,278 @@ export default async function ProductionHistoryPage() {
               textDecoration: "none",
             }}
           >
-            ← Back to The Hive
+            ← Return to The Hive
           </Link>
 
           <h1
             style={{
-              marginTop: "18px",
-              marginBottom: "6px",
-              color: "#4c3500",
-              fontSize: "2.3rem",
+              margin: "18px 0 6px",
+              color: "#3d2a07",
+              fontSize: "2.4rem",
             }}
           >
-            Production History
+            📊 Center Production History
           </h1>
 
           <p
             style={{
               margin: 0,
-              color: "#755d27",
-              fontSize: "1rem",
+              color: "#74643a",
+              lineHeight: 1.5,
             }}
           >
-            Riviera Beach 115 daily production records
+            Official daily center production
+            totals for liters collected and
+            donors processed.
           </p>
         </header>
 
-        {groupedDays.length === 0 ? (
+        <section
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: "14px",
+            marginBottom: "24px",
+          }}
+        >
+          <SummaryCard
+            label="Recorded Days"
+            value={productionEntries.length.toLocaleString(
+              "en-US",
+            )}
+          />
+
+          <SummaryCard
+            label="Total Liters"
+            value={formatLiters(
+              totalLiters,
+            )}
+          />
+
+          <SummaryCard
+            label="Total Donors"
+            value={totalDonors.toLocaleString(
+              "en-US",
+            )}
+          />
+
+          <SummaryCard
+            label="Liters / Donor"
+            value={litersPerDonor.toLocaleString(
+              "en-US",
+              {
+                minimumFractionDigits: 3,
+                maximumFractionDigits: 3,
+              },
+            )}
+          />
+        </section>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent:
+              "space-between",
+            alignItems: "center",
+            gap: "12px",
+            marginBottom: "16px",
+            flexWrap: "wrap",
+          }}
+        >
+          <h2
+            style={{
+              margin: 0,
+              color: "#3d2a07",
+            }}
+          >
+            Daily Records
+          </h2>
+
+          <Link
+            href="/daily-center-production"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "10px 14px",
+              borderRadius: "10px",
+              backgroundColor:
+                "#d4a017",
+              color: "#fff",
+              fontWeight: 800,
+              textDecoration: "none",
+            }}
+          >
+            + Enter Daily Production
+          </Link>
+        </div>
+
+        {productionEntries.length ===
+        0 ? (
           <section
             style={{
-              backgroundColor: "white",
+              padding: "36px",
+              border:
+                "1px dashed #c9aa48",
               borderRadius: "16px",
-              padding: "30px",
+              backgroundColor:
+                "rgba(255,255,255,.72)",
               textAlign: "center",
-              boxShadow: "0 4px 14px rgba(0, 0, 0, 0.1)",
+              color: "#75663c",
+            }}
+          >
+            No center production
+            records have been entered
+            yet.
+          </section>
+        ) : (
+          <section
+            style={{
+              overflow: "hidden",
+              border:
+                "1px solid #d7bd65",
+              borderRadius: "18px",
+              backgroundColor: "#fff",
+              boxShadow:
+                "0 10px 24px rgba(88,62,8,.10)",
             }}
           >
             <div
               style={{
-                fontSize: "2.5rem",
-                marginBottom: "12px",
+                display: "grid",
+                gridTemplateColumns:
+                  "1.5fr 1fr 1fr 1fr",
+                gap: "12px",
+                padding: "13px 18px",
+                backgroundColor:
+                  "#ffeaa0",
+                color: "#624607",
+                fontSize: "0.75rem",
+                fontWeight: 900,
+                letterSpacing:
+                  "0.05em",
+                textTransform:
+                  "uppercase",
               }}
             >
-              🐝
+              <span>Date</span>
+              <span>Liters</span>
+              <span>Donors</span>
+              <span>
+                Liters / Donor
+              </span>
             </div>
 
-            <h2
-              style={{
-                color: "#4c3500",
-                marginBottom: "8px",
-              }}
-            >
-              No production saved yet
-            </h2>
+            {productionEntries.map(
+              (entry) => {
+                const entryLitersPerDonor =
+                  entry.donors > 0
+                    ? entry.liters /
+                      entry.donors
+                    : 0;
 
-            <p
-              style={{
-                color: "#755d27",
-                marginBottom: "20px",
-              }}
-            >
-              Saved daily production will appear here.
-            </p>
-
-            <Link
-              href="/daily-entry"
-              style={{
-                display: "inline-block",
-                backgroundColor: "#d4a017",
-                color: "white",
-                borderRadius: "10px",
-                padding: "12px 18px",
-                fontWeight: "bold",
-                textDecoration: "none",
-              }}
-            >
-              Enter Production
-            </Link>
-          </section>
-        ) : (
-          <div
-            style={{
-              display: "grid",
-              gap: "22px",
-            }}
-          >
-            {groupedDays.map((day) => (
-              <section
-                key={day.date.toISOString()}
-                style={{
-                  overflow: "hidden",
-                  backgroundColor: "white",
-                  borderRadius: "16px",
-                  boxShadow: "0 4px 14px rgba(0, 0, 0, 0.1)",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: "16px",
-                    flexWrap: "wrap",
-                    padding: "18px 22px",
-                    backgroundColor: "#4c3500",
-                    color: "white",
-                  }}
-                >
-                  <h2
-                    style={{
-                      margin: 0,
-                      fontSize: "1.25rem",
-                    }}
-                  >
-                    {day.date.toLocaleDateString("en-US", {
-                      weekday: "long",
-                      month: "long",
-                      day: "numeric",
-                      year: "numeric",
-                      timeZone: "UTC",
-                    })}
-                  </h2>
-
+                return (
                   <div
+                    key={entry.id}
                     style={{
-                      fontSize: "1.2rem",
-                      fontWeight: "bold",
-                      color: "#ffd86b",
+                      display: "grid",
+                      gridTemplateColumns:
+                        "1.5fr 1fr 1fr 1fr",
+                      gap: "12px",
+                      alignItems: "center",
+                      padding:
+                        "16px 18px",
+                      borderTop:
+                        "1px solid #eee2b8",
+                      color: "#49350b",
                     }}
                   >
-                    {day.totalLiters.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}{" "}
-                    L
+                    <strong>
+                      {formatDate(
+                        entry.entryDate,
+                      )}
+                    </strong>
+
+                    <span>
+                      {formatLiters(
+                        entry.liters,
+                      )}
+                    </span>
+
+                    <span>
+                      {entry.donors.toLocaleString(
+                        "en-US",
+                      )}
+                    </span>
+
+                    <span>
+                      {entryLitersPerDonor.toLocaleString(
+                        "en-US",
+                        {
+                          minimumFractionDigits: 3,
+                          maximumFractionDigits: 3,
+                        },
+                      )}
+                    </span>
                   </div>
-                </div>
-
-                <div
-                  style={{
-                    padding: "8px 22px 18px",
-                  }}
-                >
-                  {day.entries.map((entry) => (
-                    <div
-                      key={entry.id}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        gap: "16px",
-                        padding: "14px 0",
-                        borderBottom: "1px solid #eee2bd",
-                      }}
-                    >
-                      <span
-                        style={{
-                          color: "#3e3420",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {entry.collectorName}
-                      </span>
-
-                      <span
-                        style={{
-                          color: "#9a6c00",
-                          fontWeight: "bold",
-                          fontSize: "1.05rem",
-                        }}
-                      >
-                        {entry.liters.toLocaleString("en-US", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}{" "}
-                        L
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
+                );
+              },
+            )}
+          </section>
         )}
       </div>
     </main>
+  );
+}
+
+type SummaryCardProps = {
+  label: string;
+  value: string;
+};
+
+function SummaryCard({
+  label,
+  value,
+}: SummaryCardProps) {
+  return (
+    <article
+      style={{
+        padding: "18px",
+        border:
+          "1px solid #dcc46e",
+        borderRadius: "14px",
+        background:
+          "linear-gradient(145deg, #ffffff, #fff4c4)",
+        boxShadow:
+          "0 6px 16px rgba(88,62,8,.08)",
+      }}
+    >
+      <span
+        style={{
+          display: "block",
+          color: "#8a6b1d",
+          fontSize: "0.72rem",
+          fontWeight: 900,
+          textTransform:
+            "uppercase",
+          letterSpacing:
+            "0.06em",
+        }}
+      >
+        {label}
+      </span>
+
+      <strong
+        style={{
+          display: "block",
+          marginTop: "7px",
+          color: "#3d2a07",
+          fontSize: "1.45rem",
+        }}
+      >
+        {value}
+      </strong>
+    </article>
   );
 }

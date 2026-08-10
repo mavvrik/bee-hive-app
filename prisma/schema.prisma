@@ -13,6 +13,10 @@ enum MetricSource {
   MANUAL
 }
 
+// ======================================================
+// WORKFORCE
+// ======================================================
+
 model Collector {
   id                     Int                      @id @default(autoincrement())
   name                   String
@@ -23,63 +27,76 @@ model Collector {
   participatesInTarget   Boolean                  @default(true)
   allocationWeight       Float                    @default(1)
   targetAdjustmentLiters Float                    @default(0)
-  entries                DailyEntry[]
   hourlyEntries          HourlyOperationalEntry[]
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([active])
   @@index([position])
-  @@index([participatesInTarget])
 }
 
-model DailyEntry {
-  id          Int       @id @default(autoincrement())
-  collectorId Int
-  entryDate   DateTime
-  liters      Float
-  sticks      Int       @default(0)
-  collector   Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+// ======================================================
+// OFFICIAL CENTER PRODUCTION
+// ======================================================
 
-  @@unique([collectorId, entryDate])
+model DailyCenterProduction {
+  id        Int      @id @default(autoincrement())
+  entryDate DateTime @unique
+  liters    Float
+  donors    Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([entryDate])
 }
 
+// ======================================================
+// HOURLY OPERATIONAL INTELLIGENCE
+// ======================================================
+
 model HourlyOperationalEntry {
-  id                 Int       @id @default(autoincrement())
+  id                 Int      @id @default(autoincrement())
   collectorId        Int
   entryDate          DateTime
   operationalHour    Int
-  successfulSticks   Int       @default(0)
-  unsuccessfulSticks Int       @default(0)
-  lostVolumeMl       Float     @default(0)
-  collector          Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  successfulSticks   Int      @default(0)
+  unsuccessfulSticks Int      @default(0)
+  lostVolumeMl       Float    @default(0)
+
+  collector Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([collectorId, entryDate, operationalHour])
   @@index([entryDate])
   @@index([entryDate, operationalHour])
 }
 
+// ======================================================
+// CENTER SETTINGS
+// ======================================================
+
 model HiveSettings {
-  id            Int    @id @default(1)
-  centerName    String @default("Riviera Beach 115")
-  monthlyGoal   Float  @default(3500)
-  weeksInPeriod Float  @default(4.33)
-
-  centerOperatingDaysPerWeek Int @default(7)
-  workerDaysPerWeek          Int @default(5)
-
-  openingHour              Int      @default(6)
-  closingHour              Int      @default(19)
-  currentMonth             Int
-  currentYear              Int
-  dashboardRotationSeconds Int      @default(45)
-  updatedAt                DateTime @updatedAt
+  id                         Int      @id @default(1)
+  centerName                 String   @default("Riviera Beach 115")
+  monthlyGoal                Float    @default(3500)
+  weeksInPeriod              Float    @default(4.33)
+  centerOperatingDaysPerWeek Int      @default(7)
+  workerDaysPerWeek          Int      @default(5)
+  openingHour                Int      @default(6)
+  closingHour                Int      @default(19)
+  currentMonth               Int
+  currentYear                Int
+  dashboardRotationSeconds   Int      @default(45)
+  updatedAt                  DateTime @updatedAt
 }
+
+// ======================================================
+// MONTHLY BUDGETS
+// ======================================================
 
 model MonthlyBudget {
   id                   Int      @id @default(autoincrement())
@@ -95,6 +112,10 @@ model MonthlyBudget {
   @@unique([fiscalYear, month])
   @@index([fiscalYear])
 }
+
+// ======================================================
+// DYNAMIC KPI ENGINE
+// ======================================================
 
 model DashboardMetric {
   id            Int             @id @default(autoincrement())
@@ -113,15 +134,21 @@ model DashboardMetric {
   @@index([isVisible, displayOrder])
 }
 
+// ======================================================
+// KPI HISTORY
+// ======================================================
+
 model MetricReading {
-  id         Int             @id @default(autoincrement())
+  id         Int          @id @default(autoincrement())
   metricId   Int
   source     MetricSource
   value      Float
-  recordedAt DateTime        @default(now())
-  metric     DashboardMetric @relation(fields: [metricId], references: [id], onDelete: Cascade)
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
+  recordedAt DateTime     @default(now())
+
+  metric DashboardMetric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([metricId, source, recordedAt])
   @@index([recordedAt])
