@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import AdminShell from "../components/AdminShell";
+import WorkerPhotoUpload from "./WorkerPhotoUpload";
 import {
   createCollector,
   deactivateCollector,
@@ -30,10 +32,16 @@ export default async function WorkerRosterPage() {
       (collector) => collector.active,
     );
 
-  const targetParticipants =
+  const meetTheBeesCollectors =
     activeCollectors.filter(
       (collector) =>
-        collector.participatesInTarget,
+        collector.showOnMeetTheBees,
+    );
+
+  const employeeOfMonth =
+    activeCollectors.find(
+      (collector) =>
+        collector.isEmployeeOfMonth,
     );
 
   const inactiveCollectors =
@@ -54,38 +62,62 @@ export default async function WorkerRosterPage() {
   return (
     <AdminShell
       pageTitle="Worker Bees"
-      pageDescription="Add worker bees, manage active status, control target participation, update display order, and adjust individual weekly targets."
+      pageDescription="Manage the Riviera Beach team, Meet the Bees profiles, recognition, and worker visibility."
       activePath="/settings/workers"
     >
       <section className="roster-summary">
         <article className="summary-card">
-          <span>Active Worker Bees</span>
+          <span>
+            Active Worker Bees
+          </span>
 
           <strong>
             {activeCollectors.length}
           </strong>
 
           <small>
-            Visible on the dashboard
+            Current active team
           </small>
         </article>
 
         <article className="summary-card">
           <span>
-            Target Participants
+            Meet the Bees
           </span>
 
           <strong>
-            {targetParticipants.length}
+            {
+              meetTheBeesCollectors.length
+            }
           </strong>
 
           <small>
-            Sharing the weekly target
+            Profiles visible on TV
+          </small>
+        </article>
+
+        <article className="summary-card featured">
+          <span>
+            Employee of the Month
+          </span>
+
+          <strong className="featured-name">
+            {employeeOfMonth
+              ? employeeOfMonth
+                  .preferredName ||
+                employeeOfMonth.name
+              : "Not Selected"}
+          </strong>
+
+          <small>
+            Featured recognition
           </small>
         </article>
 
         <article className="summary-card">
-          <span>Inactive Records</span>
+          <span>
+            Inactive Records
+          </span>
 
           <strong>
             {inactiveCollectors.length}
@@ -97,6 +129,33 @@ export default async function WorkerRosterPage() {
         </article>
       </section>
 
+      <section className="performance-banner">
+        <div>
+          <p className="section-eyebrow">
+            Worker Performance
+          </p>
+
+          <h2>
+            Stick Performance
+          </h2>
+
+          <p>
+            Individual Worker Bees are
+            measured using total sticks
+            and successful sticks. Liters
+            remain a center-level
+            production metric.
+          </p>
+        </div>
+
+        <Link
+          href="/settings/workers/performance"
+          className="performance-button"
+        >
+          View Stick Performance →
+        </Link>
+      </section>
+
       <section className="add-worker-section">
         <div className="section-heading">
           <div>
@@ -104,7 +163,9 @@ export default async function WorkerRosterPage() {
               New Hire
             </p>
 
-            <h2>Add Worker Bee</h2>
+            <h2>
+              Add Worker Bee
+            </h2>
           </div>
 
           <span className="section-badge">
@@ -172,44 +233,33 @@ export default async function WorkerRosterPage() {
           </label>
 
           <label className="form-field">
-            <span>Display Order</span>
+            <span>
+              Display Order
+            </span>
 
             <input
               type="number"
               name="position"
               min="1"
               step="1"
-              defaultValue={nextPosition}
+              defaultValue={
+                nextPosition
+              }
               required
             />
           </label>
 
-          <div className="add-worker-options">
-            <label className="checkbox-field">
-              <input
-                type="checkbox"
-                name="active"
-                defaultChecked
-              />
+          <label className="checkbox-field add-active">
+            <input
+              type="checkbox"
+              name="active"
+              defaultChecked
+            />
 
-              <span>
-                Active on dashboard
-              </span>
-            </label>
-
-            <label className="checkbox-field">
-              <input
-                type="checkbox"
-                name="participatesInTarget"
-                defaultChecked
-              />
-
-              <span>
-                Participates in weekly
-                target
-              </span>
-            </label>
-          </div>
+            <span>
+              Active Worker Bee
+            </span>
+          </label>
 
           <button
             type="submit"
@@ -228,239 +278,379 @@ export default async function WorkerRosterPage() {
             </p>
 
             <h2>
-              Current Worker Bees
+              Worker Bee Profiles
             </h2>
           </div>
 
           <span className="section-badge">
-            {activeCollectors.length} Active
+            {activeCollectors.length}{" "}
+            Active
           </span>
         </div>
 
-        {activeCollectors.length > 0 ? (
+        {activeCollectors.length >
+        0 ? (
           <div className="worker-grid">
             {activeCollectors.map(
-              (collector) => (
-                <article
-                  key={collector.id}
-                  className={`worker-card ${
-                    collector.participatesInTarget
-                      ? "target-worker"
-                      : "support-worker"
-                  }`}
-                >
-                  <div className="worker-card-header">
-                    <div className="worker-identity">
-                      <div className="worker-avatar">
-                        🐝
-                      </div>
+              (collector) => {
+                const displayName =
+                  collector
+                    .preferredName ||
+                  collector.name;
 
-                      <div>
-                        <p>
-                          {collector.role}
-                        </p>
-
-                        <h3>
-                          {collector.name}
-                        </h3>
-                      </div>
-                    </div>
-
-                    <span
-                      className={`worker-status ${
-                        collector.participatesInTarget
-                          ? "participant"
-                          : "support"
-                      }`}
-                    >
-                      {collector.participatesInTarget
-                        ? "Target Participant"
-                        : "Support Role"}
-                    </span>
-                  </div>
-
-                  <form
-                    action={updateCollector}
-                    className="worker-form"
+                return (
+                  <article
+                    key={collector.id}
+                    className={`worker-card ${
+                      collector.isEmployeeOfMonth
+                        ? "employee-of-month"
+                        : ""
+                    }`}
                   >
-                    <input
-                      type="hidden"
-                      name="collectorId"
-                      value={collector.id}
-                    />
+                    <div className="worker-card-header">
+                      <div className="worker-identity">
+                        <div className="worker-avatar">
+                          {collector.photoUrl ? (
+                            <img
+                              src={
+                                collector.photoUrl
+                              }
+                              alt=""
+                            />
+                          ) : (
+                            <span>
+                              🐝
+                            </span>
+                          )}
+                        </div>
 
-                    <div className="worker-form-grid">
-                      <label className="form-field">
-                        <span>Name</span>
+                        <div>
+                          <p>
+                            {collector.profileTitle ||
+                              collector.role}
+                          </p>
 
-                        <input
-                          type="text"
-                          name="name"
-                          defaultValue={
-                            collector.name
-                          }
-                          required
-                        />
-                      </label>
+                          <h3>
+                            {displayName}
+                          </h3>
 
-                      <label className="form-field">
-                        <span>Role</span>
-
-                        <select
-                          name="role"
-                          defaultValue={
-                            collector.role
-                          }
-                          required
-                        >
-                          <option value="Phlebotomist">
-                            Phlebotomist
-                          </option>
-
-                          <option value="Group Lead">
-                            Group Lead
-                          </option>
-
-                          <option value="Management">
-                            Management
-                          </option>
-
-                          <option value="Other">
-                            Other
-                          </option>
-                        </select>
-                      </label>
-
-                      <label className="form-field">
-                        <span>
-                          Group Type
-                        </span>
-
-                        <select
-                          name="groupType"
-                          defaultValue={
-                            collector.groupType
-                          }
-                          required
-                        >
-                          <option value="Individual">
-                            Individual
-                          </option>
-
-                          <option value="Group">
-                            Group
-                          </option>
-                        </select>
-                      </label>
-
-                      <label className="form-field">
-                        <span>
-                          Display Order
-                        </span>
-
-                        <input
-                          type="number"
-                          name="position"
-                          min="1"
-                          step="1"
-                          defaultValue={
-                            collector.position
-                          }
-                          required
-                        />
-                      </label>
-                    </div>
-
-                    <div className="target-adjustment-panel">
-                      <div>
-                        <span className="adjustment-label">
-                          Weekly Target
-                          Adjustment
-                        </span>
-
-                        <small>
-                          Use a negative number
-                          to reduce the target or
-                          a positive number to
-                          increase it.
-                        </small>
+                          {collector.preferredName &&
+                            collector.preferredName !==
+                              collector.name && (
+                              <small>
+                                {
+                                  collector.name
+                                }
+                              </small>
+                            )}
+                        </div>
                       </div>
 
-                      <div className="adjustment-input">
-                        <input
-                          type="number"
-                          name="targetAdjustmentLiters"
-                          step="0.01"
-                          defaultValue={
-                            collector.targetAdjustmentLiters
-                          }
-                          disabled={
-                            !collector.participatesInTarget
-                          }
-                        />
+                      <div className="status-stack">
+                        {collector.isEmployeeOfMonth && (
+                          <span className="worker-status employee">
+                            🏆 Employee of
+                            the Month
+                          </span>
+                        )}
 
-                        <span>L</span>
+                        <span
+                          className={`worker-status ${
+                            collector.showOnMeetTheBees
+                              ? "visible"
+                              : "hidden"
+                          }`}
+                        >
+                          {collector.showOnMeetTheBees
+                            ? "Meet the Bees"
+                            : "Profile Hidden"}
+                        </span>
                       </div>
                     </div>
 
-                    <div className="worker-options">
-                      <label className="checkbox-field">
-                        <input
-                          type="checkbox"
-                          name="active"
-                          defaultChecked={
-                            collector.active
-                          }
-                        />
+                    <form
+                      action={
+                        updateCollector
+                      }
+                      className="worker-form"
+                    >
+                      <input
+                        type="hidden"
+                        name="collectorId"
+                        value={
+                          collector.id
+                        }
+                      />
 
-                        <span>Active</span>
-                      </label>
+                      <div className="profile-section-label">
+                        Roster Information
+                      </div>
 
-                      <label className="checkbox-field">
-                        <input
-                          type="checkbox"
-                          name="participatesInTarget"
-                          defaultChecked={
-                            collector.participatesInTarget
-                          }
-                        />
+                      <div className="worker-form-grid">
+                        <label className="form-field">
+                          <span>
+                            Full Name
+                          </span>
 
-                        <span>
-                          Participates in
-                          weekly target
-                        </span>
-                      </label>
-                    </div>
+                          <input
+                            type="text"
+                            name="name"
+                            defaultValue={
+                              collector.name
+                            }
+                            required
+                          />
+                        </label>
 
-                    <div className="worker-actions">
+                        <label className="form-field">
+                          <span>
+                            Preferred Name
+                          </span>
+
+                          <input
+                            type="text"
+                            name="preferredName"
+                            defaultValue={
+                              collector.preferredName ??
+                              ""
+                            }
+                            placeholder="Optional"
+                          />
+                        </label>
+
+                        <label className="form-field">
+                          <span>Role</span>
+
+                          <select
+                            name="role"
+                            defaultValue={
+                              collector.role
+                            }
+                            required
+                          >
+                            <option value="Phlebotomist">
+                              Phlebotomist
+                            </option>
+
+                            <option value="Group Lead">
+                              Group Lead
+                            </option>
+
+                            <option value="Management">
+                              Management
+                            </option>
+
+                            <option value="Other">
+                              Other
+                            </option>
+                          </select>
+                        </label>
+
+                        <label className="form-field">
+                          <span>
+                            Group Type
+                          </span>
+
+                          <select
+                            name="groupType"
+                            defaultValue={
+                              collector.groupType
+                            }
+                            required
+                          >
+                            <option value="Individual">
+                              Individual
+                            </option>
+
+                            <option value="Group">
+                              Group
+                            </option>
+                          </select>
+                        </label>
+
+                        <label className="form-field">
+                          <span>
+                            Display Order
+                          </span>
+
+                          <input
+                            type="number"
+                            name="position"
+                            min="1"
+                            step="1"
+                            defaultValue={
+                              collector.position
+                            }
+                            required
+                          />
+                        </label>
+
+                        <label className="form-field">
+                          <span>
+                            Profile Title
+                          </span>
+
+                          <input
+                            type="text"
+                            name="profileTitle"
+                            defaultValue={
+                              collector.profileTitle ??
+                              ""
+                            }
+                            placeholder="Example: Phlebotomy Pro"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="profile-section-label profile-gap">
+                        Meet the Bees Profile
+                      </div>
+
+                      <div className="profile-form-grid">
+                        <div className="full-width">
+  <WorkerPhotoUpload
+    workerId={collector.id}
+    workerName={
+      collector.preferredName ||
+      collector.name
+    }
+    initialPhotoUrl={
+      collector.photoUrl
+    }
+  />
+</div>
+
+                        <label className="form-field full-width">
+                          <span>
+                            Short Bio
+                          </span>
+
+                          <textarea
+                            name="bio"
+                            defaultValue={
+                              collector.bio ??
+                              ""
+                            }
+                            placeholder="A short introduction for Meet the Bees..."
+                            rows={3}
+                          />
+                        </label>
+
+                        <label className="form-field full-width">
+                          <span>
+                            Fun Fact
+                          </span>
+
+                          <input
+                            type="text"
+                            name="funFact"
+                            defaultValue={
+                              collector.funFact ??
+                              ""
+                            }
+                            placeholder="Something fun about this Worker Bee"
+                          />
+                        </label>
+
+                        <label className="form-field full-width">
+                          <span>
+                            Recognition
+                            Message
+                          </span>
+
+                          <textarea
+                            name="recognitionMessage"
+                            defaultValue={
+                              collector.recognitionMessage ??
+                              ""
+                            }
+                            placeholder="Optional recognition or Employee of the Month message..."
+                            rows={2}
+                          />
+                        </label>
+                      </div>
+
+                      <div className="worker-options">
+                        <label className="checkbox-field">
+                          <input
+                            type="checkbox"
+                            name="active"
+                            defaultChecked={
+                              collector.active
+                            }
+                          />
+
+                          <span>
+                            Active
+                          </span>
+                        </label>
+
+                        <label className="checkbox-field">
+                          <input
+                            type="checkbox"
+                            name="showOnMeetTheBees"
+                            defaultChecked={
+                              collector.showOnMeetTheBees
+                            }
+                          />
+
+                          <span>
+                            Show on Meet the
+                            Bees
+                          </span>
+                        </label>
+
+                        <label className="checkbox-field employee-checkbox">
+                          <input
+                            type="checkbox"
+                            name="isEmployeeOfMonth"
+                            defaultChecked={
+                              collector.isEmployeeOfMonth
+                            }
+                          />
+
+                          <span>
+                            🏆 Employee of the
+                            Month
+                          </span>
+                        </label>
+                      </div>
+
+                      <div className="worker-actions">
+                        <button
+                          type="submit"
+                          className="save-button"
+                        >
+                          Save Profile
+                        </button>
+                      </div>
+                    </form>
+
+                    <form
+                      action={
+                        deactivateCollector
+                      }
+                      className="deactivate-form"
+                    >
+                      <input
+                        type="hidden"
+                        name="collectorId"
+                        value={
+                          collector.id
+                        }
+                      />
+
                       <button
                         type="submit"
-                        className="save-button"
+                        className="deactivate-button"
                       >
-                        Save Changes
+                        Deactivate Worker
+                        Bee
                       </button>
-                    </div>
-                  </form>
-
-                  <form
-                    action={deactivateCollector}
-                    className="deactivate-form"
-                  >
-                    <input
-                      type="hidden"
-                      name="collectorId"
-                      value={collector.id}
-                    />
-
-                    <button
-                      type="submit"
-                      className="deactivate-button"
-                    >
-                      Deactivate Worker Bee
-                    </button>
-                  </form>
-                </article>
-              ),
+                    </form>
+                  </article>
+                );
+              },
             )}
           </div>
         ) : (
@@ -472,14 +662,15 @@ export default async function WorkerRosterPage() {
             </h3>
 
             <p>
-              Add the first worker bee
+              Add the first Worker Bee
               using the form above.
             </p>
           </div>
         )}
       </section>
 
-      {inactiveCollectors.length > 0 && (
+      {inactiveCollectors.length >
+        0 && (
         <section className="inactive-section">
           <div className="section-heading">
             <div>
@@ -493,7 +684,10 @@ export default async function WorkerRosterPage() {
             </div>
 
             <span className="section-badge inactive">
-              {inactiveCollectors.length} Inactive
+              {
+                inactiveCollectors.length
+              }{" "}
+              Inactive
             </span>
           </div>
 
@@ -506,7 +700,10 @@ export default async function WorkerRosterPage() {
                 >
                   <div>
                     <strong>
-                      {collector.name}
+                      {
+                        collector.preferredName ||
+                        collector.name
+                      }
                     </strong>
 
                     <span>
@@ -515,12 +712,16 @@ export default async function WorkerRosterPage() {
                   </div>
 
                   <form
-                    action={reactivateCollector}
+                    action={
+                      reactivateCollector
+                    }
                   >
                     <input
                       type="hidden"
                       name="collectorId"
-                      value={collector.id}
+                      value={
+                        collector.id
+                      }
                     />
 
                     <button
@@ -546,7 +747,7 @@ export default async function WorkerRosterPage() {
           .roster-summary {
             display: grid;
             grid-template-columns:
-              repeat(3, minmax(0, 1fr));
+              repeat(4, minmax(0, 1fr));
             gap: 14px;
             margin-bottom: 20px;
           }
@@ -559,22 +760,27 @@ export default async function WorkerRosterPage() {
             padding: 20px;
             border: 1px solid #e4cf89;
             border-radius: 18px;
-            background: rgba(
-              255,
-              255,
-              255,
-              0.96
-            );
+            background: rgba(255,255,255,.96);
             box-shadow:
               0 8px 20px
-              rgba(75, 54, 10, 0.07);
+              rgba(75,54,10,.07);
+          }
+
+          .summary-card.featured {
+            background:
+              linear-gradient(
+                145deg,
+                #fff8d9,
+                #ffe89a
+              );
+            border-color: #d6a318;
           }
 
           .summary-card span {
             color: #806719;
-            font-size: 0.73rem;
+            font-size: .73rem;
             font-weight: 900;
-            letter-spacing: 0.06em;
+            letter-spacing: .06em;
             text-transform: uppercase;
           }
 
@@ -584,10 +790,15 @@ export default async function WorkerRosterPage() {
             font-size: 2rem;
           }
 
+          .summary-card .featured-name {
+            font-size: 1.25rem;
+          }
+
           .summary-card small {
             color: #7a7157;
           }
 
+          .performance-banner,
           .add-worker-section,
           .active-roster-section,
           .inactive-section {
@@ -595,15 +806,50 @@ export default async function WorkerRosterPage() {
             padding: 24px;
             border: 1px solid #e0c675;
             border-radius: 22px;
-            background: rgba(
-              255,
-              255,
-              255,
-              0.96
-            );
+            background: rgba(255,255,255,.96);
             box-shadow:
               0 10px 28px
-              rgba(74, 53, 7, 0.08);
+              rgba(74,53,7,.08);
+          }
+
+          .performance-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            background:
+              linear-gradient(
+                135deg,
+                #3b2a07,
+                #6a4b08
+              );
+          }
+
+          .performance-banner h2 {
+            margin: 0 0 7px;
+            color: #ffe48a;
+          }
+
+          .performance-banner p:not(.section-eyebrow) {
+            max-width: 680px;
+            margin: 0;
+            color: #f5e8bd;
+            line-height: 1.5;
+          }
+
+          .performance-banner .section-eyebrow {
+            color: #e8c75c;
+          }
+
+          .performance-button {
+            flex: 0 0 auto;
+            padding: 11px 16px;
+            border-radius: 10px;
+            background: #e1aa19;
+            color: #fff;
+            font-size: .82rem;
+            font-weight: 900;
+            text-decoration: none;
           }
 
           .section-heading {
@@ -617,9 +863,9 @@ export default async function WorkerRosterPage() {
           .section-eyebrow {
             margin: 0 0 6px;
             color: #9b6c09;
-            font-size: 0.68rem;
+            font-size: .68rem;
             font-weight: 900;
-            letter-spacing: 0.15em;
+            letter-spacing: .15em;
             text-transform: uppercase;
           }
 
@@ -634,9 +880,9 @@ export default async function WorkerRosterPage() {
             border-radius: 999px;
             background: #fff0ae;
             color: #785300;
-            font-size: 0.7rem;
+            font-size: .7rem;
             font-weight: 900;
-            letter-spacing: 0.05em;
+            letter-spacing: .05em;
             text-transform: uppercase;
           }
 
@@ -648,9 +894,13 @@ export default async function WorkerRosterPage() {
           .add-worker-form {
             display: grid;
             grid-template-columns:
-              2fr 1.4fr 1.2fr 0.8fr;
+              2fr 1.4fr 1.2fr .8fr;
             gap: 14px;
             align-items: end;
+          }
+
+          .add-active {
+            min-height: 42px;
           }
 
           .form-field {
@@ -661,45 +911,48 @@ export default async function WorkerRosterPage() {
           }
 
           .form-field > span,
-          .adjustment-label {
+          .profile-section-label {
             color: #5d4b1c;
-            font-size: 0.72rem;
+            font-size: .72rem;
             font-weight: 900;
-            letter-spacing: 0.04em;
+            letter-spacing: .04em;
             text-transform: uppercase;
           }
 
           .form-field input,
           .form-field select,
-          .adjustment-input input {
+          .form-field textarea {
             width: 100%;
             min-width: 0;
-            height: 42px;
             padding: 9px 11px;
             border: 1px solid #d8c47a;
             border-radius: 9px;
             background: white;
             color: #332606;
-            font-size: 0.92rem;
+            font-family: inherit;
+            font-size: .92rem;
             font-weight: 700;
             outline: none;
           }
 
+          .form-field input,
+          .form-field select {
+            height: 42px;
+          }
+
+          .form-field textarea {
+            min-height: 72px;
+            resize: vertical;
+            line-height: 1.4;
+          }
+
           .form-field input:focus,
           .form-field select:focus,
-          .adjustment-input input:focus {
+          .form-field textarea:focus {
             border-color: #c88e00;
             box-shadow:
               0 0 0 3px
-              rgba(214, 161, 14, 0.16);
-          }
-
-          .add-worker-options {
-            display: flex;
-            grid-column: 1 / -2;
-            align-items: center;
-            gap: 24px;
-            min-height: 42px;
+              rgba(214,161,14,.16);
           }
 
           .checkbox-field {
@@ -707,7 +960,7 @@ export default async function WorkerRosterPage() {
             align-items: center;
             gap: 8px;
             color: #58491f;
-            font-size: 0.84rem;
+            font-size: .84rem;
             font-weight: 800;
             cursor: pointer;
           }
@@ -739,12 +992,6 @@ export default async function WorkerRosterPage() {
             padding: 0 18px;
           }
 
-          .primary-button:hover,
-          .save-button:hover,
-          .reactivate-button:hover {
-            filter: brightness(1.05);
-          }
-
           .worker-grid {
             display: grid;
             grid-template-columns:
@@ -753,28 +1000,31 @@ export default async function WorkerRosterPage() {
           }
 
           .worker-card {
-            position: relative;
             min-width: 0;
             padding: 18px;
             overflow: hidden;
             border: 1px solid #e1cb80;
+            border-top: 4px solid #d7a216;
             border-radius: 18px;
             background:
               linear-gradient(
                 180deg,
-                #ffffff,
+                #fff,
                 #fffaf0
               );
           }
 
-          .worker-card.target-worker {
-            border-top:
-              4px solid #d7a216;
-          }
-
-          .worker-card.support-worker {
-            border-top:
-              4px solid #777;
+          .worker-card.employee-of-month {
+            border-color: #d39a00;
+            background:
+              linear-gradient(
+                180deg,
+                #fff9db,
+                #fff3b7
+              );
+            box-shadow:
+              0 10px 26px
+              rgba(181,128,0,.16);
           }
 
           .worker-card-header {
@@ -782,120 +1032,123 @@ export default async function WorkerRosterPage() {
             align-items: flex-start;
             justify-content: space-between;
             gap: 14px;
-            margin-bottom: 16px;
+            margin-bottom: 18px;
           }
 
           .worker-identity {
             display: flex;
             min-width: 0;
             align-items: center;
-            gap: 11px;
+            gap: 12px;
           }
 
           .worker-avatar {
             display: grid;
             flex: 0 0 auto;
-            width: 44px;
-            height: 44px;
+            width: 58px;
+            height: 58px;
             place-items: center;
+            overflow: hidden;
             border: 1px solid #dfbd4d;
-            border-radius: 14px;
+            border-radius: 16px;
             background: #fff0a2;
-            font-size: 1.45rem;
+            font-size: 1.6rem;
+          }
+
+          .worker-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
           }
 
           .worker-identity p {
             margin: 0 0 2px;
             color: #8b6e19;
-            font-size: 0.66rem;
+            font-size: .66rem;
             font-weight: 900;
-            letter-spacing: 0.07em;
+            letter-spacing: .07em;
             text-transform: uppercase;
           }
 
           .worker-identity h3 {
             margin: 0;
-            overflow: hidden;
             color: #382807;
             font-size: 1.2rem;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+          }
+
+          .worker-identity small {
+            display: block;
+            margin-top: 3px;
+            color: #887d62;
+          }
+
+          .status-stack {
+            display: flex;
+            align-items: flex-end;
+            flex-direction: column;
+            gap: 6px;
           }
 
           .worker-status {
-            flex: 0 0 auto;
             padding: 6px 9px;
             border-radius: 999px;
-            font-size: 0.61rem;
+            font-size: .61rem;
             font-weight: 900;
             text-transform: uppercase;
+            white-space: nowrap;
           }
 
-          .worker-status.participant {
+          .worker-status.visible {
             background: #e1f7e5;
             color: #29703a;
           }
 
-          .worker-status.support {
+          .worker-status.hidden {
             background: #ececec;
             color: #686868;
           }
 
-          .worker-form-grid {
+          .worker-status.employee {
+            background: #ffe486;
+            color: #694900;
+          }
+
+          .profile-section-label {
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eadba8;
+          }
+
+          .profile-gap {
+            margin-top: 18px;
+          }
+
+          .worker-form-grid,
+          .profile-form-grid {
             display: grid;
             grid-template-columns:
               repeat(2, minmax(0, 1fr));
             gap: 12px;
+            margin-top: 12px;
           }
 
-          .target-adjustment-panel {
+          .full-width {
+            grid-column: 1 / -1;
+          }
+
+          .worker-options {
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
-            justify-content: space-between;
             gap: 20px;
-            margin-top: 14px;
+            margin-top: 16px;
             padding: 13px;
             border: 1px solid #eadba8;
             border-radius: 12px;
             background: #fff9e7;
           }
 
-          .target-adjustment-panel small {
-            display: block;
-            max-width: 300px;
-            margin-top: 4px;
-            color: #83775a;
-            font-size: 0.72rem;
-            line-height: 1.35;
-          }
-
-          .adjustment-input {
-            display: flex;
-            flex: 0 0 auto;
-            align-items: center;
-            gap: 7px;
-          }
-
-          .adjustment-input input {
-            width: 100px;
-          }
-
-          .adjustment-input input:disabled {
-            background: #eee;
-            color: #888;
-            cursor: not-allowed;
-          }
-
-          .adjustment-input span {
-            color: #6c550f;
-            font-weight: 900;
-          }
-
-          .worker-options {
-            display: flex;
-            align-items: center;
-            gap: 22px;
-            margin-top: 14px;
+          .employee-checkbox {
+            color: #795500;
           }
 
           .worker-actions {
@@ -919,13 +1172,9 @@ export default async function WorkerRosterPage() {
             border: none;
             background: transparent;
             color: #a23b32;
-            font-size: 0.75rem;
+            font-size: .75rem;
             font-weight: 900;
             cursor: pointer;
-          }
-
-          .deactivate-button:hover {
-            text-decoration: underline;
           }
 
           .inactive-list {
@@ -956,7 +1205,7 @@ export default async function WorkerRosterPage() {
 
           .inactive-card span {
             color: #7c7c7c;
-            font-size: 0.78rem;
+            font-size: .78rem;
           }
 
           .reactivate-button {
@@ -984,14 +1233,15 @@ export default async function WorkerRosterPage() {
             color: #776d54;
           }
 
-          @media (max-width: 1100px) {
-            .add-worker-form {
+          @media (max-width: 1150px) {
+            .roster-summary {
               grid-template-columns:
                 repeat(2, minmax(0, 1fr));
             }
 
-            .add-worker-options {
-              grid-column: 1 / -1;
+            .add-worker-form {
+              grid-template-columns:
+                repeat(2, minmax(0, 1fr));
             }
 
             .primary-button {
@@ -1004,37 +1254,37 @@ export default async function WorkerRosterPage() {
           }
 
           @media (max-width: 700px) {
+            .roster-summary,
+            .add-worker-form,
+            .worker-form-grid,
+            .profile-form-grid {
+              grid-template-columns: 1fr;
+            }
+
+            .performance-banner,
             .section-heading,
-            .worker-card-header,
-            .target-adjustment-panel {
+            .worker-card-header {
               align-items: flex-start;
               flex-direction: column;
             }
 
-            .roster-summary,
-            .add-worker-form,
-            .worker-form-grid {
-              grid-template-columns: 1fr;
+            .performance-button {
+              width: 100%;
+              text-align: center;
             }
 
-            .add-worker-options,
+            .full-width {
+              grid-column: auto;
+            }
+
+            .status-stack {
+              align-items: flex-start;
+            }
+
             .worker-options {
               align-items: flex-start;
               flex-direction: column;
               gap: 10px;
-            }
-
-            .worker-status {
-              align-self: flex-start;
-            }
-
-            .adjustment-input {
-              width: 100%;
-            }
-
-            .adjustment-input input {
-              flex: 1;
-              width: auto;
             }
           }
         `}

@@ -1,9 +1,5 @@
 import WorkerBeeCard from "./WorkerBeeCard";
 
-import type {
-  ContributorIntelligence,
-} from "@/app/lib/centerIntelligence";
-
 type CollectorForBeeTeam = {
   id: number;
   name: string;
@@ -11,109 +7,25 @@ type CollectorForBeeTeam = {
   groupType: string;
   position: number;
   active: boolean;
-  participatesInTarget: boolean;
-  allocationWeight: number;
-  targetAdjustmentLiters: number;
+
+  preferredName?: string | null;
+  profileTitle?: string | null;
+  photoUrl?: string | null;
+  isEmployeeOfMonth?: boolean;
 };
 
 type BeeTeamProps = {
   collectors: CollectorForBeeTeam[];
-
-  /*
-   * Contributor Intelligence is retained
-   * because the Goal Engine calculates each
-   * participating worker's weighted target.
-   *
-   * We no longer use it to display individual
-   * worker production.
-   */
-  contributorIntelligence:
-    ContributorIntelligence[];
-
-  workerDaysPerWeek: number;
-};
-
-type BeeTarget = {
-  id: number;
-  name: string;
-  roleLabel: string;
-  isManagement: boolean;
-  participatesInTarget: boolean;
-  dailyTargetLiters: number;
-  weeklyTargetLiters: number;
 };
 
 export default function BeeTeam({
   collectors,
-  contributorIntelligence,
-  workerDaysPerWeek,
 }: BeeTeamProps) {
-  const intelligenceByCollectorId =
-    new Map(
-      contributorIntelligence.map(
-        (contributor) => [
-          contributor.id,
-          contributor,
-        ],
-      ),
+  const activeBees =
+    collectors.filter(
+      (collector) =>
+        collector.active,
     );
-
-  const beeTargets: BeeTarget[] =
-    collectors
-      .filter(
-        (collector) => collector.active,
-      )
-      .map((collector) => {
-        const intelligence =
-          intelligenceByCollectorId.get(
-            collector.id,
-          );
-
-        const dailyTargetLiters =
-          intelligence
-            ?.dailyTargetLiters ?? 0;
-
-        const weeklyTargetLiters =
-          dailyTargetLiters *
-          Math.max(
-            workerDaysPerWeek,
-            0,
-          );
-
-        const isManagement =
-          collector.role ===
-            "Management" ||
-          collector.name ===
-            "Management Team";
-
-        const roleLabel =
-          isManagement
-            ? "Supporting Operations"
-            : collector.role ===
-                "Group Lead"
-              ? "Group Lead"
-              : collector.role ===
-                  "Phlebotomist"
-                ? "Donor Floor"
-                : collector.role;
-
-        return {
-          id: collector.id,
-          name: collector.name,
-          roleLabel,
-          isManagement,
-          participatesInTarget:
-            collector.participatesInTarget,
-          dailyTargetLiters,
-          weeklyTargetLiters,
-        };
-      });
-
-  const participatingBees =
-    beeTargets.filter(
-      (bee) =>
-        bee.participatesInTarget,
-    ).length;
 
   return (
     <section className="bee-team-section">
@@ -124,42 +36,42 @@ export default function BeeTeam({
           </p>
 
           <h2>
-            Worker Bee Targets
+            Meet the Worker Bees
           </h2>
         </div>
 
         <div className="team-summary">
           <span>
-            Active Target Team
+            Active Team
           </span>
 
           <strong>
-            {participatingBees} Bees
+            {activeBees.length} Bees
           </strong>
 
           <small>
-            {workerDaysPerWeek}-day
-            individual work week
+            Riviera Beach 115
           </small>
         </div>
       </header>
 
       <div className="bee-performance-grid">
-        {beeTargets.map((bee) => (
+        {activeBees.map((bee) => (
           <WorkerBeeCard
             key={bee.id}
-            name={bee.name}
+            name={
+              bee.preferredName ||
+              bee.name
+            }
             roleLabel={
-              bee.roleLabel
-            }
-            dailyTargetLiters={
-              bee.dailyTargetLiters
-            }
-            weeklyTargetLiters={
-              bee.weeklyTargetLiters
+              bee.profileTitle ||
+              bee.role
             }
             isManagement={
-              bee.isManagement
+              bee.role ===
+                "Management" ||
+              bee.name ===
+                "Management Team"
             }
           />
         ))}
@@ -276,14 +188,16 @@ export default function BeeTeam({
             text-overflow:
               ellipsis;
 
-            white-space: nowrap;
+            white-space:
+              nowrap;
           }
 
           .team-summary {
             display: flex;
             flex: 0 0 auto;
 
-            flex-direction: column;
+            flex-direction:
+              column;
 
             justify-content:
               center;
@@ -330,7 +244,8 @@ export default function BeeTeam({
             text-transform:
               uppercase;
 
-            white-space: nowrap;
+            white-space:
+              nowrap;
           }
 
           .team-summary strong {
@@ -344,7 +259,8 @@ export default function BeeTeam({
             text-overflow:
               ellipsis;
 
-            white-space: nowrap;
+            white-space:
+              nowrap;
           }
 
           .team-summary small {
@@ -359,7 +275,8 @@ export default function BeeTeam({
             text-overflow:
               ellipsis;
 
-            white-space: nowrap;
+            white-space:
+              nowrap;
           }
 
           .bee-performance-grid {
@@ -441,7 +358,9 @@ export default function BeeTeam({
 
             .team-summary {
               width: 100%;
-              text-align: left;
+
+              text-align:
+                left;
             }
 
             .bee-performance-grid {

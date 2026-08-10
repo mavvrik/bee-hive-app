@@ -3,7 +3,6 @@ export interface GoalEngineInput {
   monthlyGoalDonors: number;
   weeksInPeriod: number;
   collectionDaysPerWeek: number;
-  contributors: number;
 }
 
 export interface GoalEngineResult {
@@ -16,9 +15,6 @@ export interface GoalEngineResult {
   dailyDonors: number;
 
   litersPerDonor: number;
-
-  litersPerContributorPerDay: number;
-  donorsPerContributorPerDay: number;
 }
 
 function safeDivide(
@@ -35,7 +31,6 @@ function safeDivide(
 export function getGoals(
   input: GoalEngineInput,
 ): GoalEngineResult {
-
   const weeklyLiters =
     safeDivide(
       input.monthlyGoalLiters,
@@ -66,38 +61,19 @@ export function getGoals(
       input.monthlyGoalDonors,
     );
 
-  const litersPerContributorPerDay =
-    safeDivide(
-      dailyLiters,
-      input.contributors,
-    );
-
-  const donorsPerContributorPerDay =
-    safeDivide(
-      dailyDonors,
-      input.contributors,
-    );
-
   return {
-
     monthlyLiters:
       input.monthlyGoalLiters,
 
     weeklyLiters,
-
     dailyLiters,
 
     monthlyDonors:
       input.monthlyGoalDonors,
 
     weeklyDonors,
-
     dailyDonors,
 
     litersPerDonor,
-
-    litersPerContributorPerDay,
-
-    donorsPerContributorPerDay,
   };
 }

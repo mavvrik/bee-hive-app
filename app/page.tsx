@@ -7,6 +7,7 @@ import { getCenterIntelligence } from "@/app/lib/centerIntelligence";
 import DashboardRotator from "./components/DashboardRotator";
 import DashboardPage from "./components/DashboardPage";
 import ExecutiveIntelligencePage from "./components/ExecutiveIntelligencePage";
+import MeetTheBeesPage from "./components/MeetTheBeesPage";
 
 import {
   formatOperationalWeekRange,
@@ -87,6 +88,10 @@ export default async function Home() {
       },
     });
 
+  const centerName =
+    settings?.centerName ??
+    "Riviera Beach 115";
+
   const reportingYear =
     settings?.currentYear ?? 2027;
 
@@ -96,9 +101,6 @@ export default async function Home() {
   const centerOperatingDaysPerWeek =
     settings?.centerOperatingDaysPerWeek ??
     7;
-
-  const workerDaysPerWeek =
-    settings?.workerDaysPerWeek ?? 5;
 
   const dashboardRotationMs =
     (settings?.dashboardRotationSeconds ??
@@ -120,8 +122,11 @@ export default async function Home() {
     await prisma.monthlyBudget.findUnique({
       where: {
         fiscalYear_month: {
-          fiscalYear: reportingYear,
-          month: currentMonthNumber,
+          fiscalYear:
+            reportingYear,
+
+          month:
+            currentMonthNumber,
         },
       },
     });
@@ -136,10 +141,6 @@ export default async function Home() {
    * ==========================================
    * OFFICIAL CENTER PRODUCTION
    * ==========================================
-   *
-   * DailyCenterProduction is now the sole
-   * source of truth for center liters and
-   * donor totals.
    */
 
   const monthToDateProduction =
@@ -147,8 +148,11 @@ export default async function Home() {
       {
         where: {
           entryDate: {
-            gte: startOfCurrentMonth,
-            lt: startOfNextMonth,
+            gte:
+              startOfCurrentMonth,
+
+            lt:
+              startOfNextMonth,
           },
         },
 
@@ -164,8 +168,11 @@ export default async function Home() {
       {
         where: {
           entryDate: {
-            gte: startOfCurrentWeek,
-            lt: startOfNextWeek,
+            gte:
+              startOfCurrentWeek,
+
+            lt:
+              startOfNextWeek,
           },
         },
 
@@ -181,8 +188,11 @@ export default async function Home() {
       {
         where: {
           entryDate: {
-            gte: startOfToday,
-            lt: startOfTomorrow,
+            gte:
+              startOfToday,
+
+            lt:
+              startOfTomorrow,
           },
         },
 
@@ -200,32 +210,31 @@ export default async function Home() {
    */
 
   const currentLiters =
-    monthToDateProduction._sum.liters ??
-    0;
+    monthToDateProduction._sum
+      .liters ?? 0;
 
   const weeklyCurrentLiters =
-    currentWeekProduction._sum.liters ??
-    0;
+    currentWeekProduction._sum
+      .liters ?? 0;
 
   const weeklyCurrentDonors =
-    currentWeekProduction._sum.donors ??
-    0;
+    currentWeekProduction._sum
+      .donors ?? 0;
 
   const dailyCurrentLiters =
-    currentDayProduction._sum.liters ??
-    0;
+    currentDayProduction._sum
+      .liters ?? 0;
 
   const dailyCurrentDonors =
-    currentDayProduction._sum.donors ??
-    0;
+    currentDayProduction._sum
+      .donors ?? 0;
 
   /*
-   * Official weekly liters per donor.
+   * Existing ExecutiveStatusBar still
+   * uses older "stick" prop names.
    *
-   * Some existing component names still use
-   * the older "stick" terminology. The values
-   * supplied here are now based on official
-   * center donor totals.
+   * These values currently represent
+   * official center donor totals.
    */
 
   const weeklyLitersPerDonor =
@@ -241,10 +250,8 @@ export default async function Home() {
     weeklyLitersPerDonor;
 
   /*
-   * Temporary historical average.
-   *
-   * Later we can calculate this from a rolling
-   * DailyCenterProduction history.
+   * Temporary center-level historical
+   * production average.
    */
 
   const historicalLitersPerStick =
@@ -261,15 +268,23 @@ export default async function Home() {
       {
         where: {
           entryDate: {
-            gte: startOfToday,
-            lt: startOfTomorrow,
+            gte:
+              startOfToday,
+
+            lt:
+              startOfTomorrow,
           },
         },
 
         _sum: {
-          successfulSticks: true,
-          unsuccessfulSticks: true,
-          lostVolumeMl: true,
+          successfulSticks:
+            true,
+
+          unsuccessfulSticks:
+            true,
+
+          lostVolumeMl:
+            true,
         },
       },
     );
@@ -284,7 +299,7 @@ export default async function Home() {
 
   /*
    * Projection engine expects liters.
-   * Database stores lost volume in milliliters.
+   * Lost volume is stored in milliliters.
    */
 
   const lostVolume =
@@ -298,11 +313,6 @@ export default async function Home() {
    * ==========================================
    * WORKER BEES
    * ==========================================
-   *
-   * Workers are now loaded as workforce /
-   * target records only.
-   *
-   * DailyEntry is no longer queried.
    */
 
   const collectors =
@@ -311,10 +321,62 @@ export default async function Home() {
         active: true,
       },
 
-      orderBy: {
-        position: "asc",
-      },
+      orderBy: [
+        {
+          position: "asc",
+        },
+        {
+          name: "asc",
+        },
+      ],
     });
+
+  /*
+   * ==========================================
+   * MEET THE BEES
+   * ==========================================
+   *
+   * Only active workers explicitly enabled
+   * through Admin are shown on the TV page.
+   */
+
+  const meetTheBeesProfiles =
+    collectors
+      .filter(
+        (collector) =>
+          collector.showOnMeetTheBees,
+      )
+      .map((collector) => ({
+        id:
+          collector.id,
+
+        name:
+          collector.name,
+
+        preferredName:
+          collector.preferredName,
+
+        role:
+          collector.role,
+
+        profileTitle:
+          collector.profileTitle,
+
+        bio:
+          collector.bio,
+
+        funFact:
+          collector.funFact,
+
+        photoUrl:
+          collector.photoUrl,
+
+        isEmployeeOfMonth:
+          collector.isEmployeeOfMonth,
+
+        recognitionMessage:
+          collector.recognitionMessage,
+      }));
 
   /*
    * ==========================================
@@ -340,7 +402,8 @@ export default async function Home() {
       include: {
         readings: {
           orderBy: {
-            recordedAt: "desc",
+            recordedAt:
+              "desc",
           },
 
           take: 50,
@@ -359,7 +422,8 @@ export default async function Home() {
           );
 
         return {
-          id: metric.id,
+          id:
+            metric.id,
 
           displayName:
             metric.displayName,
@@ -387,12 +451,6 @@ export default async function Home() {
    * ==========================================
    * CENTER INTELLIGENCE
    * ==========================================
-   *
-   * Contributors still receive weighted targets.
-   *
-   * currentLiters is intentionally zero because
-   * individual worker production is no longer
-   * collected or inferred.
    */
 
   const intelligence =
@@ -420,35 +478,18 @@ export default async function Home() {
         dailyCurrentDonors,
 
       successfulSticks,
+
       unsuccessfulSticks,
+
       lostVolume,
+
       historicalLitersPerStick,
+
       currentHour,
+
       openingHour,
+
       closingHour,
-
-      contributors: collectors
-        .filter(
-          (collector) =>
-            collector.participatesInTarget,
-        )
-        .map((collector) => ({
-          id: collector.id,
-
-          name:
-            collector.name,
-
-          weight:
-            collector.allocationWeight,
-
-          /*
-           * Intentionally zero.
-           *
-           * We no longer enter or infer
-           * individual production.
-           */
-          currentLiters: 0,
-        })),
     });
 
   /*
@@ -467,13 +508,15 @@ export default async function Home() {
     );
 
   const weekRange =
-    formatOperationalWeekRange(today);
+    formatOperationalWeekRange(
+      today,
+    );
 
   /*
-   * Individual Lead Forager is intentionally
-   * unavailable until we introduce a reliable
-   * recognition metric or another legitimate
-   * worker-level source.
+   * Individual Lead Forager remains
+   * intentionally unavailable until a
+   * legitimate worker-level recognition
+   * metric is selected.
    */
 
   const executiveTopWorkerName =
@@ -512,8 +555,7 @@ export default async function Home() {
         <DashboardPage>
           <HiveHeader
             centerName={
-              settings?.centerName ??
-              "Riviera Beach 115"
+              centerName
             }
 
             reportingYear={
@@ -651,14 +693,6 @@ export default async function Home() {
             collectors={
               collectors
             }
-
-            contributorIntelligence={
-              intelligence.contributors
-            }
-
-            workerDaysPerWeek={
-              workerDaysPerWeek
-            }
           />
         </DashboardPage>
 
@@ -669,8 +703,7 @@ export default async function Home() {
         <DashboardPage>
           <ExecutiveIntelligencePage
             centerName={
-              settings?.centerName ??
-              "Riviera Beach 115"
+              centerName
             }
 
             metrics={
@@ -715,6 +748,23 @@ export default async function Home() {
 
             topWorkerPercentage={
               executiveTopWorkerPercentage
+            }
+          />
+        </DashboardPage>
+
+        {/* =====================================
+            PAGE 3 — RIVIERA BEEch
+            MEET THE BEES
+           ===================================== */}
+
+        <DashboardPage>
+          <MeetTheBeesPage
+            centerName={
+              centerName
+            }
+
+            bees={
+              meetTheBeesProfiles
             }
           />
         </DashboardPage>

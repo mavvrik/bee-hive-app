@@ -2,838 +2,1874 @@
 
 import {
   useEffect,
+  useMemo,
   useState,
 } from "react";
 
-type BeeProfile = {
+export type MeetTheBeesProfile = {
   id: number;
+
   name: string;
-  roleLabel: string;
-  currentLiters: number;
-  dailyGoalLiters: number;
-  weeklyGoalLiters: number;
-  isManagement: boolean;
+  preferredName: string | null;
+
+  role: string;
+  profileTitle: string | null;
+
+  bio: string | null;
+  funFact: string | null;
+
+  photoUrl: string | null;
+
+  isEmployeeOfMonth: boolean;
+  recognitionMessage: string | null;
 };
 
 type MeetTheBeesPageProps = {
   centerName: string;
-  bees: BeeProfile[];
+  bees: MeetTheBeesProfile[];
 };
 
-function formatLiters(value: number) {
-  return `${value.toLocaleString("en-US", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  })} L`;
+function getDisplayName(
+  bee: MeetTheBeesProfile,
+) {
+  return (
+    bee.preferredName ||
+    bee.name
+  );
 }
 
-function getBeeTitle(
-  roleLabel: string,
-  isManagement: boolean,
+function getProfileTitle(
+  bee: MeetTheBeesProfile,
 ) {
-  if (isManagement) {
+  if (bee.profileTitle) {
+    return bee.profileTitle;
+  }
+
+  if (
+    bee.role
+      .toLowerCase()
+      .includes("management")
+  ) {
     return "Hive Leadership";
   }
 
   if (
-    roleLabel.toLowerCase().includes("lead")
+    bee.role
+      .toLowerCase()
+      .includes("lead")
   ) {
-    return "Lead Forager";
+    return "Hive Team Lead";
   }
 
-  return "Plasma Pathfinder";
+  if (
+    bee.role
+      .toLowerCase()
+      .includes("phlebotomist")
+  ) {
+    return "Donor Experience Team";
+  }
+
+  return bee.role;
 }
 
 export default function MeetTheBeesPage({
   centerName,
   bees,
 }: MeetTheBeesPageProps) {
-  const [activeBeeIndex, setActiveBeeIndex] =
-    useState(0);
+  /*
+   * Employee of the Month appears first,
+   * followed by normal display order.
+   */
+  const orderedBees =
+    useMemo(() => {
+      return [...bees].sort(
+        (a, b) =>
+          Number(
+            b.isEmployeeOfMonth,
+          ) -
+          Number(
+            a.isEmployeeOfMonth,
+          ),
+      );
+    }, [bees]);
 
+  const [
+    activeBeeIndex,
+    setActiveBeeIndex,
+  ] = useState(0);
+
+  /*
+   * Each employee remains on screen for
+   * five seconds.
+   *
+   * With eight profiles, a complete pass
+   * takes about 40 seconds — fitting nicely
+   * inside the main Hive dashboard's
+   * configurable page rotation.
+   */
   useEffect(() => {
-    if (bees.length <= 1) {
+    setActiveBeeIndex(0);
+
+    if (
+      orderedBees.length <= 1
+    ) {
       return;
     }
 
-    const timer = window.setInterval(() => {
-      setActiveBeeIndex(
-        (current) =>
-          (current + 1) % bees.length,
-      );
-    }, 5000);
+    const timer =
+      window.setInterval(() => {
+        setActiveBeeIndex(
+          (current) =>
+            (current + 1) %
+            orderedBees.length,
+        );
+      }, 5000);
 
     return () => {
-      window.clearInterval(timer);
+      window.clearInterval(
+        timer,
+      );
     };
-  }, [bees.length]);
+  }, [orderedBees.length]);
+
+  const activeBee =
+    orderedBees[
+      activeBeeIndex
+    ] ?? null;
+
+  if (!activeBee) {
+    return (
+      <section className="meet-bees-page empty-beach">
+        <BeachBackground />
+
+        <div className="empty-beach-card">
+          <span className="empty-bee">
+            🐝
+          </span>
+
+          <p className="beach-eyebrow">
+            Riviera BEEch
+          </p>
+
+          <h1>
+            Meet the Bees
+          </h1>
+
+          <p>
+            Worker Bee profiles will
+            appear here once they are
+            enabled in Administration.
+          </p>
+        </div>
+
+        <MeetTheBeesStyles />
+      </section>
+    );
+  }
+
+  const displayName =
+    getDisplayName(
+      activeBee,
+    );
+
+  const profileTitle =
+    getProfileTitle(
+      activeBee,
+    );
 
   return (
     <section className="meet-bees-page">
-      <div className="sun-honeycomb" />
+      <BeachBackground />
 
-      <div className="ocean-wave wave-one" />
-      <div className="ocean-wave wave-two" />
+      <div
+        className="sun-glow"
+        aria-hidden="true"
+      />
 
-      <div className="beach-bee beach-bee-one">
+      <div
+        className="floating-bee bee-a"
+        aria-hidden="true"
+      >
         🐝
       </div>
 
-      <div className="beach-bee beach-bee-two">
+      <div
+        className="floating-bee bee-b"
+        aria-hidden="true"
+      >
+        🐝
+      </div>
+
+      <div
+        className="floating-bee bee-c"
+        aria-hidden="true"
+      >
         🐝
       </div>
 
       <header className="meet-bees-header">
         <div>
-          <p className="meet-bees-eyebrow">
+          <p className="beach-eyebrow">
             Welcome to Riviera BEEch
           </p>
 
-          <h1>Meet the Bees</h1>
+          <h1>
+            Meet the Bees
+          </h1>
 
-          <p className="meet-bees-subtitle">
-            The people powering{" "}
+          <p className="center-name">
             {centerName}
           </p>
         </div>
 
-        <div className="beech-badge">
-          <span>Center 115</span>
-          <strong>Riviera BEEch</strong>
+        <div className="beach-brand">
+          <span className="brand-bee">
+            🐝
+          </span>
+
+          <div>
+            <strong>
+              RIVIERA BEEch
+            </strong>
+
+            <small>
+              Where the Hive meets
+              the shore
+            </small>
+          </div>
         </div>
       </header>
 
-      <main className="meet-bees-content">
-        <section className="featured-bee">
-          {bees.length > 0 ? (
-            <>
-              <div className="featured-bee-art">
-                <div className="featured-wing wing-left" />
-                <div className="featured-wing wing-right" />
-                <div className="featured-body" />
-                <div className="featured-head">
-                  <span className="featured-eye eye-left" />
-                  <span className="featured-eye eye-right" />
-                </div>
-              </div>
+      <main className="bee-profile-stage">
+        <section
+          className={`bee-photo-panel ${
+            activeBee.isEmployeeOfMonth
+              ? "featured-worker"
+              : ""
+          }`}
+        >
+          {activeBee.isEmployeeOfMonth && (
+            <div className="employee-ribbon">
+              <span>🏆</span>
 
-              <p className="featured-label">
-                Featured Bee
-              </p>
-
-              <h2>
-                {bees[activeBeeIndex].name}
-              </h2>
-
-              <strong className="featured-title">
-                {getBeeTitle(
-                  bees[activeBeeIndex]
-                    .roleLabel,
-                  bees[activeBeeIndex]
-                    .isManagement,
-                )}
-              </strong>
-
-              <span className="featured-role">
-                {
-                  bees[activeBeeIndex]
-                    .roleLabel
-                }
-              </span>
-
-              <div className="featured-metrics">
-                <article>
-                  <span>Today</span>
-                  <strong>
-                    {formatLiters(
-                      bees[activeBeeIndex]
-                        .currentLiters,
-                    )}
-                  </strong>
-                </article>
-
-                <article>
-                  <span>Daily Goal</span>
-                  <strong>
-                    {formatLiters(
-                      bees[activeBeeIndex]
-                        .dailyGoalLiters,
-                    )}
-                  </strong>
-                </article>
-
-                <article>
-                  <span>Weekly Goal</span>
-                  <strong>
-                    {formatLiters(
-                      bees[activeBeeIndex]
-                        .weeklyGoalLiters,
-                    )}
-                  </strong>
-                </article>
-              </div>
-            </>
-          ) : (
-            <div className="empty-bees">
-              No active bees are configured.
+              Employee of the Month
             </div>
           )}
-        </section>
 
-        <section className="bee-roster-panel">
-          <div className="roster-heading">
-            <div>
-              <p className="meet-bees-eyebrow">
-                The Hive Workforce
-              </p>
-
-              <h2>Our Riviera BEEch Crew</h2>
-            </div>
-
-            <span>
-              {bees.length} Active Bees
-            </span>
-          </div>
-
-          <div className="bee-roster-grid">
-            {bees.map((bee, index) => (
-              <article
-                key={bee.id}
-                className={`roster-bee-card ${
-                  index === activeBeeIndex
-                    ? "active-roster-bee"
-                    : ""
-                }`}
-              >
-                <div className="roster-bee-icon">
+          <div className="photo-frame">
+            {activeBee.photoUrl ? (
+              <img
+                src={
+                  activeBee.photoUrl
+                }
+                alt={displayName}
+                className="worker-photo"
+              />
+            ) : (
+              <div className="photo-placeholder">
+                <div className="placeholder-bee">
                   🐝
                 </div>
 
-                <div>
-                  <strong>{bee.name}</strong>
-                  <span>{bee.roleLabel}</span>
-                </div>
+                <span>
+                  Photo Coming Soon
+                </span>
+              </div>
+            )}
 
-                <small>
-                  {getBeeTitle(
-                    bee.roleLabel,
-                    bee.isManagement,
-                  )}
-                </small>
-              </article>
-            ))}
+            <div
+              className="photo-honeycomb"
+              aria-hidden="true"
+            >
+              <span />
+              <span />
+              <span />
+            </div>
           </div>
+
+          <div className="name-plate">
+            <p>
+              Worker Bee
+            </p>
+
+            <h2>
+              {displayName}
+            </h2>
+
+            <strong>
+              {profileTitle}
+            </strong>
+          </div>
+        </section>
+
+        <section className="bee-story-panel">
+          <div className="story-top">
+            <p className="story-eyebrow">
+              Meet Your Hive
+            </p>
+
+            <h2>
+              Say hello to{" "}
+              {displayName}
+            </h2>
+          </div>
+
+          <div className="bio-card">
+            <span className="card-icon">
+              🍯
+            </span>
+
+            <div>
+              <p className="card-label">
+                About This Bee
+              </p>
+
+              <p className="bio-copy">
+                {activeBee.bio ||
+                  `${displayName} is a valued member of the ${centerName} Hive, helping create a welcoming and successful donor experience every day.`}
+              </p>
+            </div>
+          </div>
+
+          <div className="story-card-grid">
+            <article className="story-card">
+              <span className="story-icon">
+                🐝
+              </span>
+
+              <div>
+                <p className="card-label">
+                  Role
+                </p>
+
+                <strong>
+                  {
+                    activeBee.role
+                  }
+                </strong>
+              </div>
+            </article>
+
+            <article className="story-card">
+              <span className="story-icon">
+                🌴
+              </span>
+
+              <div>
+                <p className="card-label">
+                  Fun Fact
+                </p>
+
+                <strong>
+                  {activeBee.funFact ||
+                    "More buzz coming soon!"}
+                </strong>
+              </div>
+            </article>
+          </div>
+
+          {activeBee.isEmployeeOfMonth ? (
+            <div className="recognition-card">
+              <div className="recognition-badge">
+                🏆
+              </div>
+
+              <div>
+                <p className="recognition-label">
+                  Hive Recognition
+                </p>
+
+                <h3>
+                  Employee of the
+                  Month
+                </h3>
+
+                <p>
+                  {activeBee.recognitionMessage ||
+                    `${displayName} is being recognized for an outstanding contribution to the Hive.`}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="hive-message">
+              <span>
+                💛
+              </span>
+
+              <div>
+                <strong>
+                  One Team. One Hive.
+                </strong>
+
+                <p>
+                  Every Worker Bee helps
+                  make Riviera BEEch a
+                  better donor experience.
+                </p>
+              </div>
+            </div>
+          )}
         </section>
       </main>
 
       <footer className="meet-bees-footer">
-        <strong>
-          Riviera BEEch 115
-        </strong>
+        <div className="profile-progress">
+          <span>
+            Bee{" "}
+            {activeBeeIndex + 1}{" "}
+            of{" "}
+            {
+              orderedBees.length
+            }
+          </span>
 
-        <span>
-          Where every bee helps the Hive
-          thrive.
-        </span>
+          <div className="profile-dots">
+            {orderedBees.map(
+              (bee, index) => (
+                <span
+                  key={bee.id}
+                  className={
+                    index ===
+                    activeBeeIndex
+                      ? "profile-dot active"
+                      : "profile-dot"
+                  }
+                />
+              ),
+            )}
+          </div>
+        </div>
 
-        <div className="shoreline-mark">
-          🌴 🐝 🌊
+        <div className="shoreline-message">
+          🌊 Riviera BEEch •{" "}
+          <strong>
+            Where Every Bee
+            Matters
+          </strong>
         </div>
       </footer>
 
-      <style>
-        {`
-          .meet-bees-page {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-            height: 100%;
-            padding: 18px 24px;
-            overflow: hidden;
-            background:
-              linear-gradient(
-                180deg,
-                #e9f8ff 0%,
-                #fff9df 54%,
-                #f5dda1 100%
-              );
-            box-sizing: border-box;
+      <MeetTheBeesStyles />
+    </section>
+  );
+}
+
+function BeachBackground() {
+  return (
+    <div
+      className="beach-background"
+      aria-hidden="true"
+    >
+      <div className="sky-layer" />
+
+      <div className="ocean-layer">
+        <div className="wave wave-one" />
+        <div className="wave wave-two" />
+        <div className="wave wave-three" />
+      </div>
+
+      <div className="sand-layer" />
+
+      <div className="palm-tree">
+        <div className="palm-trunk" />
+
+        <span className="palm-leaf leaf-one" />
+        <span className="palm-leaf leaf-two" />
+        <span className="palm-leaf leaf-three" />
+        <span className="palm-leaf leaf-four" />
+        <span className="palm-leaf leaf-five" />
+      </div>
+    </div>
+  );
+}
+
+function MeetTheBeesStyles() {
+  return (
+    <style>
+      {`
+        .meet-bees-page {
+          position: relative;
+
+          width: 100%;
+          height: 100%;
+
+          min-width: 0;
+          min-height: 0;
+
+          overflow: hidden;
+
+          padding: clamp(
+            18px,
+            2vw,
+            34px
+          );
+
+          background: #dff7ff;
+
+          font-family:
+            Arial,
+            Helvetica,
+            sans-serif;
+
+          color: #382707;
+
+          box-sizing: border-box;
+        }
+
+        .beach-background {
+          position: absolute;
+
+          inset: 0;
+
+          overflow: hidden;
+
+          pointer-events: none;
+        }
+
+        .sky-layer {
+          position: absolute;
+
+          inset: 0 0 38% 0;
+
+          background:
+            radial-gradient(
+              circle at 76% 17%,
+              rgba(
+                255,
+                238,
+                132,
+                0.98
+              )
+              0 6%,
+              rgba(
+                255,
+                238,
+                132,
+                0.27
+              )
+              7% 15%,
+              transparent 27%
+            ),
+            linear-gradient(
+              180deg,
+              #bdeeff 0%,
+              #e9fbff 100%
+            );
+        }
+
+        .sun-glow {
+          position: absolute;
+
+          top: -7vw;
+          right: -4vw;
+
+          width: 25vw;
+          height: 25vw;
+
+          border-radius: 50%;
+
+          background:
+            radial-gradient(
+              circle,
+              rgba(
+                255,
+                224,
+                80,
+                0.42
+              ),
+              transparent 68%
+            );
+
+          pointer-events: none;
+        }
+
+        .ocean-layer {
+          position: absolute;
+
+          right: 0;
+          bottom: 12%;
+          left: 0;
+
+          height: 34%;
+
+          background:
+            linear-gradient(
+              180deg,
+              #58cbe2,
+              #1589ad
+            );
+        }
+
+        .wave {
+          position: absolute;
+
+          left: -5%;
+
+          width: 110%;
+          height: 36px;
+
+          border-radius: 50%;
+
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.72
+            );
+        }
+
+        .wave-one {
+          top: -13px;
+
+          animation:
+            beachWaveOne
+            5s ease-in-out
+            infinite alternate;
+        }
+
+        .wave-two {
+          top: 15px;
+
+          opacity: 0.46;
+
+          animation:
+            beachWaveTwo
+            6.5s ease-in-out
+            infinite alternate;
+        }
+
+        .wave-three {
+          top: 42px;
+
+          opacity: 0.25;
+
+          animation:
+            beachWaveOne
+            8s ease-in-out
+            infinite alternate-reverse;
+        }
+
+        @keyframes beachWaveOne {
+          from {
+            transform:
+              translateX(-2%);
           }
 
-          .sun-honeycomb {
-            position: absolute;
-            top: 36px;
-            right: 8%;
-            width: 105px;
-            height: 94px;
-            background:
-              linear-gradient(
-                145deg,
-                #ffe88b,
-                #eebc2e
+          to {
+            transform:
+              translateX(2%);
+          }
+        }
+
+        @keyframes beachWaveTwo {
+          from {
+            transform:
+              translateX(2%);
+          }
+
+          to {
+            transform:
+              translateX(-3%);
+          }
+        }
+
+        .sand-layer {
+          position: absolute;
+
+          right: 0;
+          bottom: 0;
+          left: 0;
+
+          height: 17%;
+
+          background:
+            linear-gradient(
+              180deg,
+              #f4d488,
+              #dcb36b
+            );
+        }
+
+        .palm-tree {
+          position: absolute;
+
+          right: 4%;
+          bottom: 10%;
+
+          width: 170px;
+          height: 260px;
+
+          opacity: 0.14;
+
+          transform:
+            rotate(3deg);
+        }
+
+        .palm-trunk {
+          position: absolute;
+
+          right: 70px;
+          bottom: 0;
+
+          width: 25px;
+          height: 190px;
+
+          border-radius:
+            60% 50% 20% 30%;
+
+          background: #694211;
+
+          transform:
+            rotate(8deg);
+        }
+
+        .palm-leaf {
+          position: absolute;
+
+          top: 35px;
+          right: 73px;
+
+          width: 105px;
+          height: 24px;
+
+          border-radius:
+            100% 0 100% 0;
+
+          background: #267a40;
+
+          transform-origin:
+            right center;
+        }
+
+        .leaf-one {
+          transform:
+            rotate(-45deg);
+        }
+
+        .leaf-two {
+          transform:
+            rotate(-15deg);
+        }
+
+        .leaf-three {
+          transform:
+            rotate(20deg);
+        }
+
+        .leaf-four {
+          transform:
+            rotate(55deg);
+        }
+
+        .leaf-five {
+          transform:
+            rotate(88deg);
+        }
+
+        .meet-bees-header {
+          position: relative;
+          z-index: 5;
+
+          display: flex;
+
+          align-items:
+            flex-start;
+
+          justify-content:
+            space-between;
+
+          gap: 30px;
+
+          height: 15%;
+
+          min-height: 105px;
+        }
+
+        .beach-eyebrow {
+          margin: 0 0 4px;
+
+          color: #c18100;
+
+          font-size: clamp(
+            0.68rem,
+            0.9vw,
+            1rem
+          );
+
+          font-weight: 1000;
+
+          letter-spacing:
+            0.18em;
+
+          text-transform:
+            uppercase;
+        }
+
+        .meet-bees-header h1 {
+          margin: 0;
+
+          color: #3b2905;
+
+          font-size: clamp(
+            2.3rem,
+            4.3vw,
+            4.7rem
+          );
+
+          line-height: 0.95;
+
+          letter-spacing:
+            -0.04em;
+        }
+
+        .center-name {
+          margin: 8px 0 0;
+
+          color: #6f5b2b;
+
+          font-size: clamp(
+            0.9rem,
+            1.3vw,
+            1.35rem
+          );
+
+          font-weight: 800;
+        }
+
+        .beach-brand {
+          display: flex;
+
+          align-items: center;
+
+          gap: 13px;
+
+          padding:
+            12px 17px;
+
+          border:
+            1px solid
+            rgba(
+              194,
+              143,
+              17,
+              0.42
+            );
+
+          border-radius: 17px;
+
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.78
+            );
+
+          box-shadow:
+            0 8px 26px
+            rgba(
+              37,
+              98,
+              111,
+              0.09
+            );
+
+          backdrop-filter:
+            blur(10px);
+        }
+
+        .brand-bee {
+          font-size: clamp(
+            1.8rem,
+            2.5vw,
+            2.8rem
+          );
+        }
+
+        .beach-brand strong,
+        .beach-brand small {
+          display: block;
+        }
+
+        .beach-brand strong {
+          color: #ba7800;
+
+          font-size: clamp(
+            0.9rem,
+            1.25vw,
+            1.3rem
+          );
+        }
+
+        .beach-brand small {
+          margin-top: 2px;
+
+          color: #52727a;
+
+          font-weight: 700;
+        }
+
+        .bee-profile-stage {
+          position: relative;
+          z-index: 4;
+
+          display: grid;
+
+          grid-template-columns:
+            minmax(300px, 0.9fr)
+            minmax(0, 1.4fr);
+
+          gap: clamp(
+            22px,
+            3vw,
+            46px
+          );
+
+          height: 72%;
+
+          min-height: 0;
+
+          align-items: stretch;
+        }
+
+        .bee-photo-panel,
+        .bee-story-panel {
+          min-width: 0;
+          min-height: 0;
+        }
+
+        .bee-photo-panel {
+          position: relative;
+
+          display: flex;
+
+          flex-direction:
+            column;
+
+          align-items: center;
+
+          justify-content:
+            center;
+
+          padding: 18px;
+
+          border:
+            1px solid
+            rgba(
+              206,
+              155,
+              25,
+              0.48
+            );
+
+          border-radius: 28px;
+
+          background:
+            linear-gradient(
+              150deg,
+              rgba(
+                255,
+                255,
+                255,
+                0.94
+              ),
+              rgba(
+                255,
+                243,
+                184,
+                0.88
+              )
+            );
+
+          box-shadow:
+            0 18px 42px
+            rgba(
+              61,
+              82,
+              67,
+              0.16
+            );
+
+          backdrop-filter:
+            blur(9px);
+        }
+
+        .bee-photo-panel.featured-worker {
+          border:
+            3px solid
+            rgba(
+              210,
+              148,
+              0,
+              0.82
+            );
+
+          box-shadow:
+            0 0 36px
+              rgba(
+                255,
+                194,
+                27,
+                0.25
+              ),
+            0 18px 42px
+              rgba(
+                61,
+                82,
+                67,
+                0.16
               );
-            clip-path: polygon(
-              25% 6%,
-              75% 6%,
+        }
+
+        .employee-ribbon {
+          position: absolute;
+          z-index: 5;
+
+          top: 14px;
+          left: 14px;
+
+          display: flex;
+
+          align-items: center;
+
+          gap: 7px;
+
+          padding:
+            8px 12px;
+
+          border-radius: 999px;
+
+          background:
+            linear-gradient(
+              135deg,
+              #ffde67,
+              #d89500
+            );
+
+          color: #533700;
+
+          font-size: clamp(
+            0.62rem,
+            0.8vw,
+            0.82rem
+          );
+
+          font-weight: 1000;
+
+          text-transform:
+            uppercase;
+
+          box-shadow:
+            0 5px 13px
+            rgba(
+              131,
+              83,
+              0,
+              0.2
+            );
+        }
+
+        .photo-frame {
+          position: relative;
+
+          display: grid;
+
+          place-items: center;
+
+          width: min(
+            100%,
+            350px
+          );
+
+          aspect-ratio: 1 / 1;
+
+          overflow: hidden;
+
+          border:
+            7px solid #fff9dc;
+
+          border-radius: 50%;
+
+          background:
+            linear-gradient(
+              135deg,
+              #fff7c6,
+              #c9f2f9
+            );
+
+          box-shadow:
+            0 13px 30px
+            rgba(
+              47,
+              83,
+              85,
+              0.16
+            );
+        }
+
+        .worker-photo {
+          width: 100%;
+          height: 100%;
+
+          object-fit: cover;
+        }
+
+        .photo-placeholder {
+          display: flex;
+
+          flex-direction:
+            column;
+
+          align-items: center;
+
+          justify-content:
+            center;
+
+          gap: 9px;
+
+          width: 100%;
+          height: 100%;
+
+          color: #836415;
+
+          font-size: 0.78rem;
+          font-weight: 900;
+
+          text-transform:
+            uppercase;
+        }
+
+        .placeholder-bee {
+          font-size: clamp(
+            4rem,
+            7vw,
+            7rem
+          );
+
+          animation:
+            beachBeeFloat
+            3.4s ease-in-out
+            infinite;
+        }
+
+        .photo-honeycomb {
+          position: absolute;
+
+          right: 6%;
+          bottom: 9%;
+
+          display: flex;
+
+          gap: 3px;
+        }
+
+        .photo-honeycomb span {
+          width: 16px;
+          height: 14px;
+
+          background:
+            rgba(
+              236,
+              174,
+              24,
+              0.68
+            );
+
+          clip-path:
+            polygon(
+              25% 0,
+              75% 0,
               100% 50%,
-              75% 94%,
-              25% 94%,
+              75% 100%,
+              25% 100%,
               0 50%
             );
-            opacity: 0.58;
-            animation:
-              honeySunGlow
-              5s ease-in-out infinite;
+        }
+
+        .name-plate {
+          width: 100%;
+
+          margin-top: 13px;
+
+          text-align: center;
+        }
+
+        .name-plate p {
+          margin: 0;
+
+          color: #ba7c00;
+
+          font-size: 0.62rem;
+          font-weight: 1000;
+
+          letter-spacing:
+            0.15em;
+
+          text-transform:
+            uppercase;
+        }
+
+        .name-plate h2 {
+          margin: 3px 0 2px;
+
+          overflow: hidden;
+
+          color: #342407;
+
+          font-size: clamp(
+            1.7rem,
+            2.5vw,
+            2.8rem
+          );
+
+          line-height: 1;
+
+          text-overflow:
+            ellipsis;
+
+          white-space: nowrap;
+        }
+
+        .name-plate strong {
+          color: #567078;
+
+          font-size: clamp(
+            0.75rem,
+            1vw,
+            1rem
+          );
+
+          text-transform:
+            uppercase;
+        }
+
+        .bee-story-panel {
+          display: flex;
+
+          flex-direction:
+            column;
+
+          justify-content:
+            center;
+
+          gap: 12px;
+
+          padding:
+            clamp(
+              14px,
+              1.8vw,
+              24px
+            );
+
+          border:
+            1px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.78
+            );
+
+          border-radius: 28px;
+
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.78
+            );
+
+          box-shadow:
+            0 18px 42px
+            rgba(
+              46,
+              82,
+              88,
+              0.12
+            );
+
+          backdrop-filter:
+            blur(14px);
+        }
+
+        .story-eyebrow,
+        .card-label,
+        .recognition-label {
+          margin: 0;
+
+          color: #b87c00;
+
+          font-size: clamp(
+            0.55rem,
+            0.7vw,
+            0.72rem
+          );
+
+          font-weight: 1000;
+
+          letter-spacing:
+            0.12em;
+
+          text-transform:
+            uppercase;
+        }
+
+        .story-top h2 {
+          margin: 3px 0 0;
+
+          color: #352608;
+
+          font-size: clamp(
+            1.5rem,
+            2.5vw,
+            2.8rem
+          );
+
+          line-height: 1;
+        }
+
+        .bio-card,
+        .story-card,
+        .hive-message,
+        .recognition-card {
+          border:
+            1px solid
+            rgba(
+              214,
+              185,
+              97,
+              0.44
+            );
+
+          border-radius: 16px;
+
+          background:
+            rgba(
+              255,
+              252,
+              238,
+              0.9
+            );
+        }
+
+        .bio-card {
+          display: grid;
+
+          grid-template-columns:
+            auto 1fr;
+
+          gap: 12px;
+
+          align-items:
+            flex-start;
+
+          padding: 14px;
+        }
+
+        .card-icon,
+        .story-icon {
+          font-size: clamp(
+            1.4rem,
+            2vw,
+            2rem
+          );
+        }
+
+        .bio-copy {
+          margin: 5px 0 0;
+
+          color: #625633;
+
+          font-size: clamp(
+            0.78rem,
+            1.02vw,
+            1.08rem
+          );
+
+          font-weight: 650;
+
+          line-height: 1.45;
+        }
+
+        .story-card-grid {
+          display: grid;
+
+          grid-template-columns:
+            repeat(
+              2,
+              minmax(0, 1fr)
+            );
+
+          gap: 10px;
+        }
+
+        .story-card {
+          display: grid;
+
+          grid-template-columns:
+            auto 1fr;
+
+          gap: 10px;
+
+          align-items: center;
+
+          min-width: 0;
+
+          padding: 13px;
+        }
+
+        .story-card strong {
+          display: block;
+
+          margin-top: 4px;
+
+          overflow: hidden;
+
+          color: #493714;
+
+          font-size: clamp(
+            0.72rem,
+            0.92vw,
+            0.98rem
+          );
+
+          line-height: 1.2;
+
+          text-overflow:
+            ellipsis;
+        }
+
+        .recognition-card {
+          display: grid;
+
+          grid-template-columns:
+            auto 1fr;
+
+          gap: 13px;
+
+          align-items: center;
+
+          padding: 14px;
+
+          border-color:
+            #deb039;
+
+          background:
+            linear-gradient(
+              135deg,
+              #fff4b9,
+              #ffe393
+            );
+
+          box-shadow:
+            0 7px 18px
+            rgba(
+              184,
+              125,
+              0,
+              0.12
+            );
+        }
+
+        .recognition-badge {
+          display: grid;
+
+          width: 54px;
+          height: 54px;
+
+          place-items: center;
+
+          border-radius: 15px;
+
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.7
+            );
+
+          font-size: 1.8rem;
+        }
+
+        .recognition-card h3 {
+          margin: 3px 0;
+
+          color: #5e4200;
+
+          font-size: clamp(
+            1rem,
+            1.35vw,
+            1.35rem
+          );
+        }
+
+        .recognition-card p:not(
+          .recognition-label
+        ) {
+          margin: 0;
+
+          color: #75591a;
+
+          font-size: clamp(
+            0.72rem,
+            0.88vw,
+            0.94rem
+          );
+
+          font-weight: 700;
+
+          line-height: 1.35;
+        }
+
+        .hive-message {
+          display: flex;
+
+          align-items: center;
+
+          gap: 11px;
+
+          padding: 13px 14px;
+
+          background:
+            linear-gradient(
+              135deg,
+              #fff8da,
+              #f4fbef
+            );
+        }
+
+        .hive-message > span {
+          font-size: 1.6rem;
+        }
+
+        .hive-message strong {
+          display: block;
+
+          color: #574007;
+
+          font-size: clamp(
+            0.8rem,
+            1vw,
+            1rem
+          );
+        }
+
+        .hive-message p {
+          margin: 3px 0 0;
+
+          color: #746640;
+
+          font-size: clamp(
+            0.65rem,
+            0.8vw,
+            0.82rem
+          );
+        }
+
+        .meet-bees-footer {
+          position: relative;
+          z-index: 5;
+
+          display: flex;
+
+          align-items: center;
+
+          justify-content:
+            space-between;
+
+          gap: 20px;
+
+          height: 10%;
+
+          min-height: 55px;
+
+          color: #4c4d34;
+
+          font-size: clamp(
+            0.66rem,
+            0.85vw,
+            0.9rem
+          );
+
+          font-weight: 800;
+        }
+
+        .profile-progress {
+          display: flex;
+
+          align-items: center;
+
+          gap: 12px;
+        }
+
+        .profile-dots {
+          display: flex;
+
+          align-items: center;
+
+          gap: 5px;
+        }
+
+        .profile-dot {
+          width: 7px;
+          height: 7px;
+
+          border-radius: 50%;
+
+          background:
+            rgba(
+              110,
+              89,
+              33,
+              0.25
+            );
+
+          transition:
+            transform 0.25s ease,
+            background 0.25s ease;
+        }
+
+        .profile-dot.active {
+          background: #d59600;
+
+          transform:
+            scale(1.45);
+        }
+
+        .shoreline-message strong {
+          color: #916400;
+        }
+
+        .floating-bee {
+          position: absolute;
+          z-index: 3;
+
+          font-size: clamp(
+            1rem,
+            1.7vw,
+            1.8rem
+          );
+
+          pointer-events: none;
+        }
+
+        .bee-a {
+          top: 19%;
+          left: 46%;
+
+          animation:
+            flyingBeeOne
+            7s ease-in-out
+            infinite;
+        }
+
+        .bee-b {
+          right: 9%;
+          bottom: 23%;
+
+          animation:
+            flyingBeeTwo
+            8.5s ease-in-out
+            infinite;
+        }
+
+        .bee-c {
+          left: 4%;
+          bottom: 18%;
+
+          opacity: 0.65;
+
+          animation:
+            flyingBeeTwo
+            10s ease-in-out
+            infinite reverse;
+        }
+
+        @keyframes beachBeeFloat {
+          0%,
+          100% {
+            transform:
+              translateY(4px)
+              rotate(-2deg);
           }
 
-          @keyframes honeySunGlow {
-            0%,
-            100% {
-              transform: scale(0.96);
-              filter:
-                drop-shadow(
-                  0 0 8px
-                  rgba(232, 174, 24, 0.2)
-                );
-            }
+          50% {
+            transform:
+              translateY(-8px)
+              rotate(3deg);
+          }
+        }
 
-            50% {
-              transform: scale(1.06);
-              filter:
-                drop-shadow(
-                  0 0 22px
-                  rgba(232, 174, 24, 0.48)
-                );
-            }
+        @keyframes flyingBeeOne {
+          0%,
+          100% {
+            transform:
+              translate(0, 0)
+              rotate(-8deg);
           }
 
-          .ocean-wave {
-            position: absolute;
-            right: -8%;
-            bottom: -12%;
-            width: 70%;
-            height: 38%;
-            border-radius: 50%;
-            background:
-              rgba(84, 184, 218, 0.26);
-            animation:
-              shorelineMove
-              9s ease-in-out infinite;
+          50% {
+            transform:
+              translate(
+                45px,
+                -25px
+              )
+              rotate(12deg);
+          }
+        }
+
+        @keyframes flyingBeeTwo {
+          0%,
+          100% {
+            transform:
+              translate(0, 0);
           }
 
-          .wave-two {
-            right: 18%;
-            bottom: -19%;
-            background:
-              rgba(49, 145, 191, 0.18);
-            animation-delay: -4s;
+          50% {
+            transform:
+              translate(
+                -28px,
+                -18px
+              );
           }
+        }
 
-          @keyframes shorelineMove {
-            0%,
-            100% {
-              transform:
-                translateX(0)
-                translateY(0);
-            }
+        .empty-beach {
+          display: grid;
 
-            50% {
-              transform:
-                translateX(-24px)
-                translateY(-12px);
-            }
-          }
+          place-items: center;
+        }
 
-          .beach-bee {
-            position: absolute;
-            z-index: 1;
-            font-size: 27px;
-            animation:
-              beachBeeFlight
-              18s linear infinite;
-          }
+        .empty-beach-card {
+          position: relative;
+          z-index: 10;
 
-          .beach-bee-one {
-            top: 16%;
-            left: -8%;
-          }
+          max-width: 560px;
 
-          .beach-bee-two {
-            top: 66%;
-            left: -15%;
-            animation-delay: -8s;
-            animation-duration: 23s;
-          }
+          padding: 42px;
 
-          @keyframes beachBeeFlight {
-            0% {
-              transform:
-                translateX(0)
-                translateY(0)
-                rotate(-5deg);
-            }
+          border:
+            1px solid
+            rgba(
+              205,
+              167,
+              58,
+              0.5
+            );
 
-            35% {
-              transform:
-                translateX(42vw)
-                translateY(-28px)
-                rotate(6deg);
-            }
+          border-radius: 28px;
 
-            70% {
-              transform:
-                translateX(80vw)
-                translateY(18px)
-                rotate(-4deg);
-            }
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.88
+            );
 
-            100% {
-              transform:
-                translateX(118vw)
-                translateY(-5px)
-                rotate(5deg);
-            }
+          text-align: center;
+
+          box-shadow:
+            0 20px 45px
+            rgba(
+              36,
+              80,
+              87,
+              0.14
+            );
+        }
+
+        .empty-bee {
+          display: block;
+
+          margin-bottom: 12px;
+
+          font-size: 4rem;
+        }
+
+        .empty-beach-card h1 {
+          margin: 0;
+
+          color: #3c2a07;
+
+          font-size: 2.8rem;
+        }
+
+        .empty-beach-card p:last-child {
+          color: #746541;
+
+          line-height: 1.5;
+        }
+
+        @media (
+          max-width: 950px
+        ) {
+          .meet-bees-page {
+            overflow: auto;
           }
 
           .meet-bees-header {
-            position: relative;
-            z-index: 2;
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 20px;
+            height: auto;
           }
 
-          .meet-bees-eyebrow {
-            margin: 0 0 5px;
-            color: #9b6b07;
-            font-size: 0.68rem;
-            font-weight: 900;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-          }
-
-          .meet-bees-header h1 {
-            margin: 0;
-            color: #342405;
-            font-size: clamp(
-              2.1rem,
-              3.2vw,
-              3.3rem
-            );
-            line-height: 0.95;
-          }
-
-          .meet-bees-subtitle {
-            margin: 9px 0 0;
-            color: #6c5d32;
-            font-weight: 800;
-          }
-
-          .beech-badge {
-            display: flex;
-            flex-direction: column;
-            min-width: 175px;
-            padding: 12px 15px;
-            border: 1px solid
-              rgba(52, 142, 184, 0.28);
-            border-radius: 14px;
-            background:
-              rgba(255, 255, 255, 0.78);
-            box-shadow:
-              0 9px 22px
-              rgba(50, 109, 137, 0.12);
-            text-align: right;
-          }
-
-          .beech-badge span {
-            color: #5a8495;
-            font-size: 0.58rem;
-            font-weight: 900;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-          }
-
-          .beech-badge strong {
-            margin-top: 4px;
-            color: #76510a;
-            font-size: 1.05rem;
-          }
-
-          .meet-bees-content {
-            position: relative;
-            z-index: 2;
-            display: grid;
-            flex: 1 1 0;
+          .bee-profile-stage {
             grid-template-columns:
-              0.9fr 1.6fr;
-            gap: 18px;
-            min-height: 0;
-            margin-top: 16px;
+              1fr;
+
+            height: auto;
           }
 
-          .featured-bee,
-          .bee-roster-panel {
-            min-width: 0;
-            min-height: 0;
-            padding: 18px;
-            overflow: hidden;
-            border: 1px solid
-              rgba(204, 165, 55, 0.46);
-            border-radius: 20px;
-            background:
-              rgba(255, 255, 255, 0.84);
-            box-shadow:
-              0 12px 28px
-              rgba(71, 55, 12, 0.1);
-            backdrop-filter: blur(5px);
-            box-sizing: border-box;
-          }
-
-          .featured-bee {
-            display: flex;
-            align-items: center;
-            flex-direction: column;
-            justify-content: center;
-            text-align: center;
-          }
-
-          .featured-bee-art {
-            position: relative;
-            width: 128px;
-            height: 90px;
-            margin-bottom: 10px;
-            animation:
-              featuredBeeFloat
-              4s ease-in-out infinite;
-          }
-
-          @keyframes featuredBeeFloat {
-            0%,
-            100% {
-              transform: translateY(3px);
-            }
-
-            50% {
-              transform: translateY(-8px);
-            }
-          }
-
-          .featured-body {
-            position: absolute;
-            top: 36px;
-            left: 35px;
-            width: 76px;
-            height: 40px;
-            border: 4px solid #4d380c;
-            border-radius: 50%;
-            background:
-              repeating-linear-gradient(
-                90deg,
-                #f3bc28 0 14px,
-                #4b360d 14px 23px
-              );
-          }
-
-          .featured-head {
-            position: absolute;
-            z-index: 3;
-            top: 34px;
-            left: 17px;
-            width: 43px;
-            height: 43px;
-            border: 4px solid #4d380c;
-            border-radius: 50%;
-            background: #edb92e;
-          }
-
-          .featured-eye {
-            position: absolute;
-            top: 15px;
-            width: 5px;
-            height: 6px;
-            border-radius: 50%;
-            background: #2d230c;
-          }
-
-          .eye-left {
-            left: 10px;
-          }
-
-          .eye-right {
-            right: 10px;
-          }
-
-          .featured-wing {
-            position: absolute;
-            z-index: 1;
-            top: 7px;
-            width: 45px;
-            height: 40px;
-            border: 2px solid
-              rgba(72, 127, 149, 0.4);
-            border-radius: 55%;
-            background:
-              rgba(222, 245, 252, 0.82);
-          }
-
-          .wing-left {
-            left: 45px;
-            transform: rotate(-18deg);
-          }
-
-          .wing-right {
-            left: 74px;
-            transform: rotate(19deg);
-          }
-
-          .featured-label {
-            margin: 0;
-            color: #a2730b;
-            font-size: 0.62rem;
-            font-weight: 900;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-          }
-
-          .featured-bee h2 {
-            margin: 6px 0 0;
-            color: #342405;
-            font-size: 1.7rem;
-          }
-
-          .featured-title {
-            margin-top: 5px;
-            color: #9a6b08;
-          }
-
-          .featured-role {
-            margin-top: 4px;
-            color: #6d603c;
-            font-size: 0.76rem;
-            font-weight: 800;
-            text-transform: uppercase;
-          }
-
-          .featured-metrics {
-            display: grid;
-            grid-template-columns:
-              repeat(3, minmax(0, 1fr));
-            gap: 8px;
-            width: 100%;
-            margin-top: 18px;
-          }
-
-          .featured-metrics article {
-            display: flex;
-            flex-direction: column;
-            padding: 10px 7px;
-            border: 1px solid #ead99d;
-            border-radius: 11px;
-            background: #fffdf4;
-          }
-
-          .featured-metrics span {
-            color: #866d2e;
-            font-size: 0.52rem;
-            font-weight: 900;
-            text-transform: uppercase;
-          }
-
-          .featured-metrics strong {
-            margin-top: 5px;
-            color: #392707;
-          }
-
-          .roster-heading {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 14px;
-          }
-
-          .roster-heading h2 {
-            margin: 0;
-            color: #392707;
-          }
-
-          .roster-heading > span {
-            padding: 7px 10px;
-            border-radius: 999px;
-            background: #e7f5dd;
-            color: #3f7136;
-            font-size: 0.6rem;
-            font-weight: 900;
-            text-transform: uppercase;
-          }
-
-          .bee-roster-grid {
-            display: grid;
-            grid-template-columns:
-              repeat(2, minmax(0, 1fr));
-            gap: 9px;
-            margin-top: 15px;
-          }
-
-          .roster-bee-card {
-            display: grid;
-            grid-template-columns:
-              42px minmax(0, 1fr);
-            align-items: center;
-            gap: 9px;
-            min-width: 0;
-            padding: 11px;
-            border: 1px solid #eadca9;
-            border-radius: 13px;
-            background:
-              rgba(255, 255, 255, 0.74);
-            transition:
-              transform 450ms ease,
-              border-color 450ms ease,
-              background 450ms ease;
-          }
-
-          .active-roster-bee {
-            transform: translateY(-3px);
-            border-color: #dfa91e;
-            background: #fff4bd;
-            box-shadow:
-              0 7px 16px
-              rgba(123, 84, 5, 0.12);
-          }
-
-          .roster-bee-icon {
-            font-size: 27px;
-            text-align: center;
-            animation:
-              rosterBeeWiggle
-              3.5s ease-in-out infinite;
-          }
-
-          @keyframes rosterBeeWiggle {
-            0%,
-            100% {
-              transform: rotate(-3deg);
-            }
-
-            50% {
-              transform: rotate(5deg);
-            }
-          }
-
-          .roster-bee-card div:nth-child(2) {
-            display: flex;
-            min-width: 0;
-            flex-direction: column;
-          }
-
-          .roster-bee-card strong {
-            overflow: hidden;
-            color: #392707;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-          }
-
-          .roster-bee-card span {
-            margin-top: 3px;
-            color: #6e613e;
-            font-size: 0.64rem;
-            font-weight: 800;
-            text-transform: uppercase;
-          }
-
-          .roster-bee-card small {
-            grid-column: 2;
-            color: #9a6b08;
-            font-size: 0.6rem;
-            font-weight: 900;
+          .photo-frame {
+            width: 270px;
           }
 
           .meet-bees-footer {
-            position: relative;
-            z-index: 2;
-            display: grid;
+            height: auto;
+
+            padding-top: 18px;
+          }
+        }
+
+        @media (
+          max-width: 650px
+        ) {
+          .meet-bees-header,
+          .meet-bees-footer {
+            align-items:
+              flex-start;
+
+            flex-direction:
+              column;
+          }
+
+          .beach-brand {
+            display: none;
+          }
+
+          .story-card-grid {
             grid-template-columns:
-              auto 1fr auto;
-            align-items: center;
-            gap: 18px;
-            margin-top: 13px;
-            padding: 10px 14px;
-            border-radius: 13px;
-            background:
-              rgba(54, 40, 8, 0.9);
-            color: #ffffff;
+              1fr;
           }
 
-          .meet-bees-footer strong {
-            color: #ffe58a;
+          .shoreline-message {
+            display: none;
           }
+        }
 
-          .meet-bees-footer span {
-            text-align: center;
-            font-weight: 800;
+        @media (
+          prefers-reduced-motion:
+            reduce
+        ) {
+          .wave,
+          .floating-bee,
+          .placeholder-bee {
+            animation: none;
           }
-
-          .shoreline-mark {
-            font-size: 1.15rem;
-          }
-
-          .empty-bees {
-            color: #75643c;
-            font-weight: 800;
-          }
-
-          @media (max-width: 1000px) {
-            .meet-bees-page {
-              height: auto;
-              min-height: 100vh;
-              overflow: visible;
-            }
-
-            .meet-bees-content {
-              grid-template-columns: 1fr;
-            }
-          }
-
-          @media (max-width: 700px) {
-            .meet-bees-header {
-              flex-direction: column;
-            }
-
-            .beech-badge {
-              width: 100%;
-              text-align: left;
-              box-sizing: border-box;
-            }
-
-            .bee-roster-grid {
-              grid-template-columns: 1fr;
-            }
-
-            .featured-metrics {
-              grid-template-columns: 1fr;
-            }
-
-            .meet-bees-footer {
-              grid-template-columns: 1fr;
-              text-align: center;
-            }
-          }
-
-          @media (
-            prefers-reduced-motion: reduce
-          ) {
-            .sun-honeycomb,
-            .ocean-wave,
-            .beach-bee,
-            .featured-bee-art,
-            .roster-bee-icon {
-              animation: none;
-            }
-          }
-        `}
-      </style>
-    </section>
+        }
+      `}
+    </style>
   );
 }

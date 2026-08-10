@@ -3,88 +3,160 @@ import "server-only";
 import crypto from "node:crypto";
 import { cookies } from "next/headers";
 
-const ADMIN_COOKIE_NAME = "hive_admin_session";
-const SESSION_DURATION_SECONDS = 60 * 60 * 8;
+const ADMIN_COOKIE_NAME =
+  "hive_admin_session";
+
+const SESSION_DURATION_SECONDS =
+  60 * 60 * 8;
+
+/*
+ * ------------------------------------------------------
+ * MANAGER PASSWORD
+ * ------------------------------------------------------
+ */
 
 function getAdminPassword(): string {
-  const password = process.env.ADMIN_PASSWORD;
+  const password =
+    process.env.ADMIN_PASSWORD;
 
   if (!password) {
     throw new Error(
-      "ADMIN_PASSWORD is not configured in the environment."
+      "ADMIN_PASSWORD is not configured in the environment.",
     );
   }
 
   return password;
 }
 
-function getSessionSecret(): string {
-  const secret = process.env.ADMIN_SESSION_SECRET;
+/*
+ * ------------------------------------------------------
+ * SESSION SECRET
+ * ------------------------------------------------------
+ *
+ * ADMIN_SESSION_SECRET is preferred.
+ *
+ * If one has not been configured, The Hive derives a
+ * stable signing secret from ADMIN_PASSWORD.
+ *
+ * This prevents the manager login form from becoming
+ * unusable simply because the optional session secret
+ * is missing.
+ */
 
-  if (!secret) {
-    throw new Error(
-      "ADMIN_SESSION_SECRET is not configured in the environment."
-    );
+function getSessionSecret(): string {
+  const configuredSecret =
+    process.env.ADMIN_SESSION_SECRET;
+
+  if (
+    configuredSecret &&
+    configuredSecret.trim() !== ""
+  ) {
+    return configuredSecret;
   }
 
-  return secret;
+  const password =
+    getAdminPassword();
+
+  return crypto
+    .createHash("sha256")
+    .update(
+      `the-hive-admin-session:${password}`,
+    )
+    .digest("hex");
 }
 
-function createSignature(expiresAt: number): string {
+/*
+ * ------------------------------------------------------
+ * SESSION SIGNATURE
+ * ------------------------------------------------------
+ */
+
+function createSignature(
+  expiresAt: number,
+): string {
   return crypto
-    .createHmac("sha256", getSessionSecret())
+    .createHmac(
+      "sha256",
+      getSessionSecret(),
+    )
     .update(String(expiresAt))
     .digest("hex");
 }
+
+/*
+ * ------------------------------------------------------
+ * SESSION CREATION
+ * ------------------------------------------------------
+ */
 
 function createSessionValue(): string {
   const expiresAt =
     Math.floor(Date.now() / 1000) +
     SESSION_DURATION_SECONDS;
 
-  const signature = createSignature(expiresAt);
+  const signature =
+    createSignature(expiresAt);
 
   return `${expiresAt}.${signature}`;
 }
 
+/*
+ * ------------------------------------------------------
+ * SESSION VALIDATION
+ * ------------------------------------------------------
+ */
+
 function isValidSessionValue(
-  sessionValue: string | undefined
+  sessionValue: string | undefined,
 ): boolean {
   if (!sessionValue) {
     return false;
   }
 
-  const [expiresAtText, suppliedSignature] =
-    sessionValue.split(".");
+  const [
+    expiresAtText,
+    suppliedSignature,
+  ] = sessionValue.split(".");
 
-  if (!expiresAtText || !suppliedSignature) {
+  if (
+    !expiresAtText ||
+    !suppliedSignature
+  ) {
     return false;
   }
 
-  const expiresAt = Number(expiresAtText);
+  const expiresAt =
+    Number(expiresAtText);
 
-  if (!Number.isFinite(expiresAt)) {
+  if (
+    !Number.isFinite(expiresAt)
+  ) {
     return false;
   }
 
-  const currentTime = Math.floor(Date.now() / 1000);
+  const currentTime =
+    Math.floor(Date.now() / 1000);
 
-  if (expiresAt <= currentTime) {
+  if (
+    expiresAt <= currentTime
+  ) {
     return false;
   }
 
   const expectedSignature =
     createSignature(expiresAt);
 
-  const suppliedBuffer = Buffer.from(
-    suppliedSignature,
-    "utf8"
-  );
+  const suppliedBuffer =
+    Buffer.from(
+      suppliedSignature,
+      "utf8",
+    );
 
-  const expectedBuffer = Buffer.from(
-    expectedSignature,
-    "utf8"
-  );
+  const expectedBuffer =
+    Buffer.from(
+      expectedSignature,
+      "utf8",
+    );
 
   if (
     suppliedBuffer.length !==
@@ -95,24 +167,33 @@ function isValidSessionValue(
 
   return crypto.timingSafeEqual(
     suppliedBuffer,
-    expectedBuffer
+    expectedBuffer,
   );
 }
+
+/*
+ * ------------------------------------------------------
+ * PASSWORD VERIFICATION
+ * ------------------------------------------------------
+ */
 
 export function verifyAdminPassword(
-  suppliedPassword: string
+  suppliedPassword: string,
 ): boolean {
-  const expectedPassword = getAdminPassword();
+  const expectedPassword =
+    getAdminPassword();
 
-  const suppliedBuffer = Buffer.from(
-    suppliedPassword,
-    "utf8"
-  );
+  const suppliedBuffer =
+    Buffer.from(
+      suppliedPassword,
+      "utf8",
+    );
 
-  const expectedBuffer = Buffer.from(
-    expectedPassword,
-    "utf8"
-  );
+  const expectedBuffer =
+    Buffer.from(
+      expectedPassword,
+      "utf8",
+    );
 
   if (
     suppliedBuffer.length !==
@@ -123,12 +204,19 @@ export function verifyAdminPassword(
 
   return crypto.timingSafeEqual(
     suppliedBuffer,
-    expectedBuffer
+    expectedBuffer,
   );
 }
 
+/*
+ * ------------------------------------------------------
+ * CREATE AUTHENTICATED SESSION
+ * ------------------------------------------------------
+ */
+
 export async function createAdminSession(): Promise<void> {
-  const cookieStore = await cookies();
+  const cookieStore =
+    await cookies();
 
   cookieStore.set(
     ADMIN_COOKIE_NAME,
@@ -136,33 +224,72 @@ export async function createAdminSession(): Promise<void> {
     {
       httpOnly: true,
       sameSite: "lax",
+
       secure:
-        process.env.NODE_ENV === "production",
+        process.env.NODE_ENV ===
+        "production",
+
       path: "/",
-      maxAge: SESSION_DURATION_SECONDS,
-    }
+
+      maxAge:
+        SESSION_DURATION_SECONDS,
+    },
   );
 }
 
-export async function clearAdminSession(): Promise<void> {
-  const cookieStore = await cookies();
+/*
+ * ------------------------------------------------------
+ * LOGOUT
+ * ------------------------------------------------------
+ */
 
-  cookieStore.delete(ADMIN_COOKIE_NAME);
+export async function clearAdminSession(): Promise<void> {
+  const cookieStore =
+    await cookies();
+
+  cookieStore.delete(
+    ADMIN_COOKIE_NAME,
+  );
 }
+
+/*
+ * ------------------------------------------------------
+ * AUTHENTICATION CHECK
+ * ------------------------------------------------------
+ */
 
 export async function isAdminAuthenticated(): Promise<boolean> {
-  const cookieStore = await cookies();
+  const cookieStore =
+    await cookies();
 
-  const sessionValue = cookieStore.get(
-    ADMIN_COOKIE_NAME
-  )?.value;
+  const sessionValue =
+    cookieStore.get(
+      ADMIN_COOKIE_NAME,
+    )?.value;
 
-  return isValidSessionValue(sessionValue);
+  return isValidSessionValue(
+    sessionValue,
+  );
 }
 
+/*
+ * ------------------------------------------------------
+ * CONFIGURATION CHECK
+ * ------------------------------------------------------
+ *
+ * Only ADMIN_PASSWORD is required.
+ *
+ * ADMIN_SESSION_SECRET remains recommended,
+ * but its absence will no longer disable
+ * Manager Access.
+ */
+
 export function isAdminConfigured(): boolean {
+  const password =
+    process.env.ADMIN_PASSWORD;
+
   return Boolean(
-    process.env.ADMIN_PASSWORD &&
-    process.env.ADMIN_SESSION_SECRET
+    password &&
+      password.trim() !== "",
   );
 }

@@ -1,18 +1,12 @@
 type WorkerBeeCardProps = {
   name: string;
   roleLabel: string;
-
-  dailyTargetLiters: number;
-  weeklyTargetLiters: number;
-
   isManagement?: boolean;
 };
 
 export default function WorkerBeeCard({
   name,
   roleLabel,
-  dailyTargetLiters,
-  weeklyTargetLiters,
   isManagement = false,
 }: WorkerBeeCardProps) {
   return (
@@ -41,35 +35,33 @@ export default function WorkerBeeCard({
       </div>
 
       <div className="worker-right-panel">
-        <div className="target-heading">
-          <span className="target-eyebrow">
-            Assigned Target
+        <div className="worker-heading">
+          <span className="worker-eyebrow">
+            Worker Bee
           </span>
 
-          <strong className="target-title">
-            Every Bee Counts
+          <strong className="worker-title">
+            {isManagement
+              ? "Hive Leadership"
+              : "Part of the Hive"}
           </strong>
 
-          <small className="target-description">
-            Individual contribution target
-            supporting the center&apos;s
-            production goal.
+          <small className="worker-description">
+            {isManagement
+              ? "Supporting the team, donor experience, and center performance."
+              : "Every interaction and every successful contribution helps move the Hive forward."}
           </small>
         </div>
 
-        <div className="target-grid">
-          <TargetMetric
-            label="Daily Target"
-            value={formatLiters(
-              dailyTargetLiters,
-            )}
+        <div className="worker-value-grid">
+          <WorkerValue
+            label="Team"
+            value="Riviera Beach"
           />
 
-          <TargetMetric
-            label="Weekly Target"
-            value={formatLiters(
-              weeklyTargetLiters,
-            )}
+          <WorkerValue
+            label="Status"
+            value="Active"
           />
         </div>
 
@@ -77,8 +69,7 @@ export default function WorkerBeeCard({
           <span>🐝</span>
 
           <p>
-            Working together toward the
-            Hive goal.
+            One team. One Hive.
           </p>
         </div>
       </div>
@@ -254,11 +245,11 @@ export default function WorkerBeeCard({
             padding: 9px 11px;
           }
 
-          .target-heading {
+          .worker-heading {
             min-width: 0;
           }
 
-          .target-eyebrow {
+          .worker-eyebrow {
             display: block;
 
             margin-bottom: 3px;
@@ -272,7 +263,7 @@ export default function WorkerBeeCard({
             text-transform: uppercase;
           }
 
-          .target-title {
+          .worker-title {
             display: block;
 
             overflow: hidden;
@@ -291,7 +282,7 @@ export default function WorkerBeeCard({
             white-space: nowrap;
           }
 
-          .target-description {
+          .worker-description {
             display: block;
 
             margin-top: 4px;
@@ -303,7 +294,7 @@ export default function WorkerBeeCard({
             line-height: 1.25;
           }
 
-          .target-grid {
+          .worker-value-grid {
             display: grid;
 
             grid-template-columns:
@@ -317,7 +308,7 @@ export default function WorkerBeeCard({
             margin-top: 9px;
           }
 
-          .target-metric {
+          .worker-value {
             display: flex;
 
             flex-direction: column;
@@ -363,7 +354,7 @@ export default function WorkerBeeCard({
             box-sizing: border-box;
           }
 
-          .target-metric span {
+          .worker-value span {
             display: block;
 
             color: #897341;
@@ -377,20 +368,26 @@ export default function WorkerBeeCard({
             text-transform: uppercase;
           }
 
-          .target-metric strong {
+          .worker-value strong {
             display: block;
 
+            max-width: 100%;
+
             margin-top: 5px;
+
+            overflow: hidden;
 
             color: #3b2a08;
 
             font-size: clamp(
-              0.72rem,
-              0.85vw,
-              0.92rem
+              0.65rem,
+              0.78vw,
+              0.84rem
             );
 
             line-height: 1;
+
+            text-overflow: ellipsis;
             white-space: nowrap;
           }
 
@@ -746,7 +743,7 @@ export default function WorkerBeeCard({
                 minmax(0, 1.2fr);
             }
 
-            .target-grid {
+            .worker-value-grid {
               grid-template-columns:
                 repeat(
                   2,
@@ -770,17 +767,17 @@ export default function WorkerBeeCard({
   );
 }
 
-type TargetMetricProps = {
+type WorkerValueProps = {
   label: string;
   value: string;
 };
 
-function TargetMetric({
+function WorkerValue({
   label,
   value,
-}: TargetMetricProps) {
+}: WorkerValueProps) {
   return (
-    <div className="target-metric">
+    <div className="worker-value">
       <span>{label}</span>
 
       <strong>{value}</strong>
@@ -835,16 +832,4 @@ function ManagementBees() {
       ))}
     </div>
   );
-}
-
-function formatLiters(
-  value: number,
-) {
-  return `${value.toLocaleString(
-    "en-US",
-    {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1,
-    },
-  )} L`;
 }

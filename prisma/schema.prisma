@@ -18,22 +18,71 @@ enum MetricSource {
 // ======================================================
 
 model Collector {
-  id                     Int                      @id @default(autoincrement())
-  name                   String
-  role                   String
-  groupType              String
-  position               Int
-  active                 Boolean                  @default(true)
-  participatesInTarget   Boolean                  @default(true)
-  allocationWeight       Float                    @default(1)
-  targetAdjustmentLiters Float                    @default(0)
-  hourlyEntries          HourlyOperationalEntry[]
+  id        Int     @id @default(autoincrement())
+  name      String
+  role      String
+  groupType String
+  position  Int
+  active    Boolean @default(true)
+
+  // ------------------------------------------------------
+  // LEGACY TARGET FIELDS
+  // ------------------------------------------------------
+  // These remain temporarily because current application
+  // logic still references them.
+  // ------------------------------------------------------
+
+  // ------------------------------------------------------
+  // MEET THE BEES PROFILE
+  // ------------------------------------------------------
+
+  preferredName      String?
+  profileTitle       String?
+  bio                String?
+  funFact            String?
+  photoUrl           String?
+  showOnMeetTheBees  Boolean @default(true)
+  isEmployeeOfMonth  Boolean @default(false)
+  recognitionMessage String?
+
+  // ------------------------------------------------------
+  // WORKER-LEVEL PERFORMANCE
+  // ------------------------------------------------------
+
+  stickEntries  WorkerStickEntry[]
+  hourlyEntries HourlyOperationalEntry[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([active])
   @@index([position])
+  @@index([showOnMeetTheBees])
+  @@index([isEmployeeOfMonth])
+}
+
+// ======================================================
+// WORKER DAILY STICK PERFORMANCE
+// ======================================================
+
+model WorkerStickEntry {
+  id Int @id @default(autoincrement())
+
+  collectorId Int
+  entryDate   DateTime
+
+  totalSticks      Int @default(0)
+  successfulSticks Int @default(0)
+
+  collector Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([collectorId, entryDate])
+  @@index([entryDate])
+  @@index([collectorId])
+  @@index([collectorId, entryDate])
 }
 
 // ======================================================
@@ -57,13 +106,15 @@ model DailyCenterProduction {
 // ======================================================
 
 model HourlyOperationalEntry {
-  id                 Int      @id @default(autoincrement())
-  collectorId        Int
-  entryDate          DateTime
-  operationalHour    Int
-  successfulSticks   Int      @default(0)
-  unsuccessfulSticks Int      @default(0)
-  lostVolumeMl       Float    @default(0)
+  id Int @id @default(autoincrement())
+
+  collectorId     Int
+  entryDate       DateTime
+  operationalHour Int
+
+  successfulSticks   Int   @default(0)
+  unsuccessfulSticks Int   @default(0)
+  lostVolumeMl       Float @default(0)
 
   collector Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
 
@@ -73,6 +124,7 @@ model HourlyOperationalEntry {
   @@unique([collectorId, entryDate, operationalHour])
   @@index([entryDate])
   @@index([entryDate, operationalHour])
+  @@index([collectorId])
 }
 
 // ======================================================
@@ -80,18 +132,25 @@ model HourlyOperationalEntry {
 // ======================================================
 
 model HiveSettings {
-  id                         Int      @id @default(1)
-  centerName                 String   @default("Riviera Beach 115")
-  monthlyGoal                Float    @default(3500)
-  weeksInPeriod              Float    @default(4.33)
-  centerOperatingDaysPerWeek Int      @default(7)
-  workerDaysPerWeek          Int      @default(5)
-  openingHour                Int      @default(6)
-  closingHour                Int      @default(19)
-  currentMonth               Int
-  currentYear                Int
-  dashboardRotationSeconds   Int      @default(45)
-  updatedAt                  DateTime @updatedAt
+  id Int @id @default(1)
+
+  centerName String @default("Riviera Beach 115")
+
+  monthlyGoal   Float @default(3500)
+  weeksInPeriod Float @default(4.33)
+
+  centerOperatingDaysPerWeek Int @default(7)
+  workerDaysPerWeek          Int @default(5)
+
+  openingHour Int @default(6)
+  closingHour Int @default(19)
+
+  currentMonth Int
+  currentYear  Int
+
+  dashboardRotationSeconds Int @default(45)
+
+  updatedAt DateTime @updatedAt
 }
 
 // ======================================================
@@ -99,15 +158,19 @@ model HiveSettings {
 // ======================================================
 
 model MonthlyBudget {
-  id                   Int      @id @default(autoincrement())
-  fiscalYear           Int
-  month                Int
+  id Int @id @default(autoincrement())
+
+  fiscalYear Int
+  month      Int
+
   budgetLiters         Float
   originalBudgetLiters Float
-  budgetDonors         Int      @default(0)
-  originalBudgetDonors Int      @default(0)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+
+  budgetDonors         Int @default(0)
+  originalBudgetDonors Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([fiscalYear, month])
   @@index([fiscalYear])
@@ -118,18 +181,24 @@ model MonthlyBudget {
 // ======================================================
 
 model DashboardMetric {
-  id            Int             @id @default(autoincrement())
-  key           String          @unique
-  displayName   String
-  description   String?
-  unit          String?
-  decimalPlaces Int             @default(2)
-  publicSource  MetricSource    @default(CSL)
-  isVisible     Boolean         @default(true)
-  displayOrder  Int             @default(0)
-  readings      MetricReading[]
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id Int @id @default(autoincrement())
+
+  key         String  @unique
+  displayName String
+  description String?
+  unit        String?
+
+  decimalPlaces Int @default(2)
+
+  publicSource MetricSource @default(CSL)
+
+  isVisible    Boolean @default(true)
+  displayOrder Int     @default(0)
+
+  readings MetricReading[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([isVisible, displayOrder])
 }
@@ -139,11 +208,13 @@ model DashboardMetric {
 // ======================================================
 
 model MetricReading {
-  id         Int          @id @default(autoincrement())
-  metricId   Int
-  source     MetricSource
-  value      Float
-  recordedAt DateTime     @default(now())
+  id Int @id @default(autoincrement())
+
+  metricId Int
+  source   MetricSource
+  value    Float
+
+  recordedAt DateTime @default(now())
 
   metric DashboardMetric @relation(fields: [metricId], references: [id], onDelete: Cascade)
 

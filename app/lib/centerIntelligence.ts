@@ -1,9 +1,4 @@
 import {
-  allocateDailyGoal,
-  type ContributorAllocation,
-} from "@/app/lib/allocationEngine";
-
-import {
   getGoals,
   type GoalEngineResult,
 } from "@/app/lib/goalEngine";
@@ -12,13 +7,6 @@ import {
   getProjection,
   type ProjectionResult,
 } from "@/app/lib/projectionEngine";
-
-export interface CenterContributorInput {
-  id: number;
-  name: string;
-  weight: number;
-  currentLiters: number;
-}
 
 export interface CenterIntelligenceInput {
   monthlyGoalLiters: number;
@@ -42,19 +30,6 @@ export interface CenterIntelligenceInput {
   currentHour: number;
   openingHour: number;
   closingHour: number;
-
-  contributors: CenterContributorInput[];
-}
-
-export interface ContributorIntelligence
-  extends ContributorAllocation {
-  currentLiters: number;
-  litersRemaining: number;
-  completionPercentage: number;
-  status:
-    | "AHEAD"
-    | "ON_TRACK"
-    | "BEHIND";
 }
 
 export interface CenterIntelligenceResult {
@@ -77,8 +52,6 @@ export interface CenterIntelligenceResult {
   };
 
   projection: ProjectionResult;
-
-  contributors: ContributorIntelligence[];
 }
 
 function safeDivide(
@@ -108,20 +81,6 @@ function clampMinimumZero(
   return Math.max(0, value);
 }
 
-function getContributorStatus(
-  completionPercentage: number,
-): ContributorIntelligence["status"] {
-  if (completionPercentage >= 105) {
-    return "AHEAD";
-  }
-
-  if (completionPercentage >= 90) {
-    return "ON_TRACK";
-  }
-
-  return "BEHIND";
-}
-
 export function getCenterIntelligence(
   input: CenterIntelligenceInput,
 ): CenterIntelligenceResult {
@@ -143,39 +102,14 @@ export function getCenterIntelligence(
 
     collectionDaysPerWeek:
       input.collectionDaysPerWeek,
-
-    contributors:
-      input.contributors.length,
   });
-
-  /*
-   * Allocation Engine
-   *
-   * Divides the daily center target among
-   * participating contributors according
-   * to their allocation weights.
-   */
-  const allocationResult =
-    allocateDailyGoal({
-      dailyCenterGoalLiters:
-        goals.dailyLiters,
-
-      contributors:
-        input.contributors.map(
-          (contributor) => ({
-            id: contributor.id,
-            name: contributor.name,
-            weight: contributor.weight,
-          }),
-        ),
-    });
 
   /*
    * Projection Engine
    *
    * Uses live operational activity and
-   * the current pace to estimate where
-   * the center will finish at closing.
+   * current pace to estimate where the
+   * CENTER will finish at closing.
    */
   const projection = getProjection({
     successfulSticks:
@@ -204,75 +138,10 @@ export function getCenterIntelligence(
   });
 
   /*
-   * Create a fast lookup for each
-   * contributor's current production.
-   */
-  const contributorCurrentLiters =
-    new Map(
-      input.contributors.map(
-        (contributor) => [
-          contributor.id,
-          contributor.currentLiters,
-        ],
-      ),
-    );
-
-  /*
-   * Contributor Intelligence
-   *
-   * Combines allocation targets with
-   * current contributor performance.
-   */
-  const contributors:
-    ContributorIntelligence[] =
-    allocationResult.allocations.map(
-      (allocation) => {
-        const currentLiters =
-          contributorCurrentLiters.get(
-            allocation.id,
-          ) ?? 0;
-
-        const completionPercentage =
-          safeDivide(
-            currentLiters,
-            allocation.dailyTargetLiters,
-          ) * 100;
-
-        return {
-          ...allocation,
-
-          currentLiters:
-            roundToTwoDecimals(
-              currentLiters,
-            ),
-
-          litersRemaining:
-            roundToTwoDecimals(
-              clampMinimumZero(
-                allocation.dailyTargetLiters -
-                  currentLiters,
-              ),
-            ),
-
-          completionPercentage:
-            roundToTwoDecimals(
-              completionPercentage,
-            ),
-
-          status:
-            getContributorStatus(
-              completionPercentage,
-            ),
-        };
-      },
-    );
-
-  /*
    * Center Intelligence
    *
-   * Consolidates official production,
-   * goal performance, projection data,
-   * and contributor performance.
+   * All liter production remains
+   * center-level only.
    */
   return {
     goals,
@@ -354,7 +223,5 @@ export function getCenterIntelligence(
     },
 
     projection,
-
-    contributors,
   };
 }

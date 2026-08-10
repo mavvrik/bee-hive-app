@@ -7,7 +7,8 @@ function readRequiredText(
   formData: FormData,
   fieldName: string,
 ) {
-  const value = formData.get(fieldName);
+  const value =
+    formData.get(fieldName);
 
   if (
     typeof value !== "string" ||
@@ -21,12 +22,34 @@ function readRequiredText(
   return value.trim();
 }
 
+function readOptionalText(
+  formData: FormData,
+  fieldName: string,
+) {
+  const value =
+    formData.get(fieldName);
+
+  if (
+    typeof value !== "string"
+  ) {
+    return null;
+  }
+
+  const trimmed =
+    value.trim();
+
+  return trimmed === ""
+    ? null
+    : trimmed;
+}
+
 function readInteger(
   formData: FormData,
   fieldName: string,
   fallback = 0,
 ) {
-  const value = formData.get(fieldName);
+  const value =
+    formData.get(fieldName);
 
   if (
     typeof value !== "string" ||
@@ -35,33 +58,15 @@ function readInteger(
     return fallback;
   }
 
-  const parsedValue = Number.parseInt(
-    value,
-    10,
-  );
+  const parsedValue =
+    Number.parseInt(
+      value,
+      10,
+    );
 
-  return Number.isFinite(parsedValue)
-    ? parsedValue
-    : fallback;
-}
-
-function readNumber(
-  formData: FormData,
-  fieldName: string,
-  fallback = 0,
-) {
-  const value = formData.get(fieldName);
-
-  if (
-    typeof value !== "string" ||
-    value.trim() === ""
-  ) {
-    return fallback;
-  }
-
-  const parsedValue = Number(value);
-
-  return Number.isFinite(parsedValue)
+  return Number.isFinite(
+    parsedValue,
+  )
     ? parsedValue
     : fallback;
 }
@@ -71,7 +76,8 @@ function readCheckbox(
   fieldName: string,
 ) {
   return (
-    formData.get(fieldName) === "on"
+    formData.get(fieldName) ===
+    "on"
   );
 }
 
@@ -81,36 +87,37 @@ function refreshRosterPages() {
   revalidatePath(
     "/settings/workers",
   );
+  revalidatePath(
+    "/settings/workers/performance",
+  );
 }
 
 export async function createCollector(
   formData: FormData,
 ) {
-  const name = readRequiredText(
-    formData,
-    "name",
-  );
-
-  const role = readRequiredText(
-    formData,
-    "role",
-  );
-
-  const groupType = readRequiredText(
-    formData,
-    "groupType",
-  );
-
-  const participatesInTarget =
-    readCheckbox(
+  const name =
+    readRequiredText(
       formData,
-      "participatesInTarget",
+      "name",
     );
 
-  const active = readCheckbox(
-    formData,
-    "active",
-  );
+  const role =
+    readRequiredText(
+      formData,
+      "role",
+    );
+
+  const groupType =
+    readRequiredText(
+      formData,
+      "groupType",
+    );
+
+  const active =
+    readCheckbox(
+      formData,
+      "active",
+    );
 
   const requestedPosition =
     readInteger(
@@ -144,18 +151,34 @@ export async function createCollector(
   const nextPosition =
     requestedPosition > 0
       ? requestedPosition
-      : (lastCollector?.position ??
-          0) + 1;
+      : (
+          lastCollector?.position ??
+          0
+        ) + 1;
 
   await prisma.collector.create({
     data: {
       name,
       role,
       groupType,
-      position: nextPosition,
+      position:
+        nextPosition,
       active,
-      participatesInTarget,
-      targetAdjustmentLiters: 0,
+
+      preferredName: null,
+      profileTitle: null,
+      bio: null,
+      funFact: null,
+      photoUrl: null,
+
+      showOnMeetTheBees:
+        active,
+
+      isEmployeeOfMonth:
+        false,
+
+      recognitionMessage:
+        null,
     },
   });
 
@@ -165,10 +188,11 @@ export async function createCollector(
 export async function updateCollector(
   formData: FormData,
 ) {
-  const collectorId = readInteger(
-    formData,
-    "collectorId",
-  );
+  const collectorId =
+    readInteger(
+      formData,
+      "collectorId",
+    );
 
   if (collectorId <= 0) {
     throw new Error(
@@ -176,50 +200,89 @@ export async function updateCollector(
     );
   }
 
-  const name = readRequiredText(
-    formData,
-    "name",
-  );
-
-  const role = readRequiredText(
-    formData,
-    "role",
-  );
-
-  const groupType = readRequiredText(
-    formData,
-    "groupType",
-  );
-
-  const position = Math.max(
-    1,
-    readInteger(
+  const name =
+    readRequiredText(
       formData,
-      "position",
+      "name",
+    );
+
+  const role =
+    readRequiredText(
+      formData,
+      "role",
+    );
+
+  const groupType =
+    readRequiredText(
+      formData,
+      "groupType",
+    );
+
+  const position =
+    Math.max(
       1,
-    ),
-  );
+      readInteger(
+        formData,
+        "position",
+        1,
+      ),
+    );
 
-  const active = readCheckbox(
-    formData,
-    "active",
-  );
+  const active =
+    readCheckbox(
+      formData,
+      "active",
+    );
 
-  const participatesInTarget =
+  const preferredName =
+    readOptionalText(
+      formData,
+      "preferredName",
+    );
+
+  const profileTitle =
+    readOptionalText(
+      formData,
+      "profileTitle",
+    );
+
+  const bio =
+    readOptionalText(
+      formData,
+      "bio",
+    );
+
+  const funFact =
+    readOptionalText(
+      formData,
+      "funFact",
+    );
+
+  const photoUrl =
+    readOptionalText(
+      formData,
+      "photoUrl",
+    );
+
+  const showOnMeetTheBees =
     active &&
     readCheckbox(
       formData,
-      "participatesInTarget",
+      "showOnMeetTheBees",
     );
 
-  const targetAdjustmentLiters =
-    participatesInTarget
-      ? readNumber(
-          formData,
-          "targetAdjustmentLiters",
-          0,
-        )
-      : 0;
+  const isEmployeeOfMonth =
+    active &&
+    readCheckbox(
+      formData,
+      "isEmployeeOfMonth",
+    );
+
+  const recognitionMessage =
+    readOptionalText(
+      formData,
+      "recognitionMessage",
+    );
 
   const duplicateCollector =
     await prisma.collector.findFirst({
@@ -227,6 +290,7 @@ export async function updateCollector(
         name: {
           equals: name,
         },
+
         NOT: {
           id: collectorId,
         },
@@ -239,18 +303,45 @@ export async function updateCollector(
     );
   }
 
+  if (isEmployeeOfMonth) {
+    await prisma.collector.updateMany({
+      where: {
+        isEmployeeOfMonth:
+          true,
+
+        NOT: {
+          id: collectorId,
+        },
+      },
+
+      data: {
+        isEmployeeOfMonth:
+          false,
+      },
+    });
+  }
+
   await prisma.collector.update({
     where: {
       id: collectorId,
     },
+
     data: {
       name,
       role,
       groupType,
       position,
       active,
-      participatesInTarget,
-      targetAdjustmentLiters,
+
+      preferredName,
+      profileTitle,
+      bio,
+      funFact,
+      photoUrl,
+
+      showOnMeetTheBees,
+      isEmployeeOfMonth,
+      recognitionMessage,
     },
   });
 
@@ -260,10 +351,11 @@ export async function updateCollector(
 export async function deactivateCollector(
   formData: FormData,
 ) {
-  const collectorId = readInteger(
-    formData,
-    "collectorId",
-  );
+  const collectorId =
+    readInteger(
+      formData,
+      "collectorId",
+    );
 
   if (collectorId <= 0) {
     throw new Error(
@@ -275,10 +367,13 @@ export async function deactivateCollector(
     where: {
       id: collectorId,
     },
+
     data: {
       active: false,
-      participatesInTarget: false,
-      targetAdjustmentLiters: 0,
+      showOnMeetTheBees:
+        false,
+      isEmployeeOfMonth:
+        false,
     },
   });
 
@@ -288,10 +383,11 @@ export async function deactivateCollector(
 export async function reactivateCollector(
   formData: FormData,
 ) {
-  const collectorId = readInteger(
-    formData,
-    "collectorId",
-  );
+  const collectorId =
+    readInteger(
+      formData,
+      "collectorId",
+    );
 
   if (collectorId <= 0) {
     throw new Error(
@@ -312,20 +408,15 @@ export async function reactivateCollector(
     );
   }
 
-  const shouldParticipate =
-    collector.role ===
-      "Phlebotomist" ||
-    collector.groupType ===
-      "Individual";
-
   await prisma.collector.update({
     where: {
       id: collectorId,
     },
+
     data: {
       active: true,
-      participatesInTarget:
-        shouldParticipate,
+      showOnMeetTheBees:
+        true,
     },
   });
 
