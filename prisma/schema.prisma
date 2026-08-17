@@ -49,8 +49,11 @@ model Collector {
   // WORKER-LEVEL PERFORMANCE
   // ------------------------------------------------------
 
-  stickEntries  WorkerStickEntry[]
-  hourlyEntries HourlyOperationalEntry[]
+  stickEntries           WorkerStickEntry[]
+  hourlyEntries          HourlyOperationalEntry[]
+  emfEntries             QualityEmfEntry[]
+  leadForagerReigns      LeadForagerReign[]
+  monthlyLeadForagerWins MonthlyLeadForager[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -83,6 +86,81 @@ model WorkerStickEntry {
   @@index([entryDate])
   @@index([collectorId])
   @@index([collectorId, entryDate])
+}
+
+// ======================================================
+// QUALITY / EMF HISTORY
+// ======================================================
+//
+// EMFs are errors captured by Quality.
+//
+// Lower monthly EMF totals represent stronger quality
+// performance.
+//
+// These records remain independent from production data
+// and will contribute 30% of the Employee of the Month
+// score.
+// ======================================================
+
+model QualityEmfEntry {
+  id Int @id @default(autoincrement())
+
+  collectorId Int
+  entryDate   DateTime
+
+  emfCount Int     @default(1)
+  note     String?
+
+  collector Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([collectorId])
+  @@index([entryDate])
+  @@index([collectorId, entryDate])
+}
+
+// ======================================================
+// REIGNING LEAD FORAGER
+// ======================================================
+
+model LeadForagerReign {
+  id Int @id @default(1)
+
+  collectorId Int?
+
+  benchmarkSuccessfulSticks Int       @default(0)
+  crownedAt                 DateTime?
+
+  collector Collector? @relation(fields: [collectorId], references: [id], onDelete: SetNull)
+
+  updatedAt DateTime @updatedAt
+
+  @@index([collectorId])
+}
+
+// ======================================================
+// MONTHLY LEAD FORAGER HISTORY
+// ======================================================
+
+model MonthlyLeadForager {
+  id Int @id @default(autoincrement())
+
+  year  Int
+  month Int
+
+  collectorId      Int
+  successfulSticks Int
+
+  collector Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+
+  recordedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([year, month])
+  @@index([collectorId])
+  @@index([year, month])
 }
 
 // ======================================================

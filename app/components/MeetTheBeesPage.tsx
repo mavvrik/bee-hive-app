@@ -27,6 +27,7 @@ export type MeetTheBeesProfile = {
 type MeetTheBeesPageProps = {
   centerName: string;
   bees: MeetTheBeesProfile[];
+  monthlyLeadForagerId: number | null;
 };
 
 function getDisplayName(
@@ -75,38 +76,58 @@ function getProfileTitle(
 export default function MeetTheBeesPage({
   centerName,
   bees,
+  monthlyLeadForagerId,
 }: MeetTheBeesPageProps) {
   /*
-   * Employee of the Month appears first,
-   * followed by normal display order.
+   * Employee of the Month appears first.
+   *
+   * Monthly Lead Forager appears next.
+   *
+   * Everyone else follows normal display
+   * order from the incoming profile list.
    */
+
   const orderedBees =
     useMemo(() => {
       return [...bees].sort(
-        (a, b) =>
-          Number(
-            b.isEmployeeOfMonth,
-          ) -
-          Number(
-            a.isEmployeeOfMonth,
-          ),
+        (a, b) => {
+          const employeeDifference =
+            Number(
+              b.isEmployeeOfMonth,
+            ) -
+            Number(
+              a.isEmployeeOfMonth,
+            );
+
+          if (
+            employeeDifference !== 0
+          ) {
+            return employeeDifference;
+          }
+
+          const monthlyLeadDifference =
+            Number(
+              b.id ===
+                monthlyLeadForagerId,
+            ) -
+            Number(
+              a.id ===
+                monthlyLeadForagerId,
+            );
+
+          return monthlyLeadDifference;
+        },
       );
-    }, [bees]);
+    }, [
+      bees,
+      monthlyLeadForagerId,
+    ]);
 
   const [
     activeBeeIndex,
     setActiveBeeIndex,
   ] = useState(0);
 
-  /*
-   * Each employee remains on screen for
-   * five seconds.
-   *
-   * With eight profiles, a complete pass
-   * takes about 40 seconds — fitting nicely
-   * inside the main Hive dashboard's
-   * configurable page rotation.
-   */
   useEffect(() => {
     setActiveBeeIndex(0);
 
@@ -177,6 +198,14 @@ export default function MeetTheBeesPage({
       activeBee,
     );
 
+  const isMonthlyLeadForager =
+    activeBee.id ===
+    monthlyLeadForagerId;
+
+  const hasRecognition =
+    activeBee.isEmployeeOfMonth ||
+    isMonthlyLeadForager;
+
   return (
     <section className="meet-bees-page">
       <BeachBackground />
@@ -243,7 +272,7 @@ export default function MeetTheBeesPage({
       <main className="bee-profile-stage">
         <section
           className={`bee-photo-panel ${
-            activeBee.isEmployeeOfMonth
+            hasRecognition
               ? "featured-worker"
               : ""
           }`}
@@ -253,6 +282,14 @@ export default function MeetTheBeesPage({
               <span>🏆</span>
 
               Employee of the Month
+            </div>
+          )}
+
+          {isMonthlyLeadForager && (
+            <div className="lead-forager-ribbon">
+              <span>🐝</span>
+
+              Monthly Lead Forager
             </div>
           )}
 
@@ -368,10 +405,12 @@ export default function MeetTheBeesPage({
             </article>
           </div>
 
-          {activeBee.isEmployeeOfMonth ? (
+          {hasRecognition ? (
             <div className="recognition-card">
               <div className="recognition-badge">
-                🏆
+                {activeBee.isEmployeeOfMonth
+                  ? "🏆"
+                  : "🐝"}
               </div>
 
               <div>
@@ -380,13 +419,21 @@ export default function MeetTheBeesPage({
                 </p>
 
                 <h3>
-                  Employee of the
-                  Month
+                  {activeBee.isEmployeeOfMonth &&
+                  isMonthlyLeadForager
+                    ? "Employee of the Month & Monthly Lead Forager"
+                    : activeBee.isEmployeeOfMonth
+                      ? "Employee of the Month"
+                      : "Monthly Lead Forager"}
                 </h3>
 
                 <p>
-                  {activeBee.recognitionMessage ||
-                    `${displayName} is being recognized for an outstanding contribution to the Hive.`}
+                  {activeBee.isEmployeeOfMonth
+                    ? (
+                        activeBee.recognitionMessage ||
+                        `${displayName} is being recognized for an outstanding contribution to the Hive.`
+                      )
+                    : `${displayName} currently leads the Hive in successful sticks for this month.`}
                 </p>
               </div>
             </div>
@@ -489,65 +536,33 @@ function MeetTheBeesStyles() {
       {`
         .meet-bees-page {
           position: relative;
-
           width: 100%;
           height: 100%;
-
           min-width: 0;
           min-height: 0;
-
           overflow: hidden;
-
-          padding: clamp(
-            18px,
-            2vw,
-            34px
-          );
-
+          padding: clamp(18px, 2vw, 34px);
           background: #dff7ff;
-
-          font-family:
-            Arial,
-            Helvetica,
-            sans-serif;
-
+          font-family: Arial, Helvetica, sans-serif;
           color: #382707;
-
           box-sizing: border-box;
         }
 
         .beach-background {
           position: absolute;
-
           inset: 0;
-
           overflow: hidden;
-
           pointer-events: none;
         }
 
         .sky-layer {
           position: absolute;
-
           inset: 0 0 38% 0;
-
           background:
             radial-gradient(
               circle at 76% 17%,
-              rgba(
-                255,
-                238,
-                132,
-                0.98
-              )
-              0 6%,
-              rgba(
-                255,
-                238,
-                132,
-                0.27
-              )
-              7% 15%,
+              rgba(255, 238, 132, 0.98) 0 6%,
+              rgba(255, 238, 132, 0.27) 7% 15%,
               transparent 27%
             ),
             linear-gradient(
@@ -559,39 +574,26 @@ function MeetTheBeesStyles() {
 
         .sun-glow {
           position: absolute;
-
           top: -7vw;
           right: -4vw;
-
           width: 25vw;
           height: 25vw;
-
           border-radius: 50%;
-
           background:
             radial-gradient(
               circle,
-              rgba(
-                255,
-                224,
-                80,
-                0.42
-              ),
+              rgba(255, 224, 80, 0.42),
               transparent 68%
             );
-
           pointer-events: none;
         }
 
         .ocean-layer {
           position: absolute;
-
           right: 0;
           bottom: 12%;
           left: 0;
-
           height: 34%;
-
           background:
             linear-gradient(
               180deg,
@@ -602,14 +604,10 @@ function MeetTheBeesStyles() {
 
         .wave {
           position: absolute;
-
           left: -5%;
-
           width: 110%;
           height: 36px;
-
           border-radius: 50%;
-
           background:
             rgba(
               255,
@@ -621,7 +619,6 @@ function MeetTheBeesStyles() {
 
         .wave-one {
           top: -13px;
-
           animation:
             beachWaveOne
             5s ease-in-out
@@ -630,9 +627,7 @@ function MeetTheBeesStyles() {
 
         .wave-two {
           top: 15px;
-
           opacity: 0.46;
-
           animation:
             beachWaveTwo
             6.5s ease-in-out
@@ -641,9 +636,7 @@ function MeetTheBeesStyles() {
 
         .wave-three {
           top: 42px;
-
           opacity: 0.25;
-
           animation:
             beachWaveOne
             8s ease-in-out
@@ -652,37 +645,30 @@ function MeetTheBeesStyles() {
 
         @keyframes beachWaveOne {
           from {
-            transform:
-              translateX(-2%);
+            transform: translateX(-2%);
           }
 
           to {
-            transform:
-              translateX(2%);
+            transform: translateX(2%);
           }
         }
 
         @keyframes beachWaveTwo {
           from {
-            transform:
-              translateX(2%);
+            transform: translateX(2%);
           }
 
           to {
-            transform:
-              translateX(-3%);
+            transform: translateX(-3%);
           }
         }
 
         .sand-layer {
           position: absolute;
-
           right: 0;
           bottom: 0;
           left: 0;
-
           height: 17%;
-
           background:
             linear-gradient(
               180deg,
@@ -693,160 +679,108 @@ function MeetTheBeesStyles() {
 
         .palm-tree {
           position: absolute;
-
           right: 4%;
           bottom: 10%;
-
           width: 170px;
           height: 260px;
-
           opacity: 0.14;
-
-          transform:
-            rotate(3deg);
+          transform: rotate(3deg);
         }
 
         .palm-trunk {
           position: absolute;
-
           right: 70px;
           bottom: 0;
-
           width: 25px;
           height: 190px;
-
-          border-radius:
-            60% 50% 20% 30%;
-
+          border-radius: 60% 50% 20% 30%;
           background: #694211;
-
-          transform:
-            rotate(8deg);
+          transform: rotate(8deg);
         }
 
         .palm-leaf {
           position: absolute;
-
           top: 35px;
           right: 73px;
-
           width: 105px;
           height: 24px;
-
-          border-radius:
-            100% 0 100% 0;
-
+          border-radius: 100% 0 100% 0;
           background: #267a40;
-
-          transform-origin:
-            right center;
+          transform-origin: right center;
         }
 
         .leaf-one {
-          transform:
-            rotate(-45deg);
+          transform: rotate(-45deg);
         }
 
         .leaf-two {
-          transform:
-            rotate(-15deg);
+          transform: rotate(-15deg);
         }
 
         .leaf-three {
-          transform:
-            rotate(20deg);
+          transform: rotate(20deg);
         }
 
         .leaf-four {
-          transform:
-            rotate(55deg);
+          transform: rotate(55deg);
         }
 
         .leaf-five {
-          transform:
-            rotate(88deg);
+          transform: rotate(88deg);
         }
 
         .meet-bees-header {
           position: relative;
           z-index: 5;
-
           display: flex;
-
-          align-items:
-            flex-start;
-
-          justify-content:
-            space-between;
-
+          align-items: flex-start;
+          justify-content: space-between;
           gap: 30px;
-
           height: 15%;
-
           min-height: 105px;
         }
 
         .beach-eyebrow {
           margin: 0 0 4px;
-
           color: #c18100;
-
           font-size: clamp(
             0.68rem,
             0.9vw,
             1rem
           );
-
           font-weight: 1000;
-
-          letter-spacing:
-            0.18em;
-
-          text-transform:
-            uppercase;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
         }
 
         .meet-bees-header h1 {
           margin: 0;
-
           color: #3b2905;
-
           font-size: clamp(
             2.3rem,
             4.3vw,
             4.7rem
           );
-
           line-height: 0.95;
-
-          letter-spacing:
-            -0.04em;
+          letter-spacing: -0.04em;
         }
 
         .center-name {
           margin: 8px 0 0;
-
           color: #6f5b2b;
-
           font-size: clamp(
             0.9rem,
             1.3vw,
             1.35rem
           );
-
           font-weight: 800;
         }
 
         .beach-brand {
           display: flex;
-
           align-items: center;
-
           gap: 13px;
-
-          padding:
-            12px 17px;
-
+          padding: 12px 17px;
           border:
             1px solid
             rgba(
@@ -855,9 +789,7 @@ function MeetTheBeesStyles() {
               17,
               0.42
             );
-
           border-radius: 17px;
-
           background:
             rgba(
               255,
@@ -865,7 +797,6 @@ function MeetTheBeesStyles() {
               255,
               0.78
             );
-
           box-shadow:
             0 8px 26px
             rgba(
@@ -874,9 +805,7 @@ function MeetTheBeesStyles() {
               111,
               0.09
             );
-
-          backdrop-filter:
-            blur(10px);
+          backdrop-filter: blur(10px);
         }
 
         .brand-bee {
@@ -894,7 +823,6 @@ function MeetTheBeesStyles() {
 
         .beach-brand strong {
           color: #ba7800;
-
           font-size: clamp(
             0.9rem,
             1.25vw,
@@ -904,32 +832,24 @@ function MeetTheBeesStyles() {
 
         .beach-brand small {
           margin-top: 2px;
-
           color: #52727a;
-
           font-weight: 700;
         }
 
         .bee-profile-stage {
           position: relative;
           z-index: 4;
-
           display: grid;
-
           grid-template-columns:
             minmax(300px, 0.9fr)
             minmax(0, 1.4fr);
-
           gap: clamp(
             22px,
             3vw,
             46px
           );
-
           height: 72%;
-
           min-height: 0;
-
           align-items: stretch;
         }
 
@@ -941,19 +861,11 @@ function MeetTheBeesStyles() {
 
         .bee-photo-panel {
           position: relative;
-
           display: flex;
-
-          flex-direction:
-            column;
-
+          flex-direction: column;
           align-items: center;
-
-          justify-content:
-            center;
-
+          justify-content: center;
           padding: 18px;
-
           border:
             1px solid
             rgba(
@@ -962,9 +874,7 @@ function MeetTheBeesStyles() {
               25,
               0.48
             );
-
           border-radius: 28px;
-
           background:
             linear-gradient(
               150deg,
@@ -981,7 +891,6 @@ function MeetTheBeesStyles() {
                 0.88
               )
             );
-
           box-shadow:
             0 18px 42px
             rgba(
@@ -990,9 +899,7 @@ function MeetTheBeesStyles() {
               67,
               0.16
             );
-
-          backdrop-filter:
-            blur(9px);
+          backdrop-filter: blur(9px);
         }
 
         .bee-photo-panel.featured-worker {
@@ -1004,7 +911,6 @@ function MeetTheBeesStyles() {
               0,
               0.82
             );
-
           box-shadow:
             0 0 36px
               rgba(
@@ -1022,44 +928,24 @@ function MeetTheBeesStyles() {
               );
         }
 
-        .employee-ribbon {
+        .employee-ribbon,
+        .lead-forager-ribbon {
           position: absolute;
           z-index: 5;
-
           top: 14px;
-          left: 14px;
-
           display: flex;
-
           align-items: center;
-
           gap: 7px;
-
-          padding:
-            8px 12px;
-
+          padding: 8px 12px;
           border-radius: 999px;
-
-          background:
-            linear-gradient(
-              135deg,
-              #ffde67,
-              #d89500
-            );
-
           color: #533700;
-
           font-size: clamp(
             0.62rem,
             0.8vw,
             0.82rem
           );
-
           font-weight: 1000;
-
-          text-transform:
-            uppercase;
-
+          text-transform: uppercase;
           box-shadow:
             0 5px 13px
             rgba(
@@ -1070,34 +956,44 @@ function MeetTheBeesStyles() {
             );
         }
 
+        .employee-ribbon {
+          left: 14px;
+          background:
+            linear-gradient(
+              135deg,
+              #ffde67,
+              #d89500
+            );
+        }
+
+        .lead-forager-ribbon {
+          right: 14px;
+          background:
+            linear-gradient(
+              135deg,
+              #fff0a7,
+              #f2b927
+            );
+        }
+
         .photo-frame {
           position: relative;
-
           display: grid;
-
           place-items: center;
-
           width: min(
             100%,
             350px
           );
-
           aspect-ratio: 1 / 1;
-
           overflow: hidden;
-
-          border:
-            7px solid #fff9dc;
-
+          border: 7px solid #fff9dc;
           border-radius: 50%;
-
           background:
             linear-gradient(
               135deg,
               #fff7c6,
               #c9f2f9
             );
-
           box-shadow:
             0 13px 30px
             rgba(
@@ -1111,33 +1007,21 @@ function MeetTheBeesStyles() {
         .worker-photo {
           width: 100%;
           height: 100%;
-
           object-fit: cover;
         }
 
         .photo-placeholder {
           display: flex;
-
-          flex-direction:
-            column;
-
+          flex-direction: column;
           align-items: center;
-
-          justify-content:
-            center;
-
+          justify-content: center;
           gap: 9px;
-
           width: 100%;
           height: 100%;
-
           color: #836415;
-
           font-size: 0.78rem;
           font-weight: 900;
-
-          text-transform:
-            uppercase;
+          text-transform: uppercase;
         }
 
         .placeholder-bee {
@@ -1146,7 +1030,6 @@ function MeetTheBeesStyles() {
             7vw,
             7rem
           );
-
           animation:
             beachBeeFloat
             3.4s ease-in-out
@@ -1155,19 +1038,15 @@ function MeetTheBeesStyles() {
 
         .photo-honeycomb {
           position: absolute;
-
           right: 6%;
           bottom: 9%;
-
           display: flex;
-
           gap: 3px;
         }
 
         .photo-honeycomb span {
           width: 16px;
           height: 14px;
-
           background:
             rgba(
               236,
@@ -1175,7 +1054,6 @@ function MeetTheBeesStyles() {
               24,
               0.68
             );
-
           clip-path:
             polygon(
               25% 0,
@@ -1189,79 +1067,53 @@ function MeetTheBeesStyles() {
 
         .name-plate {
           width: 100%;
-
           margin-top: 13px;
-
           text-align: center;
         }
 
         .name-plate p {
           margin: 0;
-
           color: #ba7c00;
-
           font-size: 0.62rem;
           font-weight: 1000;
-
-          letter-spacing:
-            0.15em;
-
-          text-transform:
-            uppercase;
+          letter-spacing: 0.15em;
+          text-transform: uppercase;
         }
 
         .name-plate h2 {
           margin: 3px 0 2px;
-
           overflow: hidden;
-
           color: #342407;
-
           font-size: clamp(
             1.7rem,
             2.5vw,
             2.8rem
           );
-
           line-height: 1;
-
-          text-overflow:
-            ellipsis;
-
+          text-overflow: ellipsis;
           white-space: nowrap;
         }
 
         .name-plate strong {
           color: #567078;
-
           font-size: clamp(
             0.75rem,
             1vw,
             1rem
           );
-
-          text-transform:
-            uppercase;
+          text-transform: uppercase;
         }
 
         .bee-story-panel {
           display: flex;
-
-          flex-direction:
-            column;
-
-          justify-content:
-            center;
-
+          flex-direction: column;
+          justify-content: center;
           gap: 12px;
-
-          padding:
-            clamp(
-              14px,
-              1.8vw,
-              24px
-            );
-
+          padding: clamp(
+            14px,
+            1.8vw,
+            24px
+          );
           border:
             1px solid
             rgba(
@@ -1270,9 +1122,7 @@ function MeetTheBeesStyles() {
               255,
               0.78
             );
-
           border-radius: 28px;
-
           background:
             rgba(
               255,
@@ -1280,7 +1130,6 @@ function MeetTheBeesStyles() {
               255,
               0.78
             );
-
           box-shadow:
             0 18px 42px
             rgba(
@@ -1289,44 +1138,32 @@ function MeetTheBeesStyles() {
               88,
               0.12
             );
-
-          backdrop-filter:
-            blur(14px);
+          backdrop-filter: blur(14px);
         }
 
         .story-eyebrow,
         .card-label,
         .recognition-label {
           margin: 0;
-
           color: #b87c00;
-
           font-size: clamp(
             0.55rem,
             0.7vw,
             0.72rem
           );
-
           font-weight: 1000;
-
-          letter-spacing:
-            0.12em;
-
-          text-transform:
-            uppercase;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
         }
 
         .story-top h2 {
           margin: 3px 0 0;
-
           color: #352608;
-
           font-size: clamp(
             1.5rem,
             2.5vw,
             2.8rem
           );
-
           line-height: 1;
         }
 
@@ -1342,9 +1179,7 @@ function MeetTheBeesStyles() {
               97,
               0.44
             );
-
           border-radius: 16px;
-
           background:
             rgba(
               255,
@@ -1356,15 +1191,10 @@ function MeetTheBeesStyles() {
 
         .bio-card {
           display: grid;
-
           grid-template-columns:
             auto 1fr;
-
           gap: 12px;
-
-          align-items:
-            flex-start;
-
+          align-items: flex-start;
           padding: 14px;
         }
 
@@ -1379,90 +1209,64 @@ function MeetTheBeesStyles() {
 
         .bio-copy {
           margin: 5px 0 0;
-
           color: #625633;
-
           font-size: clamp(
             0.78rem,
             1.02vw,
             1.08rem
           );
-
           font-weight: 650;
-
           line-height: 1.45;
         }
 
         .story-card-grid {
           display: grid;
-
           grid-template-columns:
             repeat(
               2,
               minmax(0, 1fr)
             );
-
           gap: 10px;
         }
 
         .story-card {
           display: grid;
-
           grid-template-columns:
             auto 1fr;
-
           gap: 10px;
-
           align-items: center;
-
           min-width: 0;
-
           padding: 13px;
         }
 
         .story-card strong {
           display: block;
-
           margin-top: 4px;
-
           overflow: hidden;
-
           color: #493714;
-
           font-size: clamp(
             0.72rem,
             0.92vw,
             0.98rem
           );
-
           line-height: 1.2;
-
-          text-overflow:
-            ellipsis;
+          text-overflow: ellipsis;
         }
 
         .recognition-card {
           display: grid;
-
           grid-template-columns:
             auto 1fr;
-
           gap: 13px;
-
           align-items: center;
-
           padding: 14px;
-
-          border-color:
-            #deb039;
-
+          border-color: #deb039;
           background:
             linear-gradient(
               135deg,
               #fff4b9,
               #ffe393
             );
-
           box-shadow:
             0 7px 18px
             rgba(
@@ -1475,14 +1279,10 @@ function MeetTheBeesStyles() {
 
         .recognition-badge {
           display: grid;
-
           width: 54px;
           height: 54px;
-
           place-items: center;
-
           border-radius: 15px;
-
           background:
             rgba(
               255,
@@ -1490,15 +1290,12 @@ function MeetTheBeesStyles() {
               255,
               0.7
             );
-
           font-size: 1.8rem;
         }
 
         .recognition-card h3 {
           margin: 3px 0;
-
           color: #5e4200;
-
           font-size: clamp(
             1rem,
             1.35vw,
@@ -1510,29 +1307,21 @@ function MeetTheBeesStyles() {
           .recognition-label
         ) {
           margin: 0;
-
           color: #75591a;
-
           font-size: clamp(
             0.72rem,
             0.88vw,
             0.94rem
           );
-
           font-weight: 700;
-
           line-height: 1.35;
         }
 
         .hive-message {
           display: flex;
-
           align-items: center;
-
           gap: 11px;
-
           padding: 13px 14px;
-
           background:
             linear-gradient(
               135deg,
@@ -1547,9 +1336,7 @@ function MeetTheBeesStyles() {
 
         .hive-message strong {
           display: block;
-
           color: #574007;
-
           font-size: clamp(
             0.8rem,
             1vw,
@@ -1559,9 +1346,7 @@ function MeetTheBeesStyles() {
 
         .hive-message p {
           margin: 3px 0 0;
-
           color: #746640;
-
           font-size: clamp(
             0.65rem,
             0.8vw,
@@ -1572,53 +1357,37 @@ function MeetTheBeesStyles() {
         .meet-bees-footer {
           position: relative;
           z-index: 5;
-
           display: flex;
-
           align-items: center;
-
-          justify-content:
-            space-between;
-
+          justify-content: space-between;
           gap: 20px;
-
           height: 10%;
-
           min-height: 55px;
-
           color: #4c4d34;
-
           font-size: clamp(
             0.66rem,
             0.85vw,
             0.9rem
           );
-
           font-weight: 800;
         }
 
         .profile-progress {
           display: flex;
-
           align-items: center;
-
           gap: 12px;
         }
 
         .profile-dots {
           display: flex;
-
           align-items: center;
-
           gap: 5px;
         }
 
         .profile-dot {
           width: 7px;
           height: 7px;
-
           border-radius: 50%;
-
           background:
             rgba(
               110,
@@ -1626,7 +1395,6 @@ function MeetTheBeesStyles() {
               33,
               0.25
             );
-
           transition:
             transform 0.25s ease,
             background 0.25s ease;
@@ -1634,9 +1402,7 @@ function MeetTheBeesStyles() {
 
         .profile-dot.active {
           background: #d59600;
-
-          transform:
-            scale(1.45);
+          transform: scale(1.45);
         }
 
         .shoreline-message strong {
@@ -1646,20 +1412,17 @@ function MeetTheBeesStyles() {
         .floating-bee {
           position: absolute;
           z-index: 3;
-
           font-size: clamp(
             1rem,
             1.7vw,
             1.8rem
           );
-
           pointer-events: none;
         }
 
         .bee-a {
           top: 19%;
           left: 46%;
-
           animation:
             flyingBeeOne
             7s ease-in-out
@@ -1669,7 +1432,6 @@ function MeetTheBeesStyles() {
         .bee-b {
           right: 9%;
           bottom: 23%;
-
           animation:
             flyingBeeTwo
             8.5s ease-in-out
@@ -1679,9 +1441,7 @@ function MeetTheBeesStyles() {
         .bee-c {
           left: 4%;
           bottom: 18%;
-
           opacity: 0.65;
-
           animation:
             flyingBeeTwo
             10s ease-in-out
@@ -1739,18 +1499,14 @@ function MeetTheBeesStyles() {
 
         .empty-beach {
           display: grid;
-
           place-items: center;
         }
 
         .empty-beach-card {
           position: relative;
           z-index: 10;
-
           max-width: 560px;
-
           padding: 42px;
-
           border:
             1px solid
             rgba(
@@ -1759,9 +1515,7 @@ function MeetTheBeesStyles() {
               58,
               0.5
             );
-
           border-radius: 28px;
-
           background:
             rgba(
               255,
@@ -1769,9 +1523,7 @@ function MeetTheBeesStyles() {
               255,
               0.88
             );
-
           text-align: center;
-
           box-shadow:
             0 20px 45px
             rgba(
@@ -1784,23 +1536,18 @@ function MeetTheBeesStyles() {
 
         .empty-bee {
           display: block;
-
           margin-bottom: 12px;
-
           font-size: 4rem;
         }
 
         .empty-beach-card h1 {
           margin: 0;
-
           color: #3c2a07;
-
           font-size: 2.8rem;
         }
 
         .empty-beach-card p:last-child {
           color: #746541;
-
           line-height: 1.5;
         }
 
@@ -1818,7 +1565,6 @@ function MeetTheBeesStyles() {
           .bee-profile-stage {
             grid-template-columns:
               1fr;
-
             height: auto;
           }
 
@@ -1828,7 +1574,6 @@ function MeetTheBeesStyles() {
 
           .meet-bees-footer {
             height: auto;
-
             padding-top: 18px;
           }
         }
@@ -1840,7 +1585,6 @@ function MeetTheBeesStyles() {
           .meet-bees-footer {
             align-items:
               flex-start;
-
             flex-direction:
               column;
           }
@@ -1856,6 +1600,12 @@ function MeetTheBeesStyles() {
 
           .shoreline-message {
             display: none;
+          }
+
+          .employee-ribbon,
+          .lead-forager-ribbon {
+            position: static;
+            margin-bottom: 8px;
           }
         }
 

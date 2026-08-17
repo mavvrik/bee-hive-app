@@ -1,13 +1,31 @@
 import ProjectionExecutiveCard from "./components/ProjectionExecutiveCard";
+
 import { prisma } from "@/lib/prisma";
+
 import HiveHeader from "@/app/components/HiveHeader";
 import ExecutiveStatusBar from "@/app/components/ExecutiveStatusBar";
-import { getCurrentMonthNumber } from "@/app/lib/fiscalMonth";
-import { getCenterIntelligence } from "@/app/lib/centerIntelligence";
+
+import {
+  getCurrentMonthNumber,
+} from "@/app/lib/fiscalMonth";
+
+import {
+  getCenterIntelligence,
+} from "@/app/lib/centerIntelligence";
+
+import {
+  getDailyTargets,
+} from "@/app/lib/dailyTargetEngine";
+
 import DashboardRotator from "./components/DashboardRotator";
 import DashboardPage from "./components/DashboardPage";
 import ExecutiveIntelligencePage from "./components/ExecutiveIntelligencePage";
 import MeetTheBeesPage from "./components/MeetTheBeesPage";
+
+import {
+  updateMonthlyLeadForager,
+  updateReigningLeadForager,
+} from "@/app/lib/leadForagerEngine";
 
 import {
   formatOperationalWeekRange,
@@ -20,10 +38,26 @@ import HoneyPotExecutive from "./components/HoneyPotExecutive";
 import DonorMeadow from "./components/DonorMeadow";
 import BeeTeam from "./components/BeeTeam";
 
-export const dynamic = "force-dynamic";
+export const dynamic =
+  "force-dynamic";
+
+function safeDivide(
+  numerator: number,
+  denominator: number,
+) {
+  if (denominator <= 0) {
+    return 0;
+  }
+
+  return (
+    numerator /
+    denominator
+  );
+}
 
 export default async function Home() {
-  const today = new Date();
+  const today =
+    new Date();
 
   const currentMonthNumber =
     getCurrentMonthNumber();
@@ -35,16 +69,23 @@ export default async function Home() {
    */
 
   const hiveWeek =
-    getHiveWeekStatus(today);
+    getHiveWeekStatus(
+      today,
+    );
 
   const startOfCurrentWeek =
-    startOfOperationalWeek(today);
+    startOfOperationalWeek(
+      today,
+    );
 
   const startOfNextWeek =
-    new Date(startOfCurrentWeek);
+    new Date(
+      startOfCurrentWeek,
+    );
 
   startOfNextWeek.setDate(
-    startOfNextWeek.getDate() + 7,
+    startOfNextWeek.getDate() +
+      7,
   );
 
   const startOfCurrentMonth =
@@ -93,24 +134,30 @@ export default async function Home() {
     "Riviera Beach 115";
 
   const reportingYear =
-    settings?.currentYear ?? 2027;
+    settings?.currentYear ??
+    2027;
 
   const weeksInPeriod =
-    settings?.weeksInPeriod ?? 4.33;
+    settings?.weeksInPeriod ??
+    4.33;
 
   const centerOperatingDaysPerWeek =
     settings?.centerOperatingDaysPerWeek ??
     7;
 
   const dashboardRotationMs =
-    (settings?.dashboardRotationSeconds ??
-      45) * 1000;
+    (
+      settings?.dashboardRotationSeconds ??
+      45
+    ) * 1000;
 
   const openingHour =
-    settings?.openingHour ?? 6;
+    settings?.openingHour ??
+    6;
 
   const closingHour =
-    settings?.closingHour ?? 19;
+    settings?.closingHour ??
+    19;
 
   /*
    * ==========================================
@@ -132,10 +179,30 @@ export default async function Home() {
     });
 
   const monthlyGoal =
-    currentBudget?.budgetLiters ?? 0;
+    currentBudget
+      ?.budgetLiters ?? 0;
 
   const monthlyGoalDonors =
-    currentBudget?.budgetDonors ?? 0;
+    currentBudget
+      ?.budgetDonors ?? 0;
+
+  /*
+   * These are the FIXED weekly goals used
+   * by both the Meadow and rolling target
+   * engine.
+   */
+
+  const weeklyGoalLiters =
+    safeDivide(
+      monthlyGoal,
+      weeksInPeriod,
+    );
+
+  const weeklyGoalDonors =
+    safeDivide(
+      monthlyGoalDonors,
+      weeksInPeriod,
+    );
 
   /*
    * ==========================================
@@ -143,65 +210,62 @@ export default async function Home() {
    * ==========================================
    */
 
-  const monthToDateProduction =
-    await prisma.dailyCenterProduction.aggregate(
-      {
-        where: {
-          entryDate: {
-            gte:
-              startOfCurrentMonth,
+  const [
+    monthToDateProduction,
+    currentWeekEntries,
+    currentDayProduction,
+  ] = await Promise.all([
+    prisma.dailyCenterProduction.aggregate({
+      where: {
+        entryDate: {
+          gte:
+            startOfCurrentMonth,
 
-            lt:
-              startOfNextMonth,
-          },
-        },
-
-        _sum: {
-          liters: true,
-          donors: true,
+          lt:
+            startOfNextMonth,
         },
       },
-    );
 
-  const currentWeekProduction =
-    await prisma.dailyCenterProduction.aggregate(
-      {
-        where: {
-          entryDate: {
-            gte:
-              startOfCurrentWeek,
+      _sum: {
+        liters: true,
+        donors: true,
+      },
+    }),
 
-            lt:
-              startOfNextWeek,
-          },
-        },
+    prisma.dailyCenterProduction.findMany({
+      where: {
+        entryDate: {
+          gte:
+            startOfCurrentWeek,
 
-        _sum: {
-          liters: true,
-          donors: true,
+          lt:
+            startOfNextWeek,
         },
       },
-    );
 
-  const currentDayProduction =
-    await prisma.dailyCenterProduction.aggregate(
-      {
-        where: {
-          entryDate: {
-            gte:
-              startOfToday,
+      orderBy: {
+        entryDate:
+          "asc",
+      },
+    }),
 
-            lt:
-              startOfTomorrow,
-          },
-        },
+    prisma.dailyCenterProduction.aggregate({
+      where: {
+        entryDate: {
+          gte:
+            startOfToday,
 
-        _sum: {
-          liters: true,
-          donors: true,
+          lt:
+            startOfTomorrow,
         },
       },
-    );
+
+      _sum: {
+        liters: true,
+        donors: true,
+      },
+    }),
+  ]);
 
   /*
    * ==========================================
@@ -214,12 +278,26 @@ export default async function Home() {
       .liters ?? 0;
 
   const weeklyCurrentLiters =
-    currentWeekProduction._sum
-      .liters ?? 0;
+    currentWeekEntries.reduce(
+      (
+        total,
+        entry,
+      ) =>
+        total +
+        entry.liters,
+      0,
+    );
 
   const weeklyCurrentDonors =
-    currentWeekProduction._sum
-      .donors ?? 0;
+    currentWeekEntries.reduce(
+      (
+        total,
+        entry,
+      ) =>
+        total +
+        entry.donors,
+      0,
+    );
 
   const dailyCurrentLiters =
     currentDayProduction._sum
@@ -230,6 +308,46 @@ export default async function Home() {
       .donors ?? 0;
 
   /*
+   * ==========================================
+   * SHARED DAILY TARGET ENGINE
+   * ==========================================
+   *
+   * This is the exact same rolling-target
+   * engine used by Daily Center Production.
+   *
+   * Weekly target stays fixed.
+   *
+   * Today's target =
+   * remaining weekly requirement divided
+   * across the remaining operating days.
+   */
+
+  const dailyTargetPlan =
+    getDailyTargets({
+      weeklyGoalLiters,
+      weeklyGoalDonors,
+
+      weekStart:
+        startOfCurrentWeek,
+
+      today,
+
+      entries:
+        currentWeekEntries.map(
+          (entry) => ({
+            entryDate:
+              entry.entryDate,
+
+            liters:
+              entry.liters,
+
+            donors:
+              entry.donors,
+          }),
+        ),
+    });
+
+  /*
    * Existing ExecutiveStatusBar still
    * uses older "stick" prop names.
    *
@@ -238,7 +356,8 @@ export default async function Home() {
    */
 
   const weeklyLitersPerDonor =
-    weeklyCurrentDonors > 0
+    weeklyCurrentDonors >
+    0
       ? weeklyCurrentLiters /
         weeklyCurrentDonors
       : 0;
@@ -291,11 +410,13 @@ export default async function Home() {
 
   const successfulSticks =
     hourlyOperationalSummary._sum
-      .successfulSticks ?? 0;
+      .successfulSticks ??
+    0;
 
   const unsuccessfulSticks =
     hourlyOperationalSummary._sum
-      .unsuccessfulSticks ?? 0;
+      .unsuccessfulSticks ??
+    0;
 
   /*
    * Projection engine expects liters.
@@ -303,8 +424,11 @@ export default async function Home() {
    */
 
   const lostVolume =
-    (hourlyOperationalSummary._sum
-      .lostVolumeMl ?? 0) / 1000;
+    (
+      hourlyOperationalSummary._sum
+        .lostVolumeMl ??
+      0
+    ) / 1000;
 
   const currentHour =
     today.getHours();
@@ -323,10 +447,12 @@ export default async function Home() {
 
       orderBy: [
         {
-          position: "asc",
+          position:
+            "asc",
         },
         {
-          name: "asc",
+          name:
+            "asc",
         },
       ],
     });
@@ -335,9 +461,6 @@ export default async function Home() {
    * ==========================================
    * MEET THE BEES
    * ==========================================
-   *
-   * Only active workers explicitly enabled
-   * through Admin are shown on the TV page.
    */
 
   const meetTheBeesProfiles =
@@ -346,37 +469,39 @@ export default async function Home() {
         (collector) =>
           collector.showOnMeetTheBees,
       )
-      .map((collector) => ({
-        id:
-          collector.id,
+      .map(
+        (collector) => ({
+          id:
+            collector.id,
 
-        name:
-          collector.name,
+          name:
+            collector.name,
 
-        preferredName:
-          collector.preferredName,
+          preferredName:
+            collector.preferredName,
 
-        role:
-          collector.role,
+          role:
+            collector.role,
 
-        profileTitle:
-          collector.profileTitle,
+          profileTitle:
+            collector.profileTitle,
 
-        bio:
-          collector.bio,
+          bio:
+            collector.bio,
 
-        funFact:
-          collector.funFact,
+          funFact:
+            collector.funFact,
 
-        photoUrl:
-          collector.photoUrl,
+          photoUrl:
+            collector.photoUrl,
 
-        isEmployeeOfMonth:
-          collector.isEmployeeOfMonth,
+          isEmployeeOfMonth:
+            collector.isEmployeeOfMonth,
 
-        recognitionMessage:
-          collector.recognitionMessage,
-      }));
+          recognitionMessage:
+            collector.recognitionMessage,
+        }),
+      );
 
   /*
    * ==========================================
@@ -387,15 +512,18 @@ export default async function Home() {
   const visibleDashboardMetrics =
     await prisma.dashboardMetric.findMany({
       where: {
-        isVisible: true,
+        isVisible:
+          true,
       },
 
       orderBy: [
         {
-          displayOrder: "asc",
+          displayOrder:
+            "asc",
         },
         {
-          displayName: "asc",
+          displayName:
+            "asc",
         },
       ],
 
@@ -438,7 +566,8 @@ export default async function Home() {
             metric.decimalPlaces,
 
           value:
-            publicReading?.value ??
+            publicReading
+              ?.value ??
             null,
 
           source:
@@ -513,25 +642,77 @@ export default async function Home() {
     );
 
   /*
-   * Individual Lead Forager remains
-   * intentionally unavailable until a
-   * legitimate worker-level recognition
-   * metric is selected.
+   * ==========================================
+   * REIGNING LEAD FORAGER
+   * ==========================================
    */
 
+  const reigningLeadForager =
+    await updateReigningLeadForager({
+      startDate:
+        startOfCurrentWeek,
+
+      endDate:
+        new Date(
+          startOfNextWeek.getTime() -
+            1,
+        ),
+    });
+
   const executiveTopWorkerName =
-    null;
+    reigningLeadForager
+      ? (
+          reigningLeadForager
+            .preferredName
+            ?.trim() ||
+          reigningLeadForager
+            .name
+        )
+      : null;
 
   const executiveTopWorkerPercentage =
-    null;
+    reigningLeadForager &&
+    reigningLeadForager
+      .totalSticks >
+      0
+      ? (
+          reigningLeadForager
+            .successfulSticks /
+          reigningLeadForager
+            .totalSticks
+        ) * 100
+      : null;
+
+  /*
+   * ==========================================
+   * MONTHLY LEAD FORAGER
+   * ==========================================
+   *
+   * Monthly recognition is independent
+   * from the reigning Lead Forager crown.
+   */
+
+  const monthlyLeadForager =
+    await updateMonthlyLeadForager({
+      year:
+        today.getFullYear(),
+
+      month:
+        today.getMonth() +
+        1,
+    });
 
   return (
     <main
       style={{
-        width: "100vw",
-        height: "100vh",
+        width:
+          "100vw",
 
-        overflow: "hidden",
+        height:
+          "100vh",
+
+        overflow:
+          "hidden",
 
         backgroundColor:
           "#f7f4e9",
@@ -601,19 +782,26 @@ export default async function Home() {
 
           <section
             style={{
-              display: "grid",
+              display:
+                "grid",
 
               gridTemplateColumns:
                 "0.9fr 1.2fr 1.3fr",
 
-              gap: "18px",
+              gap:
+                "18px",
 
-              marginTop: "12px",
+              marginTop:
+                "12px",
 
-              height: "31vh",
-              flex: "0 0 31vh",
+              height:
+                "31vh",
 
-              minHeight: "270px",
+              flex:
+                "0 0 31vh",
+
+              minHeight:
+                "270px",
             }}
           >
             <HoneyPotExecutive
@@ -639,11 +827,18 @@ export default async function Home() {
                   .weeklyLiters
               }
 
+              todaysLitersTarget={
+                dailyTargetPlan
+                  .todaysTargetLiters
+              }
+
               dayName={
                 hiveWeek.dayName
               }
 
-              totalFlowers={12}
+              totalFlowers={
+                12
+              }
             />
 
             <ProjectionExecutiveCard
@@ -658,8 +853,8 @@ export default async function Home() {
               }
 
               dailyGoal={
-                intelligence.goals
-                  .dailyLiters
+                dailyTargetPlan
+                  .todaysTargetLiters
               }
 
               confidence={
@@ -765,6 +960,12 @@ export default async function Home() {
 
             bees={
               meetTheBeesProfiles
+            }
+
+            monthlyLeadForagerId={
+              monthlyLeadForager
+                ?.collectorId ??
+              null
             }
           />
         </DashboardPage>
