@@ -897,13 +897,22 @@ export default async function Home() {
 
         <DashboardPage>
           <ExecutiveIntelligencePage
-            centerName={
-              centerName
-            }
+  centerName={
+    centerName
+  }
 
-            metrics={
-              executiveMetrics
-            }
+  metrics={
+    executiveMetrics
+  }
+
+  todaysLitersTarget={
+    dailyTargetPlan
+      .todaysTargetLiters
+  }
+
+  todaysLitersCollected={
+    dailyCurrentLiters
+  }
 
             projectedFinish={
               intelligence.projection

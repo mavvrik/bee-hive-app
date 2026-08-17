@@ -1,5 +1,7 @@
 "use client";
 
+import Beezy from "./Beezy";
+
 import {
   useEffect,
   useMemo,
@@ -19,6 +21,9 @@ type IntelligenceMetric = {
 type ExecutiveIntelligencePageProps = {
   centerName: string;
   metrics: IntelligenceMetric[];
+
+  todaysLitersTarget: number;
+  todaysLitersCollected: number;
 
   projectedFinish: number;
   projectedVariance: number;
@@ -43,12 +48,16 @@ function formatMetricValue(
   }
 
   const formatted =
-    value.toLocaleString("en-US", {
-      minimumFractionDigits:
-        decimalPlaces,
-      maximumFractionDigits:
-        decimalPlaces,
-    });
+    value.toLocaleString(
+      "en-US",
+      {
+        minimumFractionDigits:
+          decimalPlaces,
+
+        maximumFractionDigits:
+          decimalPlaces,
+      },
+    );
 
   if (!unit) {
     return formatted;
@@ -61,40 +70,112 @@ function formatMetricValue(
   return `${formatted} ${unit}`;
 }
 
-function formatLiters(value: number) {
-  return `${value.toLocaleString("en-US", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  })} L`;
+function formatLiters(
+  value: number,
+) {
+  return `${value.toLocaleString(
+    "en-US",
+    {
+      minimumFractionDigits:
+        1,
+
+      maximumFractionDigits:
+        1,
+    },
+  )} L`;
+}
+
+function clampPercentage(
+  value: number,
+) {
+  return Math.min(
+    100,
+    Math.max(
+      0,
+      value,
+    ),
+  );
 }
 
 export default function ExecutiveIntelligencePage({
   centerName,
   metrics,
+
+  todaysLitersTarget,
+  todaysLitersCollected,
+
   projectedFinish,
   projectedVariance,
   confidence,
   additionalDonorsNeeded,
+
   successfulSticks,
   unsuccessfulSticks,
   lostVolumeLiters,
+
   topWorkerName = null,
   topWorkerPercentage = null,
 }: ExecutiveIntelligencePageProps) {
-  const [now, setNow] =
-  useState<Date | null>(null);
-  
+  const [
+    now,
+    setNow,
+  ] = useState<Date | null>(
+    null,
+  );
+
   useEffect(() => {
-  setNow(new Date());
+    setNow(
+      new Date(),
+    );
 
-  const timer = window.setInterval(() => {
-    setNow(new Date());
-  }, 1000);
+    const timer =
+      window.setInterval(
+        () => {
+          setNow(
+            new Date(),
+          );
+        },
+        1000,
+      );
 
-  return () => {
-    window.clearInterval(timer);
-  };
-}, []);
+    return () => {
+      window.clearInterval(
+        timer,
+      );
+    };
+  }, []);
+
+  /*
+   * ==========================================
+   * TODAY'S MISSION
+   * ==========================================
+   */
+
+  const remainingLiters =
+    Math.max(
+      0,
+      todaysLitersTarget -
+        todaysLitersCollected,
+    );
+
+  const missionPercentage =
+    todaysLitersTarget > 0
+      ? (
+          todaysLitersCollected /
+          todaysLitersTarget
+        ) * 100
+      : 0;
+
+  const missionProgress =
+    clampPercentage(
+      missionPercentage,
+    );
+
+  /*
+   * ==========================================
+   * STICK PERFORMANCE
+   * ==========================================
+   */
 
   const totalAttempts =
     successfulSticks +
@@ -102,141 +183,510 @@ export default function ExecutiveIntelligencePage({
 
   const successfulStickRate =
     totalAttempts > 0
-      ? (successfulSticks /
-          totalAttempts) *
-        100
+      ? (
+          successfulSticks /
+          totalAttempts
+        ) * 100
       : 0;
 
-  const status = useMemo(() => {
-    if (projectedVariance >= 5) {
-      return {
-        label: "Ahead of Goal",
-        className: "status-ahead",
-      };
-    }
+  /*
+   * ==========================================
+   * STATUS
+   * ==========================================
+   */
 
-    if (projectedVariance >= 0) {
-      return {
-        label: "On Track",
-        className: "status-track",
-      };
-    }
+  const status =
+    useMemo(() => {
+      if (
+        projectedVariance >=
+        5
+      ) {
+        return {
+          label:
+            "Ahead of Goal",
 
-    return {
-      label: "Goal at Risk",
-      className: "status-risk",
-    };
-  }, [projectedVariance]);
+          shortLabel:
+            "Ahead",
+
+          className:
+            "status-ahead",
+        };
+      }
+
+      if (
+        projectedVariance >=
+        0
+      ) {
+        return {
+          label:
+            "On Track",
+
+          shortLabel:
+            "On Track",
+
+          className:
+            "status-track",
+        };
+      }
+
+      return {
+        label:
+          "Goal at Risk",
+
+        shortLabel:
+          "At Risk",
+
+        className:
+          "status-risk",
+      };
+    }, [
+      projectedVariance,
+    ]);
+
+  /*
+   * ==========================================
+   * INTELLIGENCE SUMMARY
+   * ==========================================
+   */
 
   const intelligenceSummary =
     projectedVariance >= 0
-      ? `The center is projected to finish ${formatLiters(
+      ? `Current production is projected to finish ${formatLiters(
           projectedVariance,
-        )} above today’s goal.`
-      : `The center is projected to finish ${formatLiters(
-          Math.abs(projectedVariance),
-        )} below today’s goal.`;
+        )} above today's liters target.`
+      : `Current production is projected to finish ${formatLiters(
+          Math.abs(
+            projectedVariance,
+          ),
+        )} below today's liters target.`;
+
+  const beezyMessage =
+    projectedVariance >= 5
+      ? "The Hive is outperforming today's requirement. Protect the pace and finish strong."
+      : projectedVariance >= 0
+        ? "The Hive is currently on pace. Maintain consistency through the remainder of the day."
+        : `We still need ${formatLiters(
+            remainingLiters,
+          )} toward today's target. Focus the team on closing the remaining gap.`;
+
+  /*
+   * Keep the command center readable.
+   * If many KPIs are configured, show
+   * the first six on television.
+   */
+
+  const visibleMetrics =
+    metrics.slice(
+      0,
+      6,
+    );
 
   return (
     <section className="intelligence-page">
+      {/* =====================================
+          BACKGROUND ATMOSPHERE
+         ===================================== */}
+
+      <div className="command-grid" />
+
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
-      <div className="ambient ambient-three" />
 
-      <div className="flying-bee flying-bee-one">
-        🐝
+      <div className="hex-decoration hex-decoration-one">
+        <span />
+        <span />
+        <span />
+        <span />
       </div>
 
-      <div className="flying-bee flying-bee-two">
-        🐝
+      <div className="hex-decoration hex-decoration-two">
+        <span />
+        <span />
+        <span />
       </div>
+
+      {/* =====================================
+          HEADER
+         ===================================== */}
 
       <header className="intelligence-header">
-        <div>
-          <p className="eyebrow">
-            The Hive Command Center
-          </p>
+        <div className="header-brand">
+          <div className="hive-mark">
+            <span>
+              H
+            </span>
+          </div>
 
-          <h1>
-            Executive Intelligence
-          </h1>
+          <div>
+            <p className="eyebrow">
+              The Hive Command Center
+            </p>
 
-          <p className="center-name">
-            {centerName}
-          </p>
+            <h1>
+              Executive Intelligence
+            </h1>
+
+            <p className="center-name">
+              {centerName}
+            </p>
+          </div>
         </div>
 
-        <div
-          className={`center-status ${status.className}`}
-        >
-          <span>Center Status</span>
-          <strong>{status.label}</strong>
+        <div className="header-right">
+          <div
+            className={`center-status ${status.className}`}
+          >
+            <span>
+              Center Status
+            </span>
+
+            <strong>
+              {status.label}
+            </strong>
+          </div>
+
+          <div className="command-clock">
+            <span>
+              Local Time
+            </span>
+
+            <strong
+              suppressHydrationWarning
+            >
+              {now
+                ? now.toLocaleTimeString(
+                    "en-US",
+                    {
+                      hour:
+                        "numeric",
+
+                      minute:
+                        "2-digit",
+                    },
+                  )
+                : "--:--"}
+            </strong>
+          </div>
         </div>
       </header>
 
-      <main className="intelligence-grid">
-        <section className="forecast-panel">
+      {/* =====================================
+          PRIMARY INTELLIGENCE GRID
+         ===================================== */}
+
+      <main className="command-layout">
+        {/* ===================================
+            LEFT — TODAY'S MISSION
+           =================================== */}
+
+        <section className="mission-panel command-panel">
           <div className="panel-heading">
             <div>
               <p className="eyebrow">
-                Live Forecast
+                Today&apos;s Mission
               </p>
 
               <h2>
-                Projected Center Finish
+                Daily Production
               </h2>
             </div>
 
-            <span className="confidence-pill">
-              {confidence}% confidence
-            </span>
+            <div className="mission-day-indicator">
+              Live
+            </div>
           </div>
 
-          <div className="forecast-primary">
+          <div className="mission-ring-wrapper">
+            <div
+              className="mission-ring"
+              style={{
+                background: `conic-gradient(
+                  #f3b722 ${missionProgress}%,
+                  rgba(255,255,255,0.08) ${missionProgress}% 100%
+                )`,
+              }}
+            >
+              <div className="mission-ring-inner">
+                <span>
+                  Mission
+                </span>
+
+                <strong>
+                  {Math.round(
+                    missionPercentage,
+                  )}
+                  %
+                </strong>
+
+                <small>
+                  complete
+                </small>
+              </div>
+            </div>
+          </div>
+
+          <div className="mission-target">
+            <span>
+              Today&apos;s Liters Target
+            </span>
+
             <strong>
               {formatLiters(
-                projectedFinish,
+                todaysLitersTarget,
               )}
             </strong>
-
-            <span>
-              {projectedVariance >= 0
-                ? "+"
-                : "-"}
-              {formatLiters(
-                Math.abs(
-                  projectedVariance,
-                ),
-              )}{" "}
-              variance
-            </span>
           </div>
 
-          <div className="forecast-kpis">
+          <div className="mission-stats">
             <article>
               <span>
-                Additional Donors Needed
+                Collected
               </span>
 
               <strong>
-                {additionalDonorsNeeded}
-              </strong>
-            </article>
-
-            <article>
-              <span>
-                Successful Stick Rate
-              </span>
-
-              <strong>
-                {successfulStickRate.toFixed(
-                  1,
+                {formatLiters(
+                  todaysLitersCollected,
                 )}
-                %
               </strong>
             </article>
 
             <article>
+              <span>
+                Remaining
+              </span>
+
+              <strong>
+                {formatLiters(
+                  remainingLiters,
+                )}
+              </strong>
+            </article>
+          </div>
+
+          <div className="donor-need">
+            <span>
+              Additional Donors Needed
+            </span>
+
+            <strong>
+              {
+                additionalDonorsNeeded
+              }
+            </strong>
+          </div>
+        </section>
+
+        {/* ===================================
+            CENTER — INTELLIGENCE CORE
+           =================================== */}
+
+        <section className="core-panel command-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">
+                Intelligence Core
+              </p>
+
+              <h2>
+                Performance Network
+              </h2>
+            </div>
+
+            <div className="confidence-pill">
+              {confidence}% Confidence
+            </div>
+          </div>
+
+          <div className="projection-core">
+            <div className="projection-glow" />
+
+            <div className="projection-hex">
+              <span>
+                Projected Finish
+              </span>
+
+              <strong>
+                {formatLiters(
+                  projectedFinish,
+                )}
+              </strong>
+
+              <small
+                className={
+                  projectedVariance >=
+                  0
+                    ? "variance-positive"
+                    : "variance-negative"
+                }
+              >
+                {projectedVariance >=
+                0
+                  ? "+"
+                  : "-"}
+                {formatLiters(
+                  Math.abs(
+                    projectedVariance,
+                  ),
+                )}{" "}
+                variance
+              </small>
+            </div>
+          </div>
+
+          <div className="metric-honeycomb">
+            {visibleMetrics.length ===
+            0 ? (
+              <div className="empty-metrics">
+                No executive KPIs are
+                currently configured.
+              </div>
+            ) : (
+              visibleMetrics.map(
+                (
+                  metric,
+                  index,
+                ) => (
+                  <article
+                    key={
+                      metric.id
+                    }
+                    className={`metric-hex metric-hex-${
+                      index + 1
+                    }`}
+                    title={
+                      metric.description ??
+                      undefined
+                    }
+                  >
+                    <div>
+                      <span>
+                        {
+                          metric.displayName
+                        }
+                      </span>
+
+                      <strong>
+                        {formatMetricValue(
+                          metric.value,
+                          metric.decimalPlaces,
+                          metric.unit,
+                        )}
+                      </strong>
+
+                      <small>
+                        {
+                          metric.source
+                        }
+                      </small>
+                    </div>
+                  </article>
+                ),
+              )
+            )}
+          </div>
+        </section>
+
+        {/* ===================================
+            RIGHT — HIVE PERFORMANCE
+           =================================== */}
+
+        <section className="performance-panel command-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">
+                Hive Performance
+              </p>
+
+              <h2>
+                Worker Intelligence
+              </h2>
+            </div>
+          </div>
+
+          <div className="lead-forager-card">
+            <div className="crown">
+              👑
+            </div>
+
+            <div>
+              <span>
+                Reigning Lead Forager
+              </span>
+
+              <strong>
+                {topWorkerName ??
+                  "Not yet established"}
+              </strong>
+
+              <small>
+                {topWorkerPercentage !==
+                null
+                  ? `${topWorkerPercentage.toFixed(
+                      1,
+                    )}% stick success`
+                  : "Awaiting performance data"}
+              </small>
+            </div>
+          </div>
+
+          <div className="stick-performance-card">
+            <div className="stick-rate-header">
+              <div>
+                <span>
+                  Successful Stick Rate
+                </span>
+
+                <strong>
+                  {successfulStickRate.toFixed(
+                    1,
+                  )}
+                  %
+                </strong>
+              </div>
+
+              <div className="stick-rate-icon">
+                ✓
+              </div>
+            </div>
+
+            <div className="stick-rate-track">
+              <div
+                className="stick-rate-fill"
+                style={{
+                  width: `${clampPercentage(
+                    successfulStickRate,
+                  )}%`,
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="performance-grid">
+            <article>
+              <span>
+                Successful
+              </span>
+
+              <strong>
+                {
+                  successfulSticks
+                }
+              </strong>
+            </article>
+
+            <article>
+              <span>
+                Unsuccessful
+              </span>
+
+              <strong>
+                {
+                  unsuccessfulSticks
+                }
+              </strong>
+            </article>
+
+            <article className="lost-volume-card">
               <span>
                 Lost Volume
               </span>
@@ -248,136 +698,100 @@ export default function ExecutiveIntelligencePage({
               </strong>
             </article>
           </div>
-        </section>
 
-        <section className="metrics-panel">
-          <div className="panel-heading">
+          <div className="trajectory-card">
             <div>
-              <p className="eyebrow">
-                Official Performance
-              </p>
+              <span>
+                Trajectory
+              </span>
 
-              <h2>
-                Executive KPIs
-              </h2>
+              <strong>
+                {
+                  status.shortLabel
+                }
+              </strong>
             </div>
 
-            <span className="live-badge">
-              Live
-            </span>
-          </div>
-
-          <div className="metric-grid">
-            {metrics.length === 0 ? (
-              <div className="empty-metrics">
-                No visible executive metrics
-                have been configured yet.
-              </div>
-            ) : (
-              metrics.map((metric) => (
-                <article
-                  key={metric.id}
-                  className="metric-card"
-                >
-                  <span>
-                    {metric.displayName}
-                  </span>
-
-                  <strong>
-                    {formatMetricValue(
-                      metric.value,
-                      metric.decimalPlaces,
-                      metric.unit,
-                    )}
-                  </strong>
-
-                  <small>
-                    {metric.source} source
-                  </small>
-                </article>
-              ))
-            )}
+            <div
+              className={`trajectory-light ${status.className}`}
+            />
           </div>
         </section>
 
-        <section className="summary-panel">
-          <div className="summary-glow" />
+        {/* ===================================
+            BOTTOM LEFT / CENTER
+            INTELLIGENCE SUMMARY
+           =================================== */}
 
-          <p className="eyebrow">
-            Hive Intelligence
-          </p>
+        <section className="summary-panel command-panel">
+          <div className="summary-light" />
 
-          <h2>
-            Operational Summary
-          </h2>
+          <div className="summary-icon">
+            ◆
+          </div>
 
-          <p className="summary-copy">
-            {intelligenceSummary}
-          </p>
+          <div>
+            <p className="eyebrow">
+              Hive Intelligence
+            </p>
 
-          <div className="summary-list">
-            <div>
-              <span>
-                Successful sticks
-              </span>
+            <h2>
+              Operational Assessment
+            </h2>
 
-              <strong>
-                {successfulSticks}
-              </strong>
-            </div>
+            <p>
+              {
+                intelligenceSummary
+              }
+            </p>
+          </div>
+        </section>
 
-            <div>
-              <span>
-                Unsuccessful sticks
-              </span>
+        {/* ===================================
+            BOTTOM RIGHT — BEEZY ADVISOR
+           =================================== */}
 
-              <strong>
-                {unsuccessfulSticks}
-              </strong>
-            </div>
+        <section className="beezy-panel command-panel">
+          <div className="beezy-image-wrap">
+  <Beezy
+    size={100}
+    className="beezy-image"
+  />
+</div>
 
-            <div>
-              <span>
-                Lead forager
-              </span>
+          <div className="beezy-copy">
+            <p className="eyebrow">
+              Beezy Says
+            </p>
 
-              <strong>
-                {topWorkerName ??
-                  "Not yet established"}
-              </strong>
-            </div>
+            <h2>
+              Hive Advisor
+            </h2>
 
-            <div>
-              <span>
-                Lead performance
-              </span>
-
-              <strong>
-                {topWorkerPercentage !==
-                null
-                  ? `${Math.round(
-                      topWorkerPercentage,
-                    )}%`
-                  : "—"}
-              </strong>
-            </div>
+            <p>
+              {beezyMessage}
+            </p>
           </div>
         </section>
       </main>
 
-      <footer className="intelligence-footer">
-        <div>
-          <span>Last refreshed</span>
+      {/* =====================================
+          FOOTER
+         ===================================== */}
 
-          <strong suppressHydrationWarning>
-  {now
-    ? now.toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        second: "2-digit",
-      })
-    : "--:--:--"}
-</strong>
+      <footer className="intelligence-footer">
+        <div className="footer-status">
+          <span className="status-dot" />
+
+          <div>
+            <span>
+              Intelligence Status
+            </span>
+
+            <strong>
+              HIVE Systems Active
+            </strong>
+          </div>
         </div>
 
         <p>
@@ -386,8 +800,13 @@ export default function ExecutiveIntelligencePage({
         </p>
 
         <div className="powered-by">
-          <span>Powered by</span>
-          <strong>The Hive</strong>
+          <span>
+            Powered by
+          </span>
+
+          <strong>
+            THE HIVE
+          </strong>
         </div>
       </footer>
 
@@ -399,537 +818,1588 @@ export default function ExecutiveIntelligencePage({
             flex-direction: column;
             width: 100%;
             height: 100%;
+            min-width: 0;
+            min-height: 0;
             overflow: hidden;
-            padding: 18px 24px;
+            padding: 18px 22px 14px;
             background:
               radial-gradient(
-                circle at top left,
-                rgba(255, 235, 147, 0.42),
-                transparent 35%
+                circle at 20% 20%,
+                rgba(242, 183, 34, 0.08),
+                transparent 28%
+              ),
+              radial-gradient(
+                circle at 84% 72%,
+                rgba(73, 135, 159, 0.08),
+                transparent 30%
               ),
               linear-gradient(
                 145deg,
-                #fffef7,
-                #f7edbd
+                #111614,
+                #18201c 48%,
+                #0d1210
               );
+            color: #f7f2df;
+            font-family:
+              Arial,
+              Helvetica,
+              sans-serif;
             box-sizing: border-box;
+          }
+
+          .command-grid {
+            position: absolute;
+            inset: 0;
+            opacity: 0.18;
+            pointer-events: none;
+            background-image:
+              linear-gradient(
+                rgba(255,255,255,0.025)
+                1px,
+                transparent 1px
+              ),
+              linear-gradient(
+                90deg,
+                rgba(255,255,255,0.025)
+                1px,
+                transparent 1px
+              );
+            background-size:
+              34px 34px;
           }
 
           .ambient {
             position: absolute;
             border-radius: 50%;
-            filter: blur(14px);
-            opacity: 0.22;
-            animation:
-              ambientDrift
-              18s ease-in-out infinite;
+            filter: blur(70px);
+            pointer-events: none;
           }
 
           .ambient-one {
-            top: 8%;
-            left: 8%;
-            width: 150px;
-            height: 150px;
-            background: #f2c94c;
+            top: -12%;
+            left: -5%;
+            width: 340px;
+            height: 340px;
+            background:
+              rgba(
+                245,
+                183,
+                32,
+                0.15
+              );
           }
 
           .ambient-two {
-            right: 10%;
-            bottom: 10%;
-            width: 210px;
-            height: 210px;
-            background: #9fcb6a;
-            animation-delay: -6s;
-          }
-
-          .ambient-three {
-            top: 38%;
-            right: 32%;
-            width: 120px;
-            height: 120px;
-            background: #f7dd85;
-            animation-delay: -10s;
-          }
-
-          @keyframes ambientDrift {
-            0%,
-            100% {
-              transform:
-                translate3d(0, 0, 0)
-                scale(1);
-            }
-
-            50% {
-              transform:
-                translate3d(
-                  24px,
-                  -18px,
-                  0
-                )
-                scale(1.12);
-            }
-          }
-
-          .flying-bee {
-            position: absolute;
-            z-index: 1;
-            font-size: 28px;
-            filter:
-              drop-shadow(
-                0 5px 4px
-                rgba(74, 51, 5, 0.16)
+            right: -8%;
+            bottom: -10%;
+            width: 420px;
+            height: 420px;
+            background:
+              rgba(
+                27,
+                118,
+                148,
+                0.12
               );
-            animation:
-              beeFlight
-              20s linear infinite;
           }
 
-          .flying-bee-one {
-            top: 20%;
-            left: -5%;
+          .hex-decoration {
+            position: absolute;
+            display: grid;
+            grid-template-columns:
+              repeat(
+                2,
+                34px
+              );
+            gap: 4px;
+            opacity: 0.08;
+            pointer-events: none;
           }
 
-          .flying-bee-two {
-            top: 72%;
-            left: -12%;
-            animation-delay: -9s;
-            animation-duration: 24s;
+          .hex-decoration span {
+            width: 34px;
+            height: 30px;
+            border:
+              2px solid
+              #efb523;
+            clip-path:
+              polygon(
+                25% 0,
+                75% 0,
+                100% 50%,
+                75% 100%,
+                25% 100%,
+                0 50%
+              );
           }
 
-          @keyframes beeFlight {
-            0% {
-              transform:
-                translateX(0)
-                translateY(0)
-                rotate(-8deg);
-            }
+          .hex-decoration-one {
+            top: 19%;
+            left: 1%;
+          }
 
-            25% {
-              transform:
-                translateX(28vw)
-                translateY(-18px)
-                rotate(6deg);
-            }
-
-            50% {
-              transform:
-                translateX(55vw)
-                translateY(14px)
-                rotate(-4deg);
-            }
-
-            75% {
-              transform:
-                translateX(82vw)
-                translateY(-12px)
-                rotate(5deg);
-            }
-
-            100% {
-              transform:
-                translateX(112vw)
-                translateY(4px)
-                rotate(-6deg);
-            }
+          .hex-decoration-two {
+            right: 2%;
+            bottom: 17%;
           }
 
           .intelligence-header {
             position: relative;
-            z-index: 2;
+            z-index: 10;
             display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
+            align-items: center;
+            justify-content:
+              space-between;
             gap: 18px;
+            flex: 0 0 auto;
+          }
+
+          .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+          }
+
+          .hive-mark {
+            display: grid;
+            width: 54px;
+            height: 48px;
+            place-items: center;
+            background:
+              linear-gradient(
+                145deg,
+                #f6c33c,
+                #b57c08
+              );
+            color: #191408;
+            font-size: 1.6rem;
+            font-weight: 1000;
+            clip-path:
+              polygon(
+                25% 0,
+                75% 0,
+                100% 50%,
+                75% 100%,
+                25% 100%,
+                0 50%
+              );
+            box-shadow:
+              0 0 26px
+              rgba(
+                240,
+                183,
+                31,
+                0.28
+              );
           }
 
           .eyebrow {
-            margin: 0 0 5px;
-            color: #93690e;
-            font-size: 0.68rem;
-            font-weight: 900;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
+            margin: 0 0 4px;
+            color: #e9ae24;
+            font-size:
+              clamp(
+                0.54rem,
+                0.65vw,
+                0.68rem
+              );
+            font-weight: 1000;
+            letter-spacing:
+              0.15em;
+            text-transform:
+              uppercase;
           }
 
           .intelligence-header h1 {
             margin: 0;
-            color: #342406;
-            font-size: clamp(
-              2rem,
-              3vw,
-              3rem
-            );
-            line-height: 0.95;
+            color: #fff7d5;
+            font-size:
+              clamp(
+                2rem,
+                2.8vw,
+                3rem
+              );
+            line-height: 0.96;
+            letter-spacing:
+              -0.04em;
           }
 
           .center-name {
-            margin: 8px 0 0;
-            color: #6e5a2c;
+            margin: 6px 0 0;
+            color: #9ca99f;
+            font-size:
+              clamp(
+                0.72rem,
+                0.9vw,
+                0.92rem
+              );
             font-weight: 800;
           }
 
-          .center-status {
+          .header-right {
+            display: flex;
+            gap: 10px;
+          }
+
+          .center-status,
+          .command-clock {
             display: flex;
             flex-direction: column;
-            min-width: 190px;
-            padding: 12px 15px;
-            border-radius: 14px;
+            justify-content: center;
+            min-width: 150px;
+            padding:
+              9px 13px;
+            border:
+              1px solid
+              rgba(
+                255,
+                255,
+                255,
+                0.08
+              );
+            border-radius:
+              12px;
+            background:
+              rgba(
+                255,
+                255,
+                255,
+                0.035
+              );
             box-shadow:
-              0 8px 18px
-              rgba(68, 47, 5, 0.11);
+              inset 0 1px 0
+              rgba(
+                255,
+                255,
+                255,
+                0.04
+              );
           }
 
-          .center-status span {
-            font-size: 0.62rem;
+          .center-status span,
+          .command-clock span {
+            color: #859088;
+            font-size:
+              0.5rem;
             font-weight: 900;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
+            letter-spacing:
+              0.1em;
+            text-transform:
+              uppercase;
           }
 
-          .center-status strong {
-            margin-top: 4px;
-            font-size: 1.05rem;
+          .center-status strong,
+          .command-clock strong {
+            margin-top: 3px;
+            font-size:
+              0.9rem;
           }
 
           .status-ahead {
-            background: #e4f4d5;
-            color: #386a25;
+            color: #89df75;
           }
 
           .status-track {
-            background: #fff2bd;
-            color: #805c07;
+            color: #f0c14a;
           }
 
           .status-risk {
-            background: #f8d9d3;
-            color: #8b3329;
+            color: #ff8a61;
           }
 
-          .intelligence-grid {
+          .command-layout {
             position: relative;
-            z-index: 2;
+            z-index: 5;
             display: grid;
             flex: 1 1 0;
             grid-template-columns:
-              1.1fr 1.35fr 0.9fr;
-            gap: 16px;
+              0.9fr
+              1.5fr
+              1fr;
+            grid-template-rows:
+              minmax(0, 1fr)
+              118px;
+            gap: 12px;
             min-height: 0;
-            margin-top: 16px;
+            margin-top: 12px;
           }
 
-          .forecast-panel,
-          .metrics-panel,
-          .summary-panel {
+          .command-panel {
+            position: relative;
             min-width: 0;
             min-height: 0;
-            padding: 18px;
             overflow: hidden;
-            border: 1px solid
-              rgba(204, 170, 71, 0.48);
-            border-radius: 20px;
+            border:
+              1px solid
+              rgba(
+                225,
+                174,
+                48,
+                0.22
+              );
+            border-radius:
+              16px;
             background:
-              rgba(255, 255, 255, 0.84);
+              linear-gradient(
+                150deg,
+                rgba(
+                  31,
+                  40,
+                  35,
+                  0.96
+                ),
+                rgba(
+                  18,
+                  25,
+                  21,
+                  0.98
+                )
+              );
             box-shadow:
-              0 12px 28px
-              rgba(86, 59, 5, 0.11);
-            backdrop-filter: blur(6px);
+              0 12px 30px
+              rgba(
+                0,
+                0,
+                0,
+                0.28
+              ),
+              inset 0 1px 0
+              rgba(
+                255,
+                255,
+                255,
+                0.035
+              );
             box-sizing: border-box;
+          }
+
+          .mission-panel,
+          .core-panel,
+          .performance-panel {
+            padding: 15px;
           }
 
           .panel-heading {
             display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
+            align-items:
+              flex-start;
+            justify-content:
+              space-between;
             gap: 12px;
           }
 
           .panel-heading h2,
-          .summary-panel h2 {
+          .summary-panel h2,
+          .beezy-panel h2 {
             margin: 0;
-            color: #392707;
-            font-size: 1.2rem;
-          }
-
-          .confidence-pill,
-          .live-badge {
-            padding: 7px 9px;
-            border-radius: 999px;
-            background: #fff1b4;
-            color: #795500;
-            font-size: 0.62rem;
-            font-weight: 900;
-            text-transform: uppercase;
-          }
-
-          .live-badge {
-            position: relative;
-            padding-left: 20px;
-          }
-
-          .live-badge::before {
-            content: "";
-            position: absolute;
-            top: 50%;
-            left: 8px;
-            width: 7px;
-            height: 7px;
-            transform:
-              translateY(-50%);
-            border-radius: 50%;
-            background: #48a054;
-            animation:
-              livePulse
-              1.4s ease-in-out infinite;
-          }
-
-          @keyframes livePulse {
-            0%,
-            100% {
-              opacity: 0.4;
-              transform:
-                translateY(-50%)
-                scale(0.8);
-            }
-
-            50% {
-              opacity: 1;
-              transform:
-                translateY(-50%)
-                scale(1.18);
-            }
-          }
-
-          .forecast-primary {
-            display: flex;
-            flex-direction: column;
-            margin-top: 32px;
-          }
-
-          .forecast-primary strong {
-            color: #2f2105;
-            font-size: clamp(
-              3rem,
-              4.8vw,
-              5rem
-            );
-            line-height: 0.9;
-          }
-
-          .forecast-primary span {
-            margin-top: 12px;
-            color: #7c6223;
-            font-size: 0.82rem;
-            font-weight: 900;
-          }
-
-          .forecast-kpis {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 10px;
-            margin-top: 24px;
-          }
-
-          .forecast-kpis article {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            padding: 12px 13px;
-            border: 1px solid #eadca9;
-            border-radius: 12px;
-            background: #fffdf5;
-          }
-
-          .forecast-kpis span {
-            color: #816d3c;
-            font-size: 0.72rem;
-            font-weight: 800;
-          }
-
-          .forecast-kpis strong {
-            color: #372606;
-          }
-
-          .metric-grid {
-            display: grid;
-            grid-template-columns:
-              repeat(2, minmax(0, 1fr));
-            gap: 10px;
-            margin-top: 14px;
-          }
-
-          .metric-card {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            min-width: 0;
-            min-height: 108px;
-            padding: 13px;
-            border: 1px solid #e8d79d;
-            border-radius: 14px;
-            background:
-              linear-gradient(
-                145deg,
-                #ffffff,
-                #fff8d6
+            color: #fff6cf;
+            font-size:
+              clamp(
+                0.95rem,
+                1.15vw,
+                1.18rem
               );
           }
 
-          .metric-card span {
-            color: #7d692f;
-            font-size: 0.66rem;
+          .mission-day-indicator {
+            padding:
+              5px 8px;
+            border:
+              1px solid
+              rgba(
+                111,
+                206,
+                98,
+                0.28
+              );
+            border-radius:
+              999px;
+            background:
+              rgba(
+                76,
+                167,
+                70,
+                0.09
+              );
+            color: #8cdf7c;
+            font-size:
+              0.5rem;
+            font-weight: 1000;
+            letter-spacing:
+              0.08em;
+            text-transform:
+              uppercase;
+          }
+
+          .mission-ring-wrapper {
+            display: grid;
+            place-items: center;
+            margin-top: 15px;
+          }
+
+          .mission-ring {
+            display: grid;
+            width:
+              clamp(
+                110px,
+                9vw,
+                145px
+              );
+            height:
+              clamp(
+                110px,
+                9vw,
+                145px
+              );
+            place-items: center;
+            border-radius: 50%;
+            box-shadow:
+              0 0 28px
+              rgba(
+                240,
+                181,
+                34,
+                0.16
+              );
+          }
+
+          .mission-ring-inner {
+            display: flex;
+            flex-direction:
+              column;
+            align-items: center;
+            justify-content: center;
+            width: 76%;
+            height: 76%;
+            border-radius: 50%;
+            background:
+              radial-gradient(
+                circle,
+                #263028,
+                #111814
+              );
+            box-shadow:
+              inset 0 0 24px
+              rgba(
+                0,
+                0,
+                0,
+                0.35
+              );
+          }
+
+          .mission-ring-inner span,
+          .mission-ring-inner small {
+            color: #8f9d92;
+            font-size:
+              0.48rem;
             font-weight: 900;
-            letter-spacing: 0.05em;
-            line-height: 1.2;
-            text-transform: uppercase;
+            letter-spacing:
+              0.08em;
+            text-transform:
+              uppercase;
           }
 
-          .metric-card strong {
-            margin-top: 8px;
-            overflow: hidden;
-            color: #332304;
-            font-size: 1.65rem;
+          .mission-ring-inner strong {
+            margin:
+              2px 0;
+            color: #f5c440;
+            font-size:
+              clamp(
+                1.8rem,
+                2.4vw,
+                2.5rem
+              );
             line-height: 1;
-            text-overflow: ellipsis;
-            white-space: nowrap;
           }
 
-          .metric-card small {
-            margin-top: 7px;
-            color: #8b7a50;
-            font-size: 0.58rem;
-            font-weight: 800;
-          }
-
-          .empty-metrics {
-            grid-column: 1 / -1;
-            padding: 24px;
-            border: 1px dashed #d4b95f;
-            border-radius: 12px;
-            color: #746238;
+          .mission-target {
+            margin-top:
+              12px;
             text-align: center;
           }
 
-          .summary-panel {
-            position: relative;
-            background:
-              linear-gradient(
-                160deg,
-                rgba(67, 47, 8, 0.97),
-                rgba(113, 79, 11, 0.94)
+          .mission-target span {
+            display: block;
+            color: #859188;
+            font-size:
+              0.54rem;
+            font-weight: 900;
+            letter-spacing:
+              0.08em;
+            text-transform:
+              uppercase;
+          }
+
+          .mission-target strong {
+            display: block;
+            margin-top: 3px;
+            color: #fff4bf;
+            font-size:
+              clamp(
+                1.2rem,
+                1.5vw,
+                1.55rem
               );
-            color: #ffffff;
           }
 
-          .summary-panel .eyebrow {
-            color: #f1c95b;
-          }
-
-          .summary-panel h2 {
-            color: #ffffff;
-          }
-
-          .summary-glow {
-            position: absolute;
-            top: -30px;
-            right: -30px;
-            width: 170px;
-            height: 170px;
-            border-radius: 50%;
-            background:
-              rgba(255, 205, 75, 0.25);
-            filter: blur(15px);
-            animation:
-              summaryGlow
-              4s ease-in-out infinite;
-          }
-
-          @keyframes summaryGlow {
-            0%,
-            100% {
-              transform: scale(0.92);
-              opacity: 0.45;
-            }
-
-            50% {
-              transform: scale(1.12);
-              opacity: 0.78;
-            }
-          }
-
-          .summary-copy {
-            position: relative;
-            margin: 24px 0;
-            color: #fff3c3;
-            font-size: 0.95rem;
-            font-weight: 800;
-            line-height: 1.55;
-          }
-
-          .summary-list {
-            position: relative;
+          .mission-stats {
             display: grid;
-            gap: 9px;
+            grid-template-columns:
+              repeat(
+                2,
+                minmax(
+                  0,
+                  1fr
+                )
+              );
+            gap: 7px;
+            margin-top: 10px;
           }
 
-          .summary-list div {
+          .mission-stats article,
+          .performance-grid article {
+            padding:
+              9px 10px;
+            border:
+              1px solid
+              rgba(
+                255,
+                255,
+                255,
+                0.06
+              );
+            border-radius:
+              10px;
+            background:
+              rgba(
+                255,
+                255,
+                255,
+                0.025
+              );
+          }
+
+          .mission-stats span,
+          .performance-grid span,
+          .donor-need span,
+          .trajectory-card span {
+            display: block;
+            color: #809086;
+            font-size:
+              0.48rem;
+            font-weight: 900;
+            letter-spacing:
+              0.07em;
+            text-transform:
+              uppercase;
+          }
+
+          .mission-stats strong,
+          .performance-grid strong {
+            display: block;
+            margin-top: 3px;
+            color: #f6eed0;
+            font-size:
+              0.9rem;
+          }
+
+          .donor-need {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content:
+              space-between;
             gap: 12px;
-            padding: 11px 0;
-            border-bottom: 1px solid
-              rgba(255, 255, 255, 0.13);
+            margin-top: 8px;
+            padding:
+              8px 10px;
+            border:
+              1px solid
+              rgba(
+                232,
+                171,
+                31,
+                0.17
+              );
+            border-radius:
+              9px;
+            background:
+              rgba(
+                240,
+                178,
+                31,
+                0.055
+              );
           }
 
-          .summary-list span {
-            color: #e9d99d;
-            font-size: 0.7rem;
-            font-weight: 800;
+          .donor-need strong {
+            color: #f3bd35;
+            font-size:
+              1.15rem;
           }
 
-          .summary-list strong {
-            color: #ffffff;
-            font-size: 0.86rem;
-            text-align: right;
+          .confidence-pill {
+            padding:
+              5px 8px;
+            border-radius:
+              999px;
+            background:
+              rgba(
+                38,
+                129,
+                153,
+                0.12
+              );
+            color: #76c6dd;
+            font-size:
+              0.48rem;
+            font-weight: 1000;
+            letter-spacing:
+              0.05em;
+            text-transform:
+              uppercase;
+          }
+
+          .projection-core {
+            position: relative;
+            display: grid;
+            place-items: center;
+            height: 38%;
+            min-height: 112px;
+            margin-top: 5px;
+          }
+
+          .projection-glow {
+            position: absolute;
+            width: 180px;
+            height: 130px;
+            border-radius: 50%;
+            background:
+              radial-gradient(
+                circle,
+                rgba(
+                  242,
+                  180,
+                  36,
+                  0.22
+                ),
+                transparent
+                  65%
+              );
+            filter: blur(8px);
+            animation:
+              intelligencePulse
+              3.5s ease-in-out
+              infinite;
+          }
+
+          .projection-hex {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction:
+              column;
+            align-items: center;
+            justify-content: center;
+            width:
+              clamp(
+                180px,
+                18vw,
+                255px
+              );
+            height:
+              clamp(
+                100px,
+                10vw,
+                140px
+              );
+            border:
+              2px solid
+              rgba(
+                242,
+                185,
+                46,
+                0.55
+              );
+            background:
+              linear-gradient(
+                145deg,
+                rgba(
+                  55,
+                  47,
+                  22,
+                  0.94
+                ),
+                rgba(
+                  24,
+                  29,
+                  24,
+                  0.98
+                )
+              );
+            clip-path:
+              polygon(
+                14% 0,
+                86% 0,
+                100% 50%,
+                86% 100%,
+                14% 100%,
+                0 50%
+              );
+          }
+
+          .projection-hex span {
+            color: #9b9d87;
+            font-size:
+              0.5rem;
+            font-weight: 900;
+            letter-spacing:
+              0.08em;
+            text-transform:
+              uppercase;
+          }
+
+          .projection-hex strong {
+            margin:
+              5px 0 3px;
+            color: #ffd55f;
+            font-size:
+              clamp(
+                1.8rem,
+                2.6vw,
+                2.8rem
+              );
+            line-height: 1;
+          }
+
+          .projection-hex small {
+            font-size:
+              0.58rem;
+            font-weight: 900;
+          }
+
+          .variance-positive {
+            color: #80d873;
+          }
+
+          .variance-negative {
+            color: #ff8d68;
+          }
+
+          .metric-honeycomb {
+            display: grid;
+            grid-template-columns:
+              repeat(
+                3,
+                minmax(
+                  0,
+                  1fr
+                )
+              );
+            gap:
+              7px 5px;
+            margin-top:
+              6px;
+          }
+
+          .metric-hex {
+            display: grid;
+            min-width: 0;
+            min-height: 92px;
+            place-items: center;
+            padding: 8px;
+            border:
+              1px solid
+              rgba(
+                242,
+                181,
+                43,
+                0.23
+              );
+            background:
+              linear-gradient(
+                145deg,
+                rgba(
+                  54,
+                  60,
+                  47,
+                  0.86
+                ),
+                rgba(
+                  22,
+                  30,
+                  25,
+                  0.94
+                )
+              );
+            clip-path:
+              polygon(
+                12% 0,
+                88% 0,
+                100% 50%,
+                88% 100%,
+                12% 100%,
+                0 50%
+              );
+            text-align: center;
+          }
+
+          .metric-hex div {
+            min-width: 0;
+          }
+
+          .metric-hex span {
+            display: block;
+            overflow: hidden;
+            color: #a4aa9d;
+            font-size:
+              clamp(
+                0.42rem,
+                0.5vw,
+                0.53rem
+              );
+            font-weight: 900;
+            letter-spacing:
+              0.06em;
+            line-height: 1.15;
+            text-overflow:
+              ellipsis;
+            text-transform:
+              uppercase;
+            white-space:
+              nowrap;
+          }
+
+          .metric-hex strong {
+            display: block;
+            margin-top:
+              5px;
+            overflow: hidden;
+            color: #f4c74d;
+            font-size:
+              clamp(
+                1rem,
+                1.3vw,
+                1.35rem
+              );
+            line-height: 1;
+            text-overflow:
+              ellipsis;
+            white-space:
+              nowrap;
+          }
+
+          .metric-hex small {
+            display: block;
+            margin-top:
+              4px;
+            color: #68746c;
+            font-size:
+              0.4rem;
+            font-weight: 900;
+          }
+
+          .empty-metrics {
+            grid-column:
+              1 / -1;
+            padding: 20px;
+            border:
+              1px dashed
+              rgba(
+                234,
+                181,
+                47,
+                0.28
+              );
+            border-radius:
+              12px;
+            color: #7f8b82;
+            text-align:
+              center;
+          }
+
+          .lead-forager-card {
+            display: grid;
+            grid-template-columns:
+              auto 1fr;
+            gap: 10px;
+            align-items: center;
+            margin-top: 14px;
+            padding:
+              11px;
+            border:
+              1px solid
+              rgba(
+                238,
+                183,
+                43,
+                0.27
+              );
+            border-radius:
+              12px;
+            background:
+              linear-gradient(
+                145deg,
+                rgba(
+                  239,
+                  179,
+                  39,
+                  0.09
+                ),
+                rgba(
+                  255,
+                  255,
+                  255,
+                  0.02
+                )
+              );
+          }
+
+          .crown {
+            display: grid;
+            width: 42px;
+            height: 42px;
+            place-items: center;
+            border-radius:
+              10px;
+            background:
+              rgba(
+                244,
+                184,
+                37,
+                0.12
+              );
+            font-size:
+              1.3rem;
+          }
+
+          .lead-forager-card span {
+            display: block;
+            color: #8e9a91;
+            font-size:
+              0.48rem;
+            font-weight: 900;
+            letter-spacing:
+              0.08em;
+            text-transform:
+              uppercase;
+          }
+
+          .lead-forager-card strong {
+            display: block;
+            margin-top: 3px;
+            color: #ffdf72;
+            font-size:
+              1rem;
+          }
+
+          .lead-forager-card small {
+            display: block;
+            margin-top: 2px;
+            color: #7b897f;
+            font-size:
+              0.48rem;
+            font-weight: 700;
+          }
+
+          .stick-performance-card {
+            margin-top: 9px;
+            padding:
+              11px;
+            border:
+              1px solid
+              rgba(
+                255,
+                255,
+                255,
+                0.06
+              );
+            border-radius:
+              12px;
+            background:
+              rgba(
+                255,
+                255,
+                255,
+                0.025
+              );
+          }
+
+          .stick-rate-header {
+            display: flex;
+            align-items: center;
+            justify-content:
+              space-between;
+          }
+
+          .stick-rate-header span {
+            display: block;
+            color: #849188;
+            font-size:
+              0.48rem;
+            font-weight: 900;
+            text-transform:
+              uppercase;
+          }
+
+          .stick-rate-header strong {
+            display: block;
+            margin-top: 2px;
+            color: #88dc78;
+            font-size:
+              1.25rem;
+          }
+
+          .stick-rate-icon {
+            display: grid;
+            width: 30px;
+            height: 30px;
+            place-items: center;
+            border-radius:
+              50%;
+            background:
+              rgba(
+                77,
+                176,
+                81,
+                0.12
+              );
+            color: #79d36e;
+            font-weight: 1000;
+          }
+
+          .stick-rate-track {
+            height: 5px;
+            margin-top: 9px;
+            overflow: hidden;
+            border-radius:
+              999px;
+            background:
+              rgba(
+                255,
+                255,
+                255,
+                0.07
+              );
+          }
+
+          .stick-rate-fill {
+            height: 100%;
+            border-radius:
+              inherit;
+            background:
+              linear-gradient(
+                90deg,
+                #3d9b4b,
+                #93da73
+              );
+            transition:
+              width
+              900ms ease;
+          }
+
+          .performance-grid {
+            display: grid;
+            grid-template-columns:
+              repeat(
+                2,
+                minmax(
+                  0,
+                  1fr
+                )
+              );
+            gap: 7px;
+            margin-top: 8px;
+          }
+
+          .lost-volume-card {
+            grid-column:
+              1 / -1;
+          }
+
+          .trajectory-card {
+            display: flex;
+            align-items: center;
+            justify-content:
+              space-between;
+            margin-top: 8px;
+            padding:
+              9px 11px;
+            border-radius:
+              10px;
+            background:
+              rgba(
+                255,
+                255,
+                255,
+                0.025
+              );
+          }
+
+          .trajectory-card strong {
+            display: block;
+            margin-top: 3px;
+            color: #f4eed4;
+            font-size:
+              0.9rem;
+          }
+
+          .trajectory-light {
+            width: 13px;
+            height: 13px;
+            border-radius:
+              50%;
+            box-shadow:
+              0 0 16px
+              currentColor;
+          }
+
+          .trajectory-light.status-ahead {
+            background:
+              #7fd16f;
+          }
+
+          .trajectory-light.status-track {
+            background:
+              #eeb846;
+          }
+
+          .trajectory-light.status-risk {
+            background:
+              #ff8260;
+          }
+
+          .summary-panel {
+            grid-column:
+              1 / 3;
+            display: grid;
+            grid-template-columns:
+              auto 1fr;
+            gap: 12px;
+            align-items: center;
+            padding:
+              13px 15px;
+          }
+
+          .summary-light {
+            position: absolute;
+            top: -50px;
+            right: 12%;
+            width: 180px;
+            height: 120px;
+            border-radius:
+              50%;
+            background:
+              rgba(
+                238,
+                175,
+                32,
+                0.08
+              );
+            filter:
+              blur(30px);
+          }
+
+          .summary-icon {
+            display: grid;
+            width: 46px;
+            height: 46px;
+            place-items: center;
+            border:
+              1px solid
+              rgba(
+                239,
+                177,
+                35,
+                0.26
+              );
+            background:
+              rgba(
+                238,
+                177,
+                37,
+                0.07
+              );
+            color: #f3ba34;
+            clip-path:
+              polygon(
+                25% 0,
+                75% 0,
+                100% 50%,
+                75% 100%,
+                25% 100%,
+                0 50%
+              );
+          }
+
+          .summary-panel p:not(
+            .eyebrow
+          ) {
+            margin:
+              4px 0 0;
+            color: #a8b0a9;
+            font-size:
+              clamp(
+                0.65rem,
+                0.75vw,
+                0.78rem
+              );
+            font-weight: 700;
+            line-height: 1.35;
+          }
+
+          .beezy-panel {
+            display: grid;
+            grid-template-columns:
+              92px 1fr;
+            gap: 12px;
+            align-items: center;
+            padding:
+              10px 12px;
+          }
+
+          .beezy-image-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.beezy-image {
+  filter:
+    drop-shadow(
+      0 8px 18px
+      rgba(0, 0, 0, 0.42)
+    )
+    drop-shadow(
+      0 0 18px
+      rgba(241, 181, 35, 0.22)
+    );
+}
+
+          .beezy-image-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.beezy-image {
+  filter:
+    drop-shadow(
+      0 8px 18px
+      rgba(0, 0, 0, 0.42)
+    )
+    drop-shadow(
+      0 0 18px
+      rgba(241, 181, 35, 0.22)
+    );
+}
+
+          .beezy-image-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.beezy-image {
+  filter:
+    drop-shadow(
+      0 8px 18px
+      rgba(0, 0, 0, 0.42)
+    )
+    drop-shadow(
+      0 0 18px
+      rgba(241, 181, 35, 0.22)
+    );
+}
+
+          .beezy-image-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.beezy-image {
+  filter:
+    drop-shadow(
+      0 8px 18px
+      rgba(0, 0, 0, 0.42)
+    )
+    drop-shadow(
+      0 0 18px
+      rgba(241, 181, 35, 0.22)
+    );
+}
+
+          .beezy-image-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.beezy-image {
+  filter:
+    drop-shadow(
+      0 8px 18px
+      rgba(0, 0, 0, 0.42)
+    )
+    drop-shadow(
+      0 0 18px
+      rgba(241, 181, 35, 0.22)
+    );
+}
+
+          .beezy-image-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.beezy-image {
+  filter:
+    drop-shadow(
+      0 8px 18px
+      rgba(0, 0, 0, 0.42)
+    )
+    drop-shadow(
+      0 0 18px
+      rgba(241, 181, 35, 0.22)
+    );
+}
+
+          .beezy-image-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.beezy-image {
+  filter:
+    drop-shadow(
+      0 8px 18px
+      rgba(0, 0, 0, 0.42)
+    )
+    drop-shadow(
+      0 0 18px
+      rgba(241, 181, 35, 0.22)
+    );
+}
+
+          .beezy-image-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.beezy-image {
+  filter:
+    drop-shadow(
+      0 8px 18px
+      rgba(0, 0, 0, 0.42)
+    )
+    drop-shadow(
+      0 0 18px
+      rgba(241, 181, 35, 0.22)
+    );
+}
+
+          .beezy-image-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.beezy-image {
+  filter:
+    drop-shadow(
+      0 8px 18px
+      rgba(0, 0, 0, 0.42)
+    )
+    drop-shadow(
+      0 0 18px
+      rgba(241, 181, 35, 0.22)
+    );
+}
+
+          .beezy-body span {
+            display: block;
+            height: 8px;
+            margin-top: 7px;
+            background:
+              #151713;
+          }
+
+          .beezy-image-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.beezy-image {
+  filter:
+    drop-shadow(
+      0 8px 18px
+      rgba(0, 0, 0, 0.42)
+    )
+    drop-shadow(
+      0 0 18px
+      rgba(241, 181, 35, 0.22)
+    );
+}
+
+          .beezy-image-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.beezy-image {
+  filter:
+    drop-shadow(
+      0 8px 18px
+      rgba(0, 0, 0, 0.42)
+    )
+    drop-shadow(
+      0 0 18px
+      rgba(241, 181, 35, 0.22)
+    );
+}
+
+          .beezy-image-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.beezy-image {
+  filter:
+    drop-shadow(
+      0 8px 18px
+      rgba(0, 0, 0, 0.42)
+    )
+    drop-shadow(
+      0 0 18px
+      rgba(241, 181, 35, 0.22)
+    );
+}
+
+          .beezy-copy p:not(
+            .eyebrow
+          ) {
+            margin:
+              4px 0 0;
+            color: #9ea8a1;
+            font-size:
+              clamp(
+                0.6rem,
+                0.7vw,
+                0.72rem
+              );
+            font-weight: 700;
+            line-height: 1.3;
           }
 
           .intelligence-footer {
             position: relative;
-            z-index: 2;
+            z-index: 10;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content:
+              space-between;
             gap: 18px;
-            margin-top: 14px;
-            padding: 10px 14px;
-            border-radius: 13px;
-            background:
-              rgba(57, 39, 5, 0.92);
-            color: #ffffff;
+            flex: 0 0 auto;
+            margin-top: 10px;
+            padding:
+              7px 11px;
+            border-top:
+              1px solid
+              rgba(
+                233,
+                178,
+                41,
+                0.16
+              );
+            color: #88948c;
           }
 
-          .intelligence-footer div {
+          .footer-status {
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius:
+              50%;
+            background:
+              #7fd170;
+            box-shadow:
+              0 0 10px
+              rgba(
+                111,
+                214,
+                103,
+                0.7
+              );
+            animation:
+              statusPulse
+              1.7s ease-in-out
+              infinite;
+          }
+
+          .footer-status div,
+          .powered-by {
+            display: flex;
+            flex-direction:
+              column;
           }
 
           .intelligence-footer span {
-            color: #e4d396;
-            font-size: 0.55rem;
+            font-size:
+              0.43rem;
             font-weight: 900;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
+            letter-spacing:
+              0.08em;
+            text-transform:
+              uppercase;
           }
 
           .intelligence-footer strong {
-            margin-top: 2px;
+            margin-top: 1px;
+            color: #d6d8ce;
+            font-size:
+              0.64rem;
           }
 
           .intelligence-footer p {
             margin: 0;
-            color: #ffe68a;
+            color: #d7b24c;
+            font-size:
+              0.7rem;
             font-weight: 900;
           }
 
@@ -937,54 +2407,65 @@ export default function ExecutiveIntelligencePage({
             text-align: right;
           }
 
-          @media (max-width: 1100px) {
-            .intelligence-page {
-              height: auto;
-              min-height: 100vh;
-              overflow: visible;
+          @keyframes intelligencePulse {
+            0%,
+            100% {
+              opacity: 0.55;
+              transform:
+                scale(0.94);
             }
 
-            .intelligence-grid {
-              grid-template-columns: 1fr;
-            }
-
-            .metric-grid {
-              grid-template-columns:
-                repeat(2, minmax(0, 1fr));
+            50% {
+              opacity: 1;
+              transform:
+                scale(1.08);
             }
           }
 
-          @media (max-width: 700px) {
-            .intelligence-header {
-              flex-direction: column;
+          @keyframes statusPulse {
+            0%,
+            100% {
+              opacity: 0.55;
+              transform:
+                scale(0.85);
             }
 
-            .center-status {
-              width: 100%;
-              box-sizing: border-box;
-            }
-
-            .metric-grid {
-              grid-template-columns: 1fr;
-            }
-
-            .intelligence-footer {
-              align-items: stretch;
-              flex-direction: column;
-            }
-
-            .powered-by {
-              text-align: left;
+            50% {
+              opacity: 1;
+              transform:
+                scale(1.2);
             }
           }
 
           @media (
-            prefers-reduced-motion: reduce
+            max-width: 1100px
           ) {
-            .ambient,
-            .flying-bee,
-            .live-badge::before,
-            .summary-glow {
+            .intelligence-page {
+              height: auto;
+              min-height:
+                100vh;
+              overflow: auto;
+            }
+
+            .command-layout {
+              grid-template-columns:
+                1fr;
+              grid-template-rows:
+                auto;
+            }
+
+            .summary-panel {
+              grid-column:
+                auto;
+            }
+          }
+
+          @media (
+            prefers-reduced-motion:
+              reduce
+          ) {
+            .projection-glow,
+            .status-dot {
               animation: none;
             }
           }
