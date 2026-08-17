@@ -457,6 +457,58 @@ export default async function Home() {
       ],
     });
 
+    const currentWeekStickEntries =
+  await prisma.workerStickEntry.findMany({
+    where: {
+      entryDate: {
+        gte:
+          startOfCurrentWeek,
+
+        lt:
+          startOfNextWeek,
+      },
+    },
+
+    select: {
+      collectorId: true,
+      totalSticks: true,
+      successfulSticks: true,
+    },
+  });
+
+  const weeklyWorkerPerformance =
+  new Map<
+    number,
+    {
+      totalSticks: number;
+      successfulSticks: number;
+    }
+  >();
+
+for (
+  const entry of
+    currentWeekStickEntries
+) {
+  const current =
+    weeklyWorkerPerformance.get(
+      entry.collectorId,
+    ) ?? {
+      totalSticks: 0,
+      successfulSticks: 0,
+    };
+
+  current.totalSticks +=
+    entry.totalSticks;
+
+  current.successfulSticks +=
+    entry.successfulSticks;
+
+  weeklyWorkerPerformance.set(
+    entry.collectorId,
+    current,
+  );
+}
+
   /*
    * ==========================================
    * MEET THE BEES
@@ -885,10 +937,44 @@ export default async function Home() {
           </section>
 
           <BeeTeam
-            collectors={
-              collectors
-            }
-          />
+  collectors={
+    collectors.map(
+      (collector) => {
+        const performance =
+          weeklyWorkerPerformance.get(
+            collector.id,
+          );
+
+        const totalSticks =
+          performance?.totalSticks ??
+          0;
+
+        const successfulSticks =
+          performance
+            ?.successfulSticks ??
+          0;
+
+        const successRate =
+          totalSticks > 0
+            ? (
+                successfulSticks /
+                totalSticks
+              ) * 100
+            : null;
+
+        return {
+          ...collector,
+
+          weeklySuccessfulSticks:
+            successfulSticks,
+
+          weeklySuccessRate:
+            successRate,
+        };
+      },
+    )
+  }
+/>
         </DashboardPage>
 
         {/* =====================================

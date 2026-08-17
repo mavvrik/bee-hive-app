@@ -1,12 +1,18 @@
 type WorkerBeeCardProps = {
   name: string;
   roleLabel: string;
+
+  successfulSticks: number;
+  successRate: number | null;
+
   isManagement?: boolean;
 };
 
 export default function WorkerBeeCard({
   name,
   roleLabel,
+  successfulSticks,
+  successRate,
   isManagement = false,
 }: WorkerBeeCardProps) {
   return (
@@ -43,25 +49,33 @@ export default function WorkerBeeCard({
           <strong className="worker-title">
             {isManagement
               ? "Hive Leadership"
-              : "Part of the Hive"}
+              : "Weekly Performance"}
           </strong>
 
           <small className="worker-description">
             {isManagement
               ? "Supporting the team, donor experience, and center performance."
-              : "Every interaction and every successful contribution helps move the Hive forward."}
+              : "Current weekly stick performance based on daily entries."}
           </small>
         </div>
 
         <div className="worker-value-grid">
           <WorkerValue
-            label="Team"
-            value="Riviera Beach"
+            label="Successful Sticks"
+            value={successfulSticks.toLocaleString(
+              "en-US",
+            )}
           />
 
           <WorkerValue
-            label="Status"
-            value="Active"
+            label="Success Rate"
+            value={
+              successRate === null
+                ? "—"
+                : `${successRate.toFixed(
+                    1,
+                  )}%`
+            }
           />
         </div>
 
@@ -380,9 +394,9 @@ export default function WorkerBeeCard({
             color: #3b2a08;
 
             font-size: clamp(
-              0.65rem,
-              0.78vw,
-              0.84rem
+              0.75rem,
+              0.9vw,
+              0.95rem
             );
 
             line-height: 1;
@@ -430,12 +444,6 @@ export default function WorkerBeeCard({
             text-overflow: ellipsis;
             white-space: nowrap;
           }
-
-          /*
-           * ==========================================
-           * INDIVIDUAL BEE
-           * ==========================================
-           */
 
           .bee-illustration {
             position: relative;
@@ -610,12 +618,6 @@ export default function WorkerBeeCard({
               rotate(26deg);
           }
 
-          /*
-           * ==========================================
-           * MANAGEMENT BEE GROUP
-           * ==========================================
-           */
-
           .management-bee-group {
             display: flex;
 
@@ -713,12 +715,6 @@ export default function WorkerBeeCard({
                 0.68
               );
           }
-
-          /*
-           * ==========================================
-           * RESPONSIVE
-           * ==========================================
-           */
 
           @media (
             max-width: 1250px
@@ -818,18 +814,25 @@ function ManagementBees() {
     >
       {Array.from({
         length: 3,
-      }).map((_, index) => (
-        <div
-          className="management-mini-bee"
-          key={index}
-        >
-          <div className="mini-bee-wing" />
+      }).map(
+        (
+          _,
+          index,
+        ) => (
+          <div
+            className="management-mini-bee"
+            key={
+              index
+            }
+          >
+            <div className="mini-bee-wing" />
 
-          <div className="mini-bee-body" />
+            <div className="mini-bee-body" />
 
-          <div className="mini-bee-head" />
-        </div>
-      ))}
+            <div className="mini-bee-head" />
+          </div>
+        ),
+      )}
     </div>
   );
 }

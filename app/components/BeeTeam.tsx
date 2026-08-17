@@ -12,6 +12,9 @@ type CollectorForBeeTeam = {
   profileTitle?: string | null;
   photoUrl?: string | null;
   isEmployeeOfMonth?: boolean;
+
+  weeklySuccessfulSticks?: number;
+  weeklySuccessRate?: number | null;
 };
 
 type BeeTeamProps = {
@@ -56,25 +59,42 @@ export default function BeeTeam({
       </header>
 
       <div className="bee-performance-grid">
-        {activeBees.map((bee) => (
-          <WorkerBeeCard
-            key={bee.id}
-            name={
-              bee.preferredName ||
-              bee.name
-            }
-            roleLabel={
-              bee.profileTitle ||
-              bee.role
-            }
-            isManagement={
-              bee.role ===
-                "Management" ||
-              bee.name ===
-                "Management Team"
-            }
-          />
-        ))}
+        {activeBees.map(
+          (bee) => (
+            <WorkerBeeCard
+              key={
+                bee.id
+              }
+
+              name={
+                bee.preferredName ||
+                bee.name
+              }
+
+              roleLabel={
+                bee.profileTitle ||
+                bee.role
+              }
+
+              successfulSticks={
+                bee.weeklySuccessfulSticks ??
+                0
+              }
+
+              successRate={
+                bee.weeklySuccessRate ??
+                null
+              }
+
+              isManagement={
+                bee.role ===
+                  "Management" ||
+                bee.name ===
+                  "Management Team"
+              }
+            />
+          ),
+        )}
       </div>
 
       <style>
