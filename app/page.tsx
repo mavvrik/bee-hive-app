@@ -1,3 +1,7 @@
+import {
+  calculateVarianceStreaks,
+} from "@/app/lib/varianceStreakEngine";
+
 import ProjectionExecutiveCard from "./components/ProjectionExecutiveCard";
 
 import { prisma } from "@/lib/prisma";
@@ -186,12 +190,6 @@ export default async function Home() {
     currentBudget
       ?.budgetDonors ?? 0;
 
-  /*
-   * These are the FIXED weekly goals used
-   * by both the Meadow and rolling target
-   * engine.
-   */
-
   const weeklyGoalLiters =
     safeDivide(
       monthlyGoal,
@@ -311,15 +309,6 @@ export default async function Home() {
    * ==========================================
    * SHARED DAILY TARGET ENGINE
    * ==========================================
-   *
-   * This is the exact same rolling-target
-   * engine used by Daily Center Production.
-   *
-   * Weekly target stays fixed.
-   *
-   * Today's target =
-   * remaining weekly requirement divided
-   * across the remaining operating days.
    */
 
   const dailyTargetPlan =
@@ -348,11 +337,9 @@ export default async function Home() {
     });
 
   /*
-   * Existing ExecutiveStatusBar still
-   * uses older "stick" prop names.
-   *
-   * These values currently represent
-   * official center donor totals.
+   * ==========================================
+   * WEEKLY CENTER RATIOS
+   * ==========================================
    */
 
   const weeklyLitersPerDonor =
@@ -367,11 +354,6 @@ export default async function Home() {
 
   const weeklyLitersPerStick =
     weeklyLitersPerDonor;
-
-  /*
-   * Temporary center-level historical
-   * production average.
-   */
 
   const historicalLitersPerStick =
     weeklyLitersPerDonor;
@@ -418,11 +400,6 @@ export default async function Home() {
       .unsuccessfulSticks ??
     0;
 
-  /*
-   * Projection engine expects liters.
-   * Lost volume is stored in milliliters.
-   */
-
   const lostVolume =
     (
       hourlyOperationalSummary._sum
@@ -457,57 +434,118 @@ export default async function Home() {
       ],
     });
 
-    const currentWeekStickEntries =
-  await prisma.workerStickEntry.findMany({
-    where: {
-      entryDate: {
-        gte:
-          startOfCurrentWeek,
+  /*
+   * ==========================================
+   * CURRENT WEEK WORKER PERFORMANCE
+   * ==========================================
+   */
 
-        lt:
-          startOfNextWeek,
+  const currentWeekStickEntries =
+    await prisma.workerStickEntry.findMany({
+      where: {
+        entryDate: {
+          gte:
+            startOfCurrentWeek,
+
+          lt:
+            startOfNextWeek,
+        },
       },
-    },
 
-    select: {
-      collectorId: true,
-      totalSticks: true,
-      successfulSticks: true,
-    },
-  });
+      select: {
+        collectorId:
+          true,
+
+        totalSticks:
+          true,
+
+        successfulSticks:
+          true,
+      },
+    });
 
   const weeklyWorkerPerformance =
-  new Map<
-    number,
-    {
-      totalSticks: number;
-      successfulSticks: number;
-    }
-  >();
+    new Map<
+      number,
+      {
+        totalSticks: number;
+        successfulSticks: number;
+      }
+    >();
 
-for (
-  const entry of
-    currentWeekStickEntries
-) {
-  const current =
-    weeklyWorkerPerformance.get(
+  for (
+    const entry of
+      currentWeekStickEntries
+  ) {
+    const current =
+      weeklyWorkerPerformance.get(
+        entry.collectorId,
+      ) ?? {
+        totalSticks: 0,
+        successfulSticks: 0,
+      };
+
+    current.totalSticks +=
+      entry.totalSticks;
+
+    current.successfulSticks +=
+      entry.successfulSticks;
+
+    weeklyWorkerPerformance.set(
       entry.collectorId,
-    ) ?? {
-      totalSticks: 0,
-      successfulSticks: 0,
-    };
+      current,
+    );
+  }
 
-  current.totalSticks +=
-    entry.totalSticks;
+  /*
+   * ==========================================
+   * VERIFIED VARIANCE-FREE STREAKS
+   * ==========================================
+   *
+   * Only completed prior-day worker data
+   * is considered verified.
+   *
+   * 0 or 1 stick = neutral day
+   * 2+ sticks and 0 unsuccessful = streak +1
+   * 2+ sticks and 1+ unsuccessful = reset
+   */
 
-  current.successfulSticks +=
-    entry.successfulSticks;
+  const verifiedWorkerStickEntries =
+    await prisma.workerStickEntry.findMany({
+      where: {
+        entryDate: {
+          lt:
+            startOfToday,
+        },
+      },
 
-  weeklyWorkerPerformance.set(
-    entry.collectorId,
-    current,
-  );
-}
+      select: {
+        collectorId:
+          true,
+
+        entryDate:
+          true,
+
+        totalSticks:
+          true,
+
+        successfulSticks:
+          true,
+      },
+
+      orderBy: {
+        entryDate:
+          "asc",
+      },
+    });
+
+  const workerVarianceStreaks =
+    calculateVarianceStreaks({
+      entries:
+        verifiedWorkerStickEntries,
+
+      today,
+    });
 
   /*
    * ==========================================
@@ -739,9 +777,6 @@ for (
    * ==========================================
    * MONTHLY LEAD FORAGER
    * ==========================================
-   *
-   * Monthly recognition is independent
-   * from the reigning Lead Forager crown.
    */
 
   const monthlyLeadForager =
@@ -937,44 +972,57 @@ for (
           </section>
 
           <BeeTeam
-  collectors={
-    collectors.map(
-      (collector) => {
-        const performance =
-          weeklyWorkerPerformance.get(
-            collector.id,
-          );
+            collectors={
+              collectors.map(
+                (collector) => {
+                  const performance =
+                    weeklyWorkerPerformance.get(
+                      collector.id,
+                    );
 
-        const totalSticks =
-          performance?.totalSticks ??
-          0;
+                  const streak =
+                    workerVarianceStreaks.get(
+                      collector.id,
+                    );
 
-        const successfulSticks =
-          performance
-            ?.successfulSticks ??
-          0;
+                  const totalSticks =
+                    performance?.totalSticks ??
+                    0;
 
-        const successRate =
-          totalSticks > 0
-            ? (
-                successfulSticks /
-                totalSticks
-              ) * 100
-            : null;
+                  const successfulSticks =
+                    performance
+                      ?.successfulSticks ??
+                    0;
 
-        return {
-          ...collector,
+                  const successRate =
+                    totalSticks > 0
+                      ? (
+                          successfulSticks /
+                          totalSticks
+                        ) * 100
+                      : null;
 
-          weeklySuccessfulSticks:
-            successfulSticks,
+                  return {
+                    ...collector,
 
-          weeklySuccessRate:
-            successRate,
-        };
-      },
-    )
-  }
-/>
+                    weeklySuccessfulSticks:
+                      successfulSticks,
+
+                    weeklySuccessRate:
+                      successRate,
+
+                    varianceFreeStreak:
+                      streak?.streakDays ??
+                      0,
+
+                    streakVerifiedThrough:
+                      streak?.latestVerifiedDate ??
+                      null,
+                  };
+                },
+              )
+            }
+          />
         </DashboardPage>
 
         {/* =====================================
@@ -983,22 +1031,22 @@ for (
 
         <DashboardPage>
           <ExecutiveIntelligencePage
-  centerName={
-    centerName
-  }
+            centerName={
+              centerName
+            }
 
-  metrics={
-    executiveMetrics
-  }
+            metrics={
+              executiveMetrics
+            }
 
-  todaysLitersTarget={
-    dailyTargetPlan
-      .todaysTargetLiters
-  }
+            todaysLitersTarget={
+              dailyTargetPlan
+                .todaysTargetLiters
+            }
 
-  todaysLitersCollected={
-    dailyCurrentLiters
-  }
+            todaysLitersCollected={
+              dailyCurrentLiters
+            }
 
             projectedFinish={
               intelligence.projection

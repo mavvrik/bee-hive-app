@@ -1,3 +1,7 @@
+import type {
+  CSSProperties,
+} from "react";
+
 type WorkerBeeCardProps = {
   name: string;
   roleLabel: string;
@@ -5,38 +9,158 @@ type WorkerBeeCardProps = {
   successfulSticks: number;
   successRate: number | null;
 
+  varianceFreeStreak: number;
+  streakVerifiedThrough: Date | null;
+
   isManagement?: boolean;
+  isPhlebotomist?: boolean;
 };
+
+function getStreakIntensity(
+  streak: number,
+) {
+  if (streak <= 0) {
+    return 0;
+  }
+
+  return Math.min(
+    1,
+    0.16 +
+      streak * 0.1,
+  );
+}
 
 export default function WorkerBeeCard({
   name,
   roleLabel,
+
   successfulSticks,
   successRate,
+
+  varianceFreeStreak,
+  streakVerifiedThrough,
+
   isManagement = false,
+  isPhlebotomist = false,
 }: WorkerBeeCardProps) {
+  const streakIntensity =
+    getStreakIntensity(
+      varianceFreeStreak,
+    );
+
+  const hasActiveStreak =
+    isPhlebotomist &&
+    varianceFreeStreak > 0;
+
+  const streakStyle =
+    hasActiveStreak
+      ? ({
+          "--streak-opacity":
+            String(
+              0.34 +
+                streakIntensity *
+                  0.5,
+            ),
+
+          "--streak-blur": `${
+            10 +
+            streakIntensity *
+              23
+          }px`,
+
+          "--streak-spread": `${
+            1 +
+            streakIntensity *
+              5
+          }px`,
+
+          "--streak-border": `${
+            2 +
+            streakIntensity *
+              2.5
+          }px`,
+
+          "--streak-scale": String(
+            1 +
+              streakIntensity *
+                0.045,
+          ),
+        } as CSSProperties)
+      : undefined;
+
+  const verifiedDateLabel =
+    streakVerifiedThrough
+      ? streakVerifiedThrough.toLocaleDateString(
+          "en-US",
+          {
+            month: "short",
+            day: "numeric",
+          },
+        )
+      : null;
+
   return (
     <article
+      data-streaker={
+        hasActiveStreak
+          ? "true"
+          : "false"
+      }
       className={`worker-bee-card ${
         isManagement
           ? "management-card"
           : ""
+      } ${
+        isPhlebotomist
+          ? "phleb-card"
+          : ""
       }`}
       aria-label={`${name}, ${roleLabel}`}
     >
+      <div className="card-shine" />
+
       <div className="worker-left-panel">
         <div className="worker-bee-stage">
+          <div className="bee-stage-glow" />
+
           {isManagement ? (
             <ManagementBees />
+          ) : hasActiveStreak ? (
+            <div
+              className="bee-streak-orbit"
+              style={
+                streakStyle
+              }
+              title={
+                verifiedDateLabel
+                  ? `${varianceFreeStreak}-day variance-free streak, verified through ${verifiedDateLabel}`
+                  : `${varianceFreeStreak}-day variance-free streak`
+              }
+            >
+              <BeeIllustration />
+
+              <span
+                className="streak-count-badge"
+                aria-label={`${varianceFreeStreak} day variance-free streak`}
+              >
+                {
+                  varianceFreeStreak
+                }
+              </span>
+            </div>
           ) : (
             <BeeIllustration />
           )}
         </div>
 
         <div className="worker-identity">
-          <strong>{name}</strong>
+          <strong>
+            {name}
+          </strong>
 
-          <span>{roleLabel}</span>
+          <span>
+            {roleLabel}
+          </span>
         </div>
       </div>
 
@@ -54,8 +178,8 @@ export default function WorkerBeeCard({
 
           <small className="worker-description">
             {isManagement
-              ? "Supporting the team, donor experience, and center performance."
-              : "Current weekly stick performance based on daily entries."}
+              ? "Supporting the team and moving the Hive forward."
+              : "Current weekly stick performance."}
           </small>
         </div>
 
@@ -65,6 +189,7 @@ export default function WorkerBeeCard({
             value={successfulSticks.toLocaleString(
               "en-US",
             )}
+            emphasis="gold"
           />
 
           <WorkerValue
@@ -76,11 +201,19 @@ export default function WorkerBeeCard({
                     1,
                   )}%`
             }
+            emphasis={
+              successRate !== null &&
+              successRate >= 90
+                ? "green"
+                : "gold"
+            }
           />
         </div>
 
         <div className="worker-message">
-          <span>🐝</span>
+          <div className="message-bee">
+            🐝
+          </div>
 
           <p>
             One team. One Hive.
@@ -96,8 +229,8 @@ export default function WorkerBeeCard({
             display: grid;
 
             grid-template-columns:
-              minmax(105px, 0.85fr)
-              minmax(0, 1.15fr);
+              minmax(112px, 0.9fr)
+              minmax(0, 1.1fr);
 
             min-width: 0;
             min-height: 0;
@@ -106,55 +239,178 @@ export default function WorkerBeeCard({
 
             border:
               1px solid
-              rgba(202, 163, 56, 0.56);
+              rgba(
+                175,
+                111,
+                10,
+                0.46
+              );
 
-            border-radius: 16px;
+            border-radius:
+              17px;
 
             background:
               linear-gradient(
-                135deg,
-                rgba(255, 255, 255, 0.98),
-                rgba(255, 249, 224, 0.92)
+                145deg,
+                rgba(
+                  255,
+                  254,
+                  242,
+                  0.99
+                ),
+                rgba(
+                  255,
+                  245,
+                  203,
+                  0.98
+                )
               );
 
             box-shadow:
-              0 5px 12px
-                rgba(94, 66, 8, 0.07),
-              inset 0 1px 0
-                rgba(255, 255, 255, 0.9);
+              0 7px 16px
+              rgba(
+                99,
+                61,
+                4,
+                0.15
+              ),
+              inset
+              0 1px 0
+              rgba(
+                255,
+                255,
+                255,
+                0.94
+              );
 
-            box-sizing: border-box;
+            box-sizing:
+              border-box;
+          }
+
+          .worker-bee-card::after {
+            content: "";
+
+            position: absolute;
+
+            inset: 0;
+
+            z-index: 0;
+
+            border-radius:
+              inherit;
+
+            background:
+              radial-gradient(
+                circle at
+                16% 20%,
+                rgba(
+                  255,
+                  219,
+                  91,
+                  0.18
+                ),
+                transparent
+                30%
+              );
+
+            pointer-events:
+              none;
+          }
+
+          .card-shine {
+            position: absolute;
+
+            z-index: 1;
+
+            top: -20px;
+            right: -24px;
+
+            width: 100px;
+            height: 100px;
+
+            border-radius:
+              50%;
+
+            background:
+              rgba(
+                255,
+                255,
+                255,
+                0.5
+              );
+
+            filter:
+              blur(
+                22px
+              );
+
+            pointer-events:
+              none;
           }
 
           .worker-bee-card.management-card {
             border-color:
-              rgba(142, 111, 30, 0.62);
+              rgba(
+                115,
+                81,
+                16,
+                0.62
+              );
 
             background:
               linear-gradient(
-                135deg,
-                rgba(255, 255, 255, 0.98),
-                rgba(246, 231, 174, 0.94)
+                145deg,
+                #fffdf0,
+                #efdaa2
               );
           }
 
+          .worker-bee-card.phleb-card {
+            border-color:
+              rgba(
+                204,
+                132,
+                15,
+                0.58
+              );
+          }
+
+          /*
+           * ====================================
+           * LEFT PANEL
+           * ====================================
+           */
+
           .worker-left-panel {
+            position: relative;
+
+            z-index: 2;
+
             display: flex;
 
-            flex-direction: column;
+            flex-direction:
+              column;
 
-            align-items: center;
+            align-items:
+              center;
+
             justify-content:
               space-between;
 
             min-width: 0;
             min-height: 0;
 
-            padding: 7px 6px 8px;
+            padding:
+              7px 7px 8px;
 
             border-right:
               1px solid
-              rgba(203, 165, 59, 0.25);
+              rgba(
+                188,
+                126,
+                17,
+                0.22
+              );
 
             background:
               linear-gradient(
@@ -162,101 +418,612 @@ export default function WorkerBeeCard({
                 rgba(
                   255,
                   251,
-                  230,
-                  0.9
+                  221,
+                  0.98
                 ),
                 rgba(
                   243,
-                  220,
-                  139,
-                  0.28
+                  209,
+                  108,
+                  0.35
                 )
               );
           }
 
+          .worker-left-panel::before {
+            content: "";
+
+            position: absolute;
+
+            inset: 0;
+
+            opacity: 0.1;
+
+            background-image:
+              linear-gradient(
+                30deg,
+                #ba7910 12%,
+                transparent 12.5%,
+                transparent 87%,
+                #ba7910 87.5%
+              ),
+              linear-gradient(
+                150deg,
+                #ba7910 12%,
+                transparent 12.5%,
+                transparent 87%,
+                #ba7910 87.5%
+              );
+
+            background-size:
+              24px 42px;
+
+            pointer-events:
+              none;
+          }
+
           .worker-bee-stage {
+            position: relative;
+
             display: flex;
 
             flex: 1;
 
-            align-items: center;
-            justify-content: center;
+            align-items:
+              center;
+
+            justify-content:
+              center;
 
             width: 100%;
 
             min-height: 0;
           }
 
+          .bee-stage-glow {
+            position: absolute;
+
+            top: 50%;
+            left: 50%;
+
+            width: 88px;
+            height: 58px;
+
+            border-radius:
+              50%;
+
+            transform:
+              translate(
+                -50%,
+                -50%
+              );
+
+            background:
+              radial-gradient(
+                ellipse,
+                rgba(
+                  255,
+                  218,
+                  104,
+                  0.34
+                ),
+                transparent
+                68%
+              );
+
+            filter:
+              blur(
+                6px
+              );
+          }
+
+          /*
+           * ====================================
+           * STREAK RING
+           * ====================================
+           */
+
+          .bee-streak-orbit {
+            position: relative;
+
+            z-index: 3;
+
+            display: grid;
+
+            width: 102px;
+            height: 80px;
+
+            place-items:
+              center;
+
+            transform:
+              scale(
+                var(
+                  --streak-scale,
+                  1
+                )
+              );
+
+            transition:
+              transform
+              450ms ease;
+          }
+
+          .bee-streak-orbit::before {
+            content: "";
+
+            position: absolute;
+
+            z-index: 0;
+
+            top: 50%;
+            left: 50%;
+
+            width: 87px;
+            height: 68px;
+
+            border:
+              var(
+                --streak-border,
+                2px
+              )
+              solid
+              rgba(
+                245,
+                164,
+                21,
+                var(
+                  --streak-opacity,
+                  0.5
+                )
+              );
+
+            border-radius:
+              50%;
+
+            transform:
+              translate(
+                -50%,
+                -50%
+              );
+
+            background:
+              radial-gradient(
+                ellipse,
+                rgba(
+                  255,
+                  229,
+                  124,
+                  calc(
+                    var(
+                        --streak-opacity,
+                        0.5
+                      ) *
+                      0.14
+                  )
+                ),
+                transparent
+                62%
+              );
+
+            box-shadow:
+              0 0
+              var(
+                --streak-blur,
+                13px
+              )
+              var(
+                --streak-spread,
+                1px
+              )
+              rgba(
+                255,
+                156,
+                17,
+                var(
+                  --streak-opacity,
+                  0.5
+                )
+              ),
+              0 0 18px
+              rgba(
+                255,
+                213,
+                74,
+                calc(
+                  var(
+                      --streak-opacity,
+                      0.5
+                    ) *
+                    0.52
+                )
+              ),
+              inset
+              0 0 14px
+              rgba(
+                255,
+                226,
+                107,
+                calc(
+                  var(
+                      --streak-opacity,
+                      0.5
+                    ) *
+                    0.5
+                )
+              );
+
+            animation:
+              streakRingPulse
+              2.3s
+              ease-in-out
+              infinite;
+
+            pointer-events:
+              none;
+          }
+
+          .bee-streak-orbit::after {
+            content: "";
+
+            position: absolute;
+
+            z-index: 0;
+
+            top: 50%;
+            left: 50%;
+
+            width: 72px;
+            height: 54px;
+
+            border-radius:
+              50%;
+
+            transform:
+              translate(
+                -50%,
+                -50%
+              );
+
+            background:
+              radial-gradient(
+                ellipse,
+                rgba(
+                  255,
+                  202,
+                  55,
+                  calc(
+                    var(
+                        --streak-opacity,
+                        0.5
+                      ) *
+                      0.24
+                  )
+                ),
+                transparent
+                67%
+              );
+          }
+
+          .bee-streak-orbit
+          .bee-illustration {
+            z-index: 2;
+          }
+
+          .streak-count-badge {
+            position: absolute;
+
+            z-index: 8;
+
+            top: 0;
+            right: 4px;
+
+            display: grid;
+
+            width: 21px;
+            height: 21px;
+
+            place-items:
+              center;
+
+            border:
+              2px solid
+              rgba(
+                255,
+                252,
+                223,
+                0.98
+              );
+
+            border-radius:
+              50%;
+
+            background:
+              linear-gradient(
+                145deg,
+                #ffe16c,
+                #e59415
+              );
+
+            color:
+              #422403;
+
+            font-size:
+              0.61rem;
+
+            font-weight:
+              1000;
+
+            line-height: 1;
+
+            box-shadow:
+              0 3px 7px
+              rgba(
+                87,
+                51,
+                3,
+                0.28
+              ),
+              0 0 10px
+              rgba(
+                246,
+                161,
+                20,
+                0.55
+              );
+
+            transition:
+              transform
+              300ms ease,
+              box-shadow
+              300ms ease;
+          }
+
+          /*
+           * ====================================
+           * BEEZY RECOGNITION
+           * ====================================
+           */
+
+          .worker-bee-card.beezy-highlight
+          .bee-streak-orbit::before {
+            border-color:
+              rgba(
+                255,
+                188,
+                31,
+                1
+              );
+
+            box-shadow:
+              0 0 36px 9px
+              rgba(
+                255,
+                151,
+                16,
+                0.78
+              ),
+              0 0 60px 18px
+              rgba(
+                255,
+                218,
+                66,
+                0.44
+              ),
+              inset
+              0 0 20px
+              rgba(
+                255,
+                231,
+                120,
+                0.76
+              );
+
+            animation:
+              beezyStreakCelebration
+              0.75s
+              ease-in-out
+              infinite;
+          }
+
+          .worker-bee-card.beezy-highlight
+          .streak-count-badge {
+            transform:
+              scale(
+                1.22
+              );
+
+            box-shadow:
+              0 0 18px
+              rgba(
+                255,
+                140,
+                12,
+                0.92
+              );
+          }
+
+          @keyframes beezyStreakCelebration {
+            0%,
+            100% {
+              transform:
+                translate(
+                  -50%,
+                  -50%
+                )
+                scale(
+                  1
+                );
+            }
+
+            50% {
+              transform:
+                translate(
+                  -50%,
+                  -50%
+                )
+                scale(
+                  1.12
+                );
+            }
+          }
+
+          @keyframes streakRingPulse {
+            0%,
+            100% {
+              opacity: 0.82;
+
+              transform:
+                translate(
+                  -50%,
+                  -50%
+                )
+                scale(
+                  0.98
+                );
+            }
+
+            50% {
+              opacity: 1;
+
+              transform:
+                translate(
+                  -50%,
+                  -50%
+                )
+                scale(
+                  1.045
+                );
+            }
+          }
+
+          /*
+           * ====================================
+           * WORKER IDENTITY
+           * ====================================
+           */
+
           .worker-identity {
+            position: relative;
+
+            z-index: 3;
+
             flex: 0 0 auto;
 
             width: 100%;
 
-            text-align: center;
+            text-align:
+              center;
           }
 
           .worker-identity strong {
             display: block;
 
-            overflow: hidden;
+            overflow:
+              hidden;
 
-            color: #392706;
+            color:
+              #422505;
 
-            font-size: 0.82rem;
-            line-height: 1.05;
+            font-size:
+              0.86rem;
 
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            font-weight:
+              1000;
+
+            line-height: 1.02;
+
+            text-overflow:
+              ellipsis;
+
+            white-space:
+              nowrap;
           }
 
           .worker-identity span {
-            display: inline-flex;
+            display:
+              inline-flex;
 
-            align-items: center;
-            justify-content: center;
+            align-items:
+              center;
+
+            justify-content:
+              center;
 
             max-width: 100%;
 
             margin-top: 4px;
-            padding: 3px 7px;
 
-            overflow: hidden;
+            padding:
+              3px 8px;
+
+            overflow:
+              hidden;
 
             border:
               1px solid
               rgba(
-                85,
-                131,
-                42,
-                0.22
+                79,
+                119,
+                40,
+                0.24
               );
 
-            border-radius: 999px;
+            border-radius:
+              999px;
 
-            background: #edf5d9;
+            background:
+              linear-gradient(
+                145deg,
+                #f1f7dd,
+                #dfefbd
+              );
 
-            color: #466527;
+            color:
+              #416126;
 
-            font-size: 0.49rem;
-            font-weight: 900;
+            font-size:
+              0.47rem;
+
+            font-weight:
+              1000;
+
             line-height: 1;
 
-            text-overflow: ellipsis;
-            text-transform: uppercase;
-            white-space: nowrap;
+            text-overflow:
+              ellipsis;
+
+            text-transform:
+              uppercase;
+
+            white-space:
+              nowrap;
           }
 
+          /*
+           * ====================================
+           * RIGHT PANEL
+           * ====================================
+           */
+
           .worker-right-panel {
+            position: relative;
+
+            z-index: 2;
+
             display: flex;
 
-            flex-direction: column;
+            flex-direction:
+              column;
 
-            justify-content: center;
+            justify-content:
+              center;
 
             min-width: 0;
             min-height: 0;
 
-            padding: 9px 11px;
+            padding:
+              9px 11px;
           }
 
           .worker-heading {
@@ -266,47 +1033,75 @@ export default function WorkerBeeCard({
           .worker-eyebrow {
             display: block;
 
-            margin-bottom: 3px;
+            margin-bottom:
+              2px;
 
-            color: #9a6d10;
+            color:
+              #a16d12;
 
-            font-size: 0.45rem;
-            font-weight: 900;
+            font-size:
+              0.43rem;
 
-            letter-spacing: 0.09em;
-            text-transform: uppercase;
+            font-weight:
+              1000;
+
+            letter-spacing:
+              0.11em;
+
+            text-transform:
+              uppercase;
           }
 
           .worker-title {
             display: block;
 
-            overflow: hidden;
+            overflow:
+              hidden;
 
-            color: #342406;
+            color:
+              #3b2205;
 
-            font-size: clamp(
-              0.9rem,
-              1.05vw,
-              1.1rem
-            );
+            font-size:
+              clamp(
+                0.92rem,
+                1.05vw,
+                1.12rem
+              );
+
+            font-weight:
+              1000;
 
             line-height: 1.05;
 
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            text-overflow:
+              ellipsis;
+
+            white-space:
+              nowrap;
           }
 
           .worker-description {
             display: block;
 
-            margin-top: 4px;
+            margin-top:
+              3px;
 
-            color: #7e6b43;
+            color:
+              #816532;
 
-            font-size: 0.48rem;
+            font-size:
+              0.46rem;
+
             font-weight: 700;
-            line-height: 1.25;
+
+            line-height: 1.22;
           }
+
+          /*
+           * ====================================
+           * METRICS
+           * ====================================
+           */
 
           .worker-value-grid {
             display: grid;
@@ -314,37 +1109,54 @@ export default function WorkerBeeCard({
             grid-template-columns:
               repeat(
                 2,
-                minmax(0, 1fr)
+                minmax(
+                  0,
+                  1fr
+                )
               );
 
             gap: 7px;
 
-            margin-top: 9px;
+            margin-top:
+              8px;
           }
 
           .worker-value {
+            position: relative;
+
             display: flex;
 
-            flex-direction: column;
+            flex-direction:
+              column;
 
-            align-items: center;
-            justify-content: center;
+            align-items:
+              center;
+
+            justify-content:
+              center;
 
             min-width: 0;
-            min-height: 55px;
 
-            padding: 7px 5px;
+            min-height:
+              54px;
+
+            padding:
+              6px 5px;
+
+            overflow:
+              hidden;
 
             border:
               1px solid
               rgba(
-                189,
-                151,
-                45,
-                0.25
+                168,
+                107,
+                9,
+                0.23
               );
 
-            border-radius: 9px;
+            border-radius:
+              10px;
 
             background:
               linear-gradient(
@@ -353,33 +1165,80 @@ export default function WorkerBeeCard({
                   255,
                   255,
                   255,
-                  0.86
+                  0.9
                 ),
                 rgba(
                   255,
-                  244,
-                  198,
-                  0.66
+                  237,
+                  171,
+                  0.7
                 )
               );
 
-            text-align: center;
+            box-shadow:
+              inset
+              0 1px 0
+              rgba(
+                255,
+                255,
+                255,
+                0.84
+              );
 
-            box-sizing: border-box;
+            text-align:
+              center;
+
+            box-sizing:
+              border-box;
+          }
+
+          .worker-value::before {
+            content: "";
+
+            position: absolute;
+
+            top: 0;
+            left: 15%;
+
+            width: 70%;
+            height: 2px;
+
+            border-radius:
+              999px;
+
+            background:
+              linear-gradient(
+                90deg,
+                transparent,
+                rgba(
+                  222,
+                  148,
+                  20,
+                  0.7
+                ),
+                transparent
+              );
           }
 
           .worker-value span {
             display: block;
 
-            color: #897341;
+            color:
+              #8b6f37;
 
-            font-size: 0.42rem;
-            font-weight: 900;
+            font-size:
+              0.4rem;
 
-            letter-spacing: 0.05em;
+            font-weight:
+              1000;
+
+            letter-spacing:
+              0.05em;
+
             line-height: 1.15;
 
-            text-transform: uppercase;
+            text-transform:
+              uppercase;
           }
 
           .worker-value strong {
@@ -387,143 +1246,283 @@ export default function WorkerBeeCard({
 
             max-width: 100%;
 
-            margin-top: 5px;
+            margin-top:
+              4px;
 
-            overflow: hidden;
+            overflow:
+              hidden;
 
-            color: #3b2a08;
+            font-size:
+              clamp(
+                0.8rem,
+                0.95vw,
+                1rem
+              );
 
-            font-size: clamp(
-              0.75rem,
-              0.9vw,
-              0.95rem
-            );
+            font-weight:
+              1000;
 
             line-height: 1;
 
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            text-overflow:
+              ellipsis;
+
+            white-space:
+              nowrap;
           }
+
+          .worker-value-gold strong {
+            color:
+              #8b5708;
+          }
+
+          .worker-value-green strong {
+            color:
+              #477728;
+          }
+
+          /*
+           * ====================================
+           * MESSAGE
+           * ====================================
+           */
 
           .worker-message {
             display: flex;
 
-            align-items: center;
+            align-items:
+              center;
 
-            gap: 5px;
+            gap: 6px;
 
-            margin-top: 7px;
-            padding-top: 6px;
+            margin-top:
+              7px;
+
+            padding-top:
+              6px;
 
             border-top:
               1px solid
               rgba(
-                194,
-                158,
-                57,
-                0.2
+                184,
+                123,
+                18,
+                0.18
               );
           }
 
-          .worker-message span {
-            flex: 0 0 auto;
+          .message-bee {
+            display: grid;
 
-            font-size: 0.72rem;
+            flex:
+              0 0 auto;
+
+            width: 18px;
+            height: 18px;
+
+            place-items:
+              center;
+
+            border-radius:
+              50%;
+
+            background:
+              rgba(
+                244,
+                183,
+                45,
+                0.16
+              );
+
+            font-size:
+              0.68rem;
           }
 
           .worker-message p {
             margin: 0;
 
-            overflow: hidden;
+            overflow:
+              hidden;
 
-            color: #776136;
+            color:
+              #735728;
 
-            font-size: 0.46rem;
-            font-weight: 800;
+            font-size:
+              0.44rem;
 
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            font-weight:
+              900;
+
+            text-overflow:
+              ellipsis;
+
+            white-space:
+              nowrap;
           }
+
+          /*
+           * ====================================
+           * NORTH STAR BEE
+           * ====================================
+           */
 
           .bee-illustration {
             position: relative;
 
-            width: 82px;
-            height: 60px;
+            width: 86px;
+            height: 66px;
+
+            filter:
+              drop-shadow(
+                0 5px 5px
+                rgba(
+                  75,
+                  49,
+                  4,
+                  0.18
+                )
+              );
 
             animation:
               workerBeeFloat
-              4.4s ease-in-out infinite;
+              4.2s
+              ease-in-out
+              infinite;
           }
 
           @keyframes workerBeeFloat {
             0%,
             100% {
               transform:
-                translateY(2px);
+                translateY(
+                  2px
+                )
+                rotate(
+                  -1deg
+                );
             }
 
             50% {
               transform:
-                translateY(-4px);
+                translateY(
+                  -5px
+                )
+                rotate(
+                  1deg
+                );
             }
           }
 
           .bee-body {
             position: absolute;
 
-            top: 22px;
-            left: 18px;
+            z-index: 3;
 
-            width: 50px;
-            height: 28px;
+            top: 27px;
+            left: 22px;
 
-            overflow: hidden;
+            width: 49px;
+            height: 29px;
+
+            overflow:
+              hidden;
 
             border:
-              3px solid #5c430e;
+              2px solid
+              #493308;
 
             border-radius:
-              50% 55% 55% 50%;
+              52% 58%
+              55% 48%;
 
             background:
               repeating-linear-gradient(
                 90deg,
-                #f3bc28 0 10px,
-                #4b360d 10px 17px
+                #ffd34f
+                0 10px,
+                #3b2a0c
+                10px 17px
               );
 
             box-shadow:
-              0 5px 8px
-                rgba(
-                  83,
-                  58,
-                  8,
-                  0.14
-                );
+              inset
+              3px 4px 7px
+              rgba(
+                255,
+                255,
+                255,
+                0.24
+              ),
+              inset
+              -3px -3px 7px
+              rgba(
+                45,
+                27,
+                4,
+                0.18
+              );
           }
 
           .bee-head {
             position: absolute;
-            z-index: 3;
 
-            top: 21px;
-            left: 8px;
+            z-index: 5;
 
-            width: 29px;
-            height: 29px;
+            top: 24px;
+            left: 9px;
+
+            width: 31px;
+            height: 31px;
 
             border:
-              3px solid #5c430e;
+              2px solid
+              #4d3508;
 
-            border-radius: 50%;
+            border-radius:
+              48%;
 
             background:
               radial-gradient(
-                circle at 35% 28%,
-                #ffe486,
-                #e2a91e 72%
+                circle at
+                34% 27%,
+                #ffe994,
+                #e8ac26
+                72%
               );
+
+            box-shadow:
+              inset
+              3px 3px 5px
+              rgba(
+                255,
+                255,
+                255,
+                0.26
+              );
+          }
+
+          .bee-head::after {
+            content: "";
+
+            position: absolute;
+
+            bottom: 5px;
+            left: 9px;
+
+            width: 10px;
+            height: 4px;
+
+            border-bottom:
+              2px solid
+              rgba(
+                74,
+                44,
+                6,
+                0.72
+              );
+
+            border-radius:
+              50%;
           }
 
           .bee-eye {
@@ -531,12 +1530,30 @@ export default function WorkerBeeCard({
 
             top: 10px;
 
-            width: 4px;
-            height: 5px;
+            width: 5px;
+            height: 6px;
 
-            border-radius: 50%;
+            border-radius:
+              50%;
 
-            background: #2f250d;
+            background:
+              radial-gradient(
+                circle at
+                35% 30%,
+                #ffffff
+                0 16%,
+                #211707
+                18% 100%
+              );
+
+            box-shadow:
+              0 0 2px
+              rgba(
+                0,
+                0,
+                0,
+                0.35
+              );
           }
 
           .bee-eye-left {
@@ -549,184 +1566,291 @@ export default function WorkerBeeCard({
 
           .bee-wing {
             position: absolute;
-            z-index: 1;
 
-            top: 5px;
+            z-index: 2;
 
-            width: 31px;
-            height: 27px;
+            top: 7px;
+
+            width: 33px;
+            height: 29px;
 
             border:
-              2px solid
+              1px solid
               rgba(
-                99,
-                126,
-                139,
-                0.42
+                107,
+                144,
+                151,
+                0.44
               );
 
             border-radius:
-              60% 60% 48% 48%;
+              65% 54%
+              52% 60%;
 
             background:
+              linear-gradient(
+                145deg,
+                rgba(
+                  245,
+                  255,
+                  255,
+                  0.84
+                ),
+                rgba(
+                  182,
+                  229,
+                  238,
+                  0.48
+                )
+              );
+
+            box-shadow:
+              inset
+              3px 3px 6px
               rgba(
-                222,
-                244,
-                250,
-                0.68
+                255,
+                255,
+                255,
+                0.44
               );
           }
 
           .bee-wing-left {
-            left: 28px;
+            left: 29px;
 
             transform:
-              rotate(-15deg);
+              rotate(
+                -18deg
+              );
           }
 
           .bee-wing-right {
-            left: 46px;
+            left: 48px;
 
             transform:
-              rotate(18deg);
+              rotate(
+                20deg
+              );
           }
 
           .bee-antenna {
             position: absolute;
-            z-index: 4;
 
-            top: 13px;
+            z-index: 6;
+
+            top: 14px;
 
             width: 17px;
             height: 13px;
 
             border-top:
-              2px solid #4b360d;
+              2px solid
+              #4a3209;
+          }
+
+          .bee-antenna::after {
+            content: "";
+
+            position: absolute;
+
+            top: -3px;
+
+            width: 4px;
+            height: 4px;
+
+            border-radius:
+              50%;
+
+            background:
+              #4a3209;
           }
 
           .bee-antenna-left {
-            left: 11px;
+            left: 12px;
 
             transform:
-              rotate(-32deg);
+              rotate(
+                -34deg
+              );
           }
 
           .bee-antenna-right {
-            left: 25px;
+            left: 27px;
 
             transform:
-              rotate(26deg);
+              rotate(
+                28deg
+              );
           }
 
+          /*
+           * ====================================
+           * MANAGEMENT BEES
+           * ====================================
+           */
+
           .management-bee-group {
+            position: relative;
+
+            z-index: 2;
+
             display: flex;
 
-            align-items: flex-end;
-            justify-content: center;
+            align-items:
+              flex-end;
+
+            justify-content:
+              center;
 
             width: 100%;
 
             animation:
               workerBeeFloat
-              4.8s ease-in-out infinite;
+              4.6s
+              ease-in-out
+              infinite;
           }
 
           .management-mini-bee {
             position: relative;
 
-            width: 38px;
-            height: 38px;
+            width: 40px;
+            height: 40px;
 
-            margin: 0 -4px;
+            margin:
+              0 -4px;
           }
 
           .management-mini-bee:nth-child(
             2
           ) {
             transform:
-              translateY(-7px);
+              translateY(
+                -8px
+              )
+              scale(
+                1.08
+              );
           }
 
           .mini-bee-body {
             position: absolute;
 
-            top: 16px;
-            left: 7px;
+            top: 17px;
+            left: 8px;
 
             width: 27px;
             height: 17px;
 
             border:
-              2px solid #5c430e;
+              2px solid
+              #553b0b;
 
-            border-radius: 50%;
+            border-radius:
+              50%;
 
             background:
               repeating-linear-gradient(
                 90deg,
-                #f3bc28 0 6px,
-                #4b360d 6px 10px
+                #ffd044
+                0 6px,
+                #3f2c0b
+                6px 10px
+              );
+
+            box-shadow:
+              0 3px 4px
+              rgba(
+                70,
+                45,
+                4,
+                0.16
               );
           }
 
           .mini-bee-head {
             position: absolute;
-            z-index: 2;
 
-            top: 15px;
-            left: 1px;
+            z-index: 3;
+
+            top: 16px;
+            left: 2px;
 
             width: 18px;
             height: 18px;
 
             border:
-              2px solid #5c430e;
+              2px solid
+              #553b0b;
 
-            border-radius: 50%;
+            border-radius:
+              50%;
 
-            background: #edbb32;
+            background:
+              radial-gradient(
+                circle at
+                35% 25%,
+                #ffe89a,
+                #e7ae2f
+              );
           }
 
           .mini-bee-wing {
             position: absolute;
 
             top: 6px;
-            left: 14px;
+            left: 15px;
 
-            width: 19px;
-            height: 15px;
+            width: 20px;
+            height: 16px;
 
             border:
               1px solid
               rgba(
-                92,
-                123,
-                139,
-                0.42
+                88,
+                125,
+                138,
+                0.4
               );
 
-            border-radius: 50%;
+            border-radius:
+              50%;
 
             background:
               rgba(
-                224,
-                244,
-                250,
-                0.68
+                229,
+                249,
+                252,
+                0.75
               );
           }
+
+          /*
+           * ====================================
+           * RESPONSIVE
+           * ====================================
+           */
 
           @media (
             max-width: 1250px
           ) {
             .worker-bee-card {
               grid-template-columns:
-                minmax(92px, 0.78fr)
-                minmax(0, 1.22fr);
+                minmax(
+                  100px,
+                  0.82fr
+                )
+                minmax(
+                  0,
+                  1.18fr
+                );
             }
 
             .bee-illustration {
-              transform: scale(0.9);
+              transform:
+                scale(
+                  0.93
+                );
             }
           }
 
@@ -735,15 +1859,24 @@ export default function WorkerBeeCard({
           ) {
             .worker-bee-card {
               grid-template-columns:
-                minmax(100px, 0.8fr)
-                minmax(0, 1.2fr);
+                minmax(
+                  104px,
+                  0.84fr
+                )
+                minmax(
+                  0,
+                  1.16fr
+                );
             }
 
             .worker-value-grid {
               grid-template-columns:
                 repeat(
                   2,
-                  minmax(0, 1fr)
+                  minmax(
+                    0,
+                    1fr
+                  )
                 );
             }
           }
@@ -753,7 +1886,8 @@ export default function WorkerBeeCard({
               reduce
           ) {
             .bee-illustration,
-            .management-bee-group {
+            .management-bee-group,
+            .bee-streak-orbit::before {
               animation: none;
             }
           }
@@ -766,17 +1900,27 @@ export default function WorkerBeeCard({
 type WorkerValueProps = {
   label: string;
   value: string;
+  emphasis?:
+    | "gold"
+    | "green";
 };
 
 function WorkerValue({
   label,
   value,
+  emphasis = "gold",
 }: WorkerValueProps) {
   return (
-    <div className="worker-value">
-      <span>{label}</span>
+    <div
+      className={`worker-value worker-value-${emphasis}`}
+    >
+      <span>
+        {label}
+      </span>
 
-      <strong>{value}</strong>
+      <strong>
+        {value}
+      </strong>
     </div>
   );
 }
