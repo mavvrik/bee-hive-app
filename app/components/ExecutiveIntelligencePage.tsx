@@ -42,20 +42,39 @@ type IntelligenceMetric = {
   unit: string | null;
   decimalPlaces: number;
 
-  improvementDirection:
-    string;
+  improvementDirection: string;
 
   source:
     | "CSL"
     | "HIVE"
     | "MANUAL";
 
-  days:
-    DailyComparison[];
+  days: DailyComparison[];
+};
+
+type CslSnapshotMetric = {
+  id: number;
+
+  displayName: string;
+
+  description:
+    string | null;
+
+  unit:
+    string | null;
+
+  decimalPlaces:
+    number;
+
+  value:
+    number | null;
 };
 
 type ExecutiveIntelligencePageProps = {
   centerName: string;
+
+  cslMetrics:
+    CslSnapshotMetric[];
 
   metrics:
     IntelligenceMetric[];
@@ -129,11 +148,8 @@ function formatLiters(
   return `${value.toLocaleString(
     "en-US",
     {
-      minimumFractionDigits:
-        1,
-
-      maximumFractionDigits:
-        1,
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
     },
   )} L`;
 }
@@ -155,22 +171,19 @@ function arrowFor(
     DailyComparison["direction"],
 ) {
   if (
-    direction ===
-    "UP"
+    direction === "UP"
   ) {
     return "↑";
   }
 
   if (
-    direction ===
-    "DOWN"
+    direction === "DOWN"
   ) {
     return "↓";
   }
 
   if (
-    direction ===
-    "FLAT"
+    direction === "FLAT"
   ) {
     return "→";
   }
@@ -183,15 +196,13 @@ function outcomeClass(
     DailyComparison["outcome"],
 ) {
   if (
-    outcome ===
-    "POSITIVE"
+    outcome === "POSITIVE"
   ) {
     return "positive";
   }
 
   if (
-    outcome ===
-    "NEGATIVE"
+    outcome === "NEGATIVE"
   ) {
     return "negative";
   }
@@ -201,6 +212,7 @@ function outcomeClass(
 
 export default function ExecutiveIntelligencePage({
   centerName,
+  cslMetrics,
   metrics,
 
   todaysLitersTarget,
@@ -215,11 +227,8 @@ export default function ExecutiveIntelligencePage({
   unsuccessfulSticks,
   lostVolumeLiters,
 
-  topWorkerName =
-    null,
-
-  topWorkerPercentage =
-    null,
+  topWorkerName = null,
+  topWorkerPercentage = null,
 }: ExecutiveIntelligencePageProps) {
   const [
     now,
@@ -257,40 +266,22 @@ export default function ExecutiveIntelligencePage({
         todaysLitersCollected,
     );
 
-  const missionPercentage =
-    todaysLitersTarget >
-    0
-      ? (
-          todaysLitersCollected /
-          todaysLitersTarget
-        ) *
-        100
-      : 0;
-
-  const missionProgress =
-    clampPercentage(
-      missionPercentage,
-    );
-
   const totalAttempts =
     successfulSticks +
     unsuccessfulSticks;
 
   const successfulStickRate =
-    totalAttempts >
-    0
+    totalAttempts > 0
       ? (
           successfulSticks /
           totalAttempts
-        ) *
-        100
+        ) * 100
       : 0;
 
   const status =
     useMemo(() => {
       if (
-        projectedVariance >=
-        5
+        projectedVariance >= 5
       ) {
         return {
           label:
@@ -305,8 +296,7 @@ export default function ExecutiveIntelligencePage({
       }
 
       if (
-        projectedVariance >=
-        0
+        projectedVariance >= 0
       ) {
         return {
           label:
@@ -335,8 +325,7 @@ export default function ExecutiveIntelligencePage({
     ]);
 
   const intelligenceSummary =
-    projectedVariance >=
-    0
+    projectedVariance >= 0
       ? `Current production is projected to finish ${formatLiters(
           projectedVariance,
         )} above today's liters target.`
@@ -347,11 +336,9 @@ export default function ExecutiveIntelligencePage({
         )} below today's liters target.`;
 
   const beezyMessage =
-    projectedVariance >=
-    5
+    projectedVariance >= 5
       ? "The Hive is outperforming today's requirement. Protect the pace and finish strong."
-      : projectedVariance >=
-          0
+      : projectedVariance >= 0
         ? "The Hive is currently on pace. Maintain consistency through the remainder of the day."
         : `We still need ${formatLiters(
             remainingLiters,
@@ -405,7 +392,9 @@ export default function ExecutiveIntelligencePage({
               Local Time
             </span>
 
-            <strong suppressHydrationWarning>
+            <strong
+              suppressHydrationWarning
+            >
               {now
                 ? now.toLocaleTimeString(
                     "en-US",
@@ -424,98 +413,92 @@ export default function ExecutiveIntelligencePage({
       </header>
 
       <main className="command-layout">
-        {/* LEFT */}
+        {/* ===================================
+            LEFT — OFFICIAL CSL KPI SNAPSHOT
+           =================================== */}
 
-        <section className="mission-panel command-panel">
+        <section className="mission-panel command-panel csl-panel">
           <div className="panel-heading">
             <div>
               <p className="eyebrow">
-                Today&apos;s Mission
+                Official Data Source
               </p>
 
               <h2>
-                Daily Production
+                CSL Performance
               </h2>
             </div>
-          </div>
 
-          <div className="mission-ring-wrapper">
-            <div
-              className="mission-ring"
-              style={{
-                background: `conic-gradient(
-                  #f3b722 ${missionProgress}%,
-                  rgba(255,255,255,0.08) ${missionProgress}% 100%
-                )`,
-              }}
-            >
-              <div className="mission-ring-inner">
-                <span>
-                  Mission
-                </span>
-
-                <strong>
-                  {Math.round(
-                    missionPercentage,
-                  )}
-                  %
-                </strong>
-
-                <small>
-                  complete
-                </small>
-              </div>
+            <div className="csl-badge">
+              CSL
             </div>
           </div>
 
-          <div className="mission-target">
-            <span>
-              Today&apos;s Liters Target
-            </span>
+          <p className="csl-panel-copy">
+            Current official center metrics
+          </p>
 
-            <strong>
-              {formatLiters(
-                todaysLitersTarget,
-              )}
-            </strong>
+          <div className="csl-kpi-stack">
+            {cslMetrics.length ===
+            0 ? (
+              <div className="csl-empty">
+                No current CSL metrics are
+                available.
+              </div>
+            ) : (
+              cslMetrics.map(
+                (
+                  metric,
+                ) => (
+                  <article
+                    key={
+                      metric.id
+                    }
+                    className="csl-kpi-card"
+                    title={
+                      metric.description ??
+                      undefined
+                    }
+                  >
+                    <div className="csl-kpi-label">
+                      <span>
+                        {
+                          metric.displayName
+                        }
+                      </span>
+
+                      <small>
+                        Current CSL Value
+                      </small>
+                    </div>
+
+                    <strong>
+                      {formatMetricValue(
+                        metric.value,
+                        metric.decimalPlaces,
+                        metric.unit,
+                      )}
+                    </strong>
+
+                    <div className="csl-kpi-line" />
+                  </article>
+                ),
+              )
+            )}
           </div>
 
-          <div className="mission-stats">
-            <article>
-              <span>
-                Collected
-              </span>
+          <div className="csl-source-footer">
+            <span className="csl-source-dot" />
+
+            <div>
+              <small>
+                Data Source
+              </small>
 
               <strong>
-                {formatLiters(
-                  todaysLitersCollected,
-                )}
+                Official CSL Reporting
               </strong>
-            </article>
-
-            <article>
-              <span>
-                Remaining
-              </span>
-
-              <strong>
-                {formatLiters(
-                  remainingLiters,
-                )}
-              </strong>
-            </article>
-          </div>
-
-          <div className="donor-need">
-            <span>
-              Additional Donors Needed
-            </span>
-
-            <strong>
-              {
-                additionalDonorsNeeded
-              }
-            </strong>
+            </div>
           </div>
         </section>
 
@@ -558,8 +541,7 @@ export default function ExecutiveIntelligencePage({
 
               <strong
                 className={
-                  projectedVariance >=
-                  0
+                  projectedVariance >= 0
                     ? "good"
                     : "bad"
                 }
@@ -870,6 +852,7 @@ export default function ExecutiveIntelligencePage({
               );
 
             color: #f7f2df;
+
             font-family:
               Arial,
               Helvetica,
@@ -879,6 +862,7 @@ export default function ExecutiveIntelligencePage({
           .command-grid {
             position: absolute;
             inset: 0;
+
             pointer-events: none;
             opacity: .15;
 
@@ -900,6 +884,7 @@ export default function ExecutiveIntelligencePage({
           .intelligence-header {
             position: relative;
             z-index: 5;
+
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -913,8 +898,10 @@ export default function ExecutiveIntelligencePage({
 
           .hive-mark {
             display: grid;
+
             width: 54px;
             height: 48px;
+
             place-items: center;
 
             background:
@@ -925,6 +912,7 @@ export default function ExecutiveIntelligencePage({
               );
 
             color: #191408;
+
             font-size: 1.6rem;
             font-weight: 1000;
 
@@ -940,34 +928,46 @@ export default function ExecutiveIntelligencePage({
           }
 
           .eyebrow {
-            margin: 0 0 4px;
+            margin:
+              0 0 4px;
+
             color: #e9ae24;
+
             font-size: .58rem;
             font-weight: 1000;
+
             letter-spacing: .14em;
             text-transform: uppercase;
           }
 
           h1 {
             margin: 0;
+
             color: #fff7d5;
+
             font-size: 2.3rem;
           }
 
           h2 {
             margin: 0;
+
             color: #fff6cf;
+
             font-size: 1.02rem;
           }
 
           .center-name {
-            margin: 4px 0 0;
+            margin:
+              4px 0 0;
+
             color: #9ca99f;
+
             font-size: .8rem;
           }
 
           .header-right {
             display: flex;
+
             gap: 10px;
           }
 
@@ -975,18 +975,29 @@ export default function ExecutiveIntelligencePage({
           .command-clock {
             display: flex;
             flex-direction: column;
+
             min-width: 145px;
-            padding: 8px 12px;
-            border: 1px solid rgba(255,255,255,.08);
+
+            padding:
+              8px 12px;
+
+            border:
+              1px solid
+              rgba(255,255,255,.08);
+
             border-radius: 11px;
-            background: rgba(255,255,255,.03);
+
+            background:
+              rgba(255,255,255,.03);
           }
 
           .center-status span,
           .command-clock span {
             color: #859088;
+
             font-size: .48rem;
             font-weight: 900;
+
             text-transform: uppercase;
           }
 
@@ -1005,27 +1016,32 @@ export default function ExecutiveIntelligencePage({
           .command-layout {
             position: relative;
             z-index: 4;
+
             display: grid;
             flex: 1 1 0;
 
             grid-template-columns:
-  .68fr
-  2.75fr
-  .72fr;
+              .68fr
+              2.75fr
+              .72fr;
 
             grid-template-rows:
               minmax(0,1fr)
               105px;
 
             gap: 10px;
+
             min-height: 0;
+
             margin-top: 10px;
           }
 
           .command-panel {
             min-width: 0;
             min-height: 0;
+
             overflow: hidden;
+
             padding: 13px;
 
             border:
@@ -1044,272 +1060,497 @@ export default function ExecutiveIntelligencePage({
 
           .panel-heading {
             display: flex;
-            justify-content: space-between;
+
+            justify-content:
+              space-between;
+
             gap: 10px;
           }
 
           .confidence-pill {
-            padding: 5px 8px;
+            padding:
+              5px 8px;
+
             border-radius: 999px;
-            background: rgba(38,129,153,.12);
+
+            background:
+              rgba(38,129,153,.12);
+
             color: #76c6dd;
+
             font-size: .46rem;
             font-weight: 900;
           }
 
-          .mission-ring-wrapper {
-            display: grid;
-            place-items: center;
-            margin-top: 15px;
+          /*
+           * ==================================
+           * CSL SNAPSHOT
+           * ==================================
+           */
+
+          .csl-panel {
+            display: flex;
+            flex-direction: column;
           }
 
-          .mission-ring {
+          .csl-badge {
             display: grid;
-            width: 125px;
-            height: 125px;
+
+            min-width: 42px;
+            height: 26px;
+
             place-items: center;
-            border-radius: 50%;
+
+            padding:
+              0 9px;
+
+            border:
+              1px solid
+              rgba(255,199,54,.3);
+
+            border-radius: 999px;
+
+            background:
+              linear-gradient(
+                145deg,
+                rgba(242,184,38,.15),
+                rgba(124,82,8,.13)
+              );
+
+            color: #f5c542;
+
+            font-size: .58rem;
+            font-weight: 1000;
+
+            letter-spacing: .08em;
           }
 
-          .mission-ring-inner {
+          .csl-panel-copy {
+            margin:
+              6px 0 8px;
+
+            color: #839087;
+
+            font-size: .58rem;
+            font-weight: 700;
+          }
+
+          .csl-kpi-stack {
+            display: grid;
+
+            flex: 1 1 0;
+
+            grid-template-rows:
+              repeat(
+                3,
+                minmax(0,1fr)
+              );
+
+            gap: 9px;
+
+            min-height: 0;
+          }
+
+          .csl-kpi-card {
+            position: relative;
+
             display: flex;
             flex-direction: column;
             justify-content: center;
-            align-items: center;
 
-            width: 77%;
-            height: 77%;
-            border-radius: 50%;
-            background: #172019;
+            min-height: 0;
+
+            padding:
+              12px 13px;
+
+            overflow: hidden;
+
+            border:
+              1px solid
+              rgba(235,181,43,.2);
+
+            border-radius: 12px;
+
+            background:
+              linear-gradient(
+                145deg,
+                rgba(50,58,46,.82),
+                rgba(20,29,24,.96)
+              );
+
+            box-shadow:
+              inset
+              0 1px 0
+              rgba(255,255,255,.035);
           }
 
-          .mission-ring-inner span,
-          .mission-ring-inner small,
-          .mission-target span,
-          .mission-stats span,
-          .donor-need span,
-          .performance-grid span,
-          .stick-performance-card span {
-            color: #859188;
-            font-size: .47rem;
-            font-weight: 900;
+          .csl-kpi-card::after {
+            content: "";
+
+            position: absolute;
+
+            top: -35px;
+            right: -25px;
+
+            width: 90px;
+            height: 90px;
+
+            border-radius: 50%;
+
+            background:
+              rgba(241,182,37,.07);
+
+            filter:
+              blur(15px);
+          }
+
+          .csl-kpi-label {
+            position: relative;
+            z-index: 2;
+
+            display: flex;
+
+            align-items: center;
+            justify-content: space-between;
+
+            gap: 7px;
+          }
+
+          .csl-kpi-label span {
+            color: #aab3aa;
+
+            font-size:
+              clamp(
+                .5rem,
+                .62vw,
+                .66rem
+              );
+
+            font-weight: 1000;
+
+            letter-spacing: .055em;
             text-transform: uppercase;
           }
 
-          .mission-ring-inner strong {
-            color: #f5c440;
-            font-size: 2rem;
+          .csl-kpi-label small {
+            color: #68756c;
+
+            font-size: .38rem;
+            font-weight: 900;
+
+            text-transform: uppercase;
           }
 
-          .mission-target {
-            margin-top: 10px;
+          .csl-kpi-card > strong {
+            position: relative;
+            z-index: 2;
+
+            display: block;
+
+            margin-top: 7px;
+
+            color: #ffd55b;
+
+            font-size:
+              clamp(
+                1.45rem,
+                2vw,
+                2.15rem
+              );
+
+            font-weight: 1000;
+
+            line-height: 1;
+          }
+
+          .csl-kpi-line {
+            position: relative;
+            z-index: 2;
+
+            width: 38%;
+            height: 3px;
+
+            margin-top: 8px;
+
+            border-radius: 999px;
+
+            background:
+              linear-gradient(
+                90deg,
+                #e8ae27,
+                rgba(232,174,39,0)
+              );
+          }
+
+          .csl-source-footer {
+            display: flex;
+
+            align-items: center;
+
+            gap: 8px;
+
+            flex: 0 0 auto;
+
+            margin-top: 9px;
+
+            padding:
+              8px 10px;
+
+            border-top:
+              1px solid
+              rgba(255,255,255,.05);
+          }
+
+          .csl-source-dot {
+            width: 8px;
+            height: 8px;
+
+            flex: 0 0 auto;
+
+            border-radius: 50%;
+
+            background: #75cc69;
+
+            box-shadow:
+              0 0 9px
+              rgba(117,204,105,.55);
+          }
+
+          .csl-source-footer div {
+            display: flex;
+            flex-direction: column;
+          }
+
+          .csl-source-footer small {
+            color: #6f7c73;
+
+            font-size: .4rem;
+            font-weight: 900;
+
+            letter-spacing: .08em;
+            text-transform: uppercase;
+          }
+
+          .csl-source-footer strong {
+            margin-top: 1px;
+
+            color: #b8c0b9;
+
+            font-size: .53rem;
+          }
+
+          .csl-empty {
+            grid-row:
+              1 / -1;
+
+            display: grid;
+
+            place-items: center;
+
+            color: #78847c;
+
+            font-size: .65rem;
+
             text-align: center;
           }
 
-          .mission-target strong {
-            display: block;
-            margin-top: 3px;
-            color: #fff4bf;
-          }
-
-          .mission-stats,
-          .performance-grid {
-            display: grid;
-            grid-template-columns:
-              repeat(2,minmax(0,1fr));
-            gap: 6px;
-            margin-top: 9px;
-          }
-
-          .mission-stats article,
-          .performance-grid article {
-            padding: 8px;
-            border-radius: 9px;
-            background: rgba(255,255,255,.03);
-          }
-
-          .mission-stats strong,
-          .performance-grid strong {
-            display: block;
-            margin-top: 3px;
-          }
-
-          .donor-need {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 7px;
-            padding: 8px;
-            border-radius: 9px;
-            background: rgba(240,178,31,.06);
-          }
-
-          .donor-need strong {
-            color: #f3bd35;
-          }
+          /*
+           * ==================================
+           * COMPARISON CORE
+           * ==================================
+           */
 
           .projection-bar {
             display: grid;
+
             grid-template-columns:
-              repeat(2,minmax(0,1fr));
+              repeat(
+                2,
+                minmax(0,1fr)
+              );
+
             gap: 8px;
+
             margin-top: 7px;
           }
 
           .projection-bar > div {
-            padding: 7px 10px;
+            padding:
+              7px 10px;
+
             border-radius: 9px;
-            background: rgba(255,255,255,.035);
+
+            background:
+              rgba(255,255,255,.035);
           }
 
           .projection-bar span {
             display: block;
+
             color: #8f998f;
+
             font-size: .43rem;
             font-weight: 900;
+
             text-transform: uppercase;
           }
 
           .projection-bar strong {
             display: block;
+
             margin-top: 2px;
+
             color: #f3c647;
+
             font-size: .95rem;
           }
 
           .good {
-            color: #79d36e !important;
+            color:
+              #79d36e !important;
           }
 
           .bad {
-            color: #ff8065 !important;
+            color:
+              #ff8065 !important;
           }
 
           .weekly-table-wrap {
-            height: calc(100% - 74px);
+            height:
+              calc(100% - 74px);
+
             margin-top: 8px;
+
             overflow: auto;
           }
 
           .weekly-table {
             width: 100%;
-            border-collapse: separate;
-            border-spacing: 3px;
-            table-layout: fixed;
+
+            border-collapse:
+              separate;
+
+            border-spacing:
+              3px;
+
+            table-layout:
+              fixed;
           }
 
           .weekly-table th {
             padding: 4px;
+
             color: #9aa59c;
+
             font-size: .43rem;
             font-weight: 900;
+
             text-transform: uppercase;
           }
 
           .weekly-table th:first-child {
             width: 170px;
+
             text-align: left;
           }
 
           .weekly-table td {
             padding: 4px;
-            vertical-align: middle;
+
+            vertical-align:
+              middle;
           }
 
           .metric-name {
-            padding-left: 6px !important;
+            padding-left:
+              6px !important;
           }
 
           .metric-name strong {
-  display: block;
-  color: #fff0b3;
+            display: block;
 
-  font-size:
-    clamp(
-      .68rem,
-      .82vw,
-      .9rem
-    );
+            color: #fff0b3;
 
-  font-weight: 900;
-  line-height: 1.15;
-}
+            font-size:
+              clamp(
+                .68rem,
+                .82vw,
+                .9rem
+              );
+
+            font-weight: 900;
+
+            line-height: 1.15;
+          }
 
           .metric-name small {
             color: #68746c;
+
             font-size: .36rem;
           }
 
           .day-cell {
-  display: grid;
+            display: grid;
 
-  min-height: 68px;
+            min-height: 68px;
 
-  place-items: center;
+            place-items: center;
 
-  padding: 6px 5px;
+            padding:
+              6px 5px;
 
-  border:
-    1px solid
-    rgba(
-      242,
-      181,
-      43,
-      .18
-    );
+            border:
+              1px solid
+              rgba(242,181,43,.18);
 
-  border-radius: 9px;
+            border-radius: 9px;
 
-  background:
-    rgba(
-      255,
-      255,
-      255,
-      .035
-    );
+            background:
+              rgba(255,255,255,.035);
 
-  text-align: center;
-}
+            text-align: center;
+          }
 
           .day-cell > strong {
-  color: #ffd75c;
+            color: #ffd75c;
 
-  font-size:
-    clamp(
-      .82rem,
-      1vw,
-      1.08rem
-    );
+            font-size:
+              clamp(
+                .82rem,
+                1vw,
+                1.08rem
+              );
 
-  font-weight: 1000;
-}
+            font-weight: 1000;
+          }
 
-          ..day-cell > span {
-  margin-top: 2px;
+          .day-cell > span {
+            margin-top: 2px;
 
-  font-size:
-    clamp(
-      .58rem,
-      .68vw,
-      .74rem
-    );
+            font-size:
+              clamp(
+                .58rem,
+                .68vw,
+                .74rem
+              );
 
-  font-weight: 1000;
-}
-.day-cell > small {
-  margin-top: 2px;
+            font-weight: 1000;
+          }
 
-  color: #a5aea7;
+          .day-cell > small {
+            margin-top: 2px;
 
-  font-size:
-    clamp(
-      .48rem,
-      .55vw,
-      .6rem
-    );
+            color: #a5aea7;
 
-  font-weight: 700;
-}
+            font-size:
+              clamp(
+                .48rem,
+                .55vw,
+                .6rem
+              );
+
+            font-weight: 700;
+          }
 
           .positive {
             color: #71d369;
@@ -1323,15 +1564,28 @@ export default function ExecutiveIntelligencePage({
             color: #9ba29e;
           }
 
+          /*
+           * ==================================
+           * WORKER INTELLIGENCE
+           * ==================================
+           */
+
           .lead-forager-card {
             display: grid;
+
             grid-template-columns:
               auto 1fr;
+
             gap: 9px;
+
             margin-top: 14px;
+
             padding: 10px;
+
             border-radius: 10px;
-            background: rgba(239,179,39,.07);
+
+            background:
+              rgba(239,179,39,.07);
           }
 
           .crown {
@@ -1340,70 +1594,142 @@ export default function ExecutiveIntelligencePage({
 
           .lead-forager-card span {
             display: block;
+
             color: #8e9a91;
+
             font-size: .45rem;
             font-weight: 900;
+
             text-transform: uppercase;
           }
 
           .lead-forager-card strong {
             display: block;
+
             margin-top: 2px;
+
             color: #ffdf72;
           }
 
           .lead-forager-card small {
             color: #7b897f;
+
             font-size: .44rem;
           }
 
           .stick-performance-card {
             margin-top: 10px;
+
             padding: 10px;
+
             border-radius: 10px;
-            background: rgba(255,255,255,.025);
+
+            background:
+              rgba(255,255,255,.025);
+          }
+
+          .stick-performance-card span,
+          .performance-grid span {
+            color: #859188;
+
+            font-size: .47rem;
+            font-weight: 900;
+
+            text-transform: uppercase;
           }
 
           .stick-performance-card strong {
             display: block;
+
             margin-top: 3px;
+
             color: #88dc78;
+
             font-size: 1.2rem;
           }
 
           .stick-rate-track {
             height: 5px;
+
             margin-top: 7px;
+
             border-radius: 99px;
-            background: rgba(255,255,255,.07);
+
+            background:
+              rgba(255,255,255,.07);
           }
 
           .stick-rate-fill {
             height: 100%;
+
             border-radius: inherit;
+
             background: #73cc66;
           }
 
-          .wide {
-            grid-column: 1 / -1;
+          .performance-grid {
+            display: grid;
+
+            grid-template-columns:
+              repeat(
+                2,
+                minmax(0,1fr)
+              );
+
+            gap: 6px;
+
+            margin-top: 9px;
           }
 
+          .performance-grid article {
+            padding: 8px;
+
+            border-radius: 9px;
+
+            background:
+              rgba(255,255,255,.03);
+          }
+
+          .performance-grid strong {
+            display: block;
+
+            margin-top: 3px;
+          }
+
+          .wide {
+            grid-column:
+              1 / -1;
+          }
+
+          /*
+           * ==================================
+           * BOTTOM ROW
+           * ==================================
+           */
+
           .summary-panel {
-            grid-column: 1 / 3;
+            grid-column:
+              1 / 3;
           }
 
           .summary-panel p,
           .beezy-panel p {
-            margin: 4px 0 0;
+            margin:
+              4px 0 0;
+
             color: #a8b0a9;
+
             font-size: .65rem;
           }
 
           .beezy-panel {
             display: grid;
+
             grid-template-columns:
               86px 1fr;
+
             align-items: center;
+
             gap: 8px;
           }
 
@@ -1413,16 +1739,21 @@ export default function ExecutiveIntelligencePage({
             .intelligence-page {
               height: auto;
               min-height: 100vh;
+
               overflow: auto;
             }
 
             .command-layout {
-              grid-template-columns: 1fr;
-              grid-template-rows: auto;
+              grid-template-columns:
+                1fr;
+
+              grid-template-rows:
+                auto;
             }
 
             .summary-panel {
-              grid-column: auto;
+              grid-column:
+                auto;
             }
           }
         `}

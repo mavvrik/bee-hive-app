@@ -1080,6 +1080,84 @@ export default async function Home() {
    * ==========================================
    */
 
+  /*
+ * ==========================================
+ * OFFICIAL CSL KPI SNAPSHOT
+ * ==========================================
+ *
+ * These are the current CSL-reported metrics
+ * configured through Dashboard & KPIs.
+ *
+ * This feed is separate from the weekly
+ * comparison engine.
+ * ==========================================
+ */
+
+const cslDashboardMetrics =
+  await prisma.dashboardMetric.findMany({
+    where: {
+      isVisible:
+        true,
+
+      publicSource:
+        "CSL",
+    },
+
+    orderBy: [
+      {
+        displayOrder:
+          "asc",
+      },
+
+      {
+        displayName:
+          "asc",
+      },
+    ],
+
+    include: {
+      readings: {
+        where: {
+          source:
+            "CSL",
+        },
+
+        orderBy: {
+          recordedAt:
+            "desc",
+        },
+
+        take:
+          1,
+      },
+    },
+  });
+
+const cslSnapshotMetrics =
+  cslDashboardMetrics.map(
+    (metric) => ({
+      id:
+        metric.id,
+
+      displayName:
+        metric.displayName,
+
+      description:
+        metric.description,
+
+      unit:
+        metric.unit,
+
+      decimalPlaces:
+        metric.decimalPlaces,
+
+      value:
+        metric.readings[0]
+          ?.value ??
+        null,
+    }),
+  );
+  
   const executiveMetricComparisons =
     await getExecutiveMetricComparisons(
       today,
@@ -1536,6 +1614,10 @@ export default async function Home() {
           <ExecutiveIntelligencePage
             centerName={
               centerName
+            }
+
+            cslMetrics={
+            cslSnapshotMetrics
             }
 
             metrics={
