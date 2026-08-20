@@ -26,8 +26,7 @@ type EmployeeOfMonthPageProps = {
 
 function getDisplayName(
   name: string,
-  preferredName:
-    string | null,
+  preferredName: string | null,
 ) {
   return (
     preferredName?.trim() ||
@@ -35,16 +34,27 @@ function getDisplayName(
   );
 }
 
+function formatScore(
+  value: number | null,
+) {
+  if (
+    value === null
+  ) {
+    return "N/A";
+  }
+
+  return value.toFixed(1);
+}
+
 export default async function EmployeeOfMonthPage({
   searchParams,
 }: EmployeeOfMonthPageProps) {
   /*
-   * Server-side protection.
-   *
-   * Typing this URL manually without
-   * Manager Access still redirects to
-   * /admin-login.
+   * ==========================================
+   * PRIVATE MANAGEMENT PAGE
+   * ==========================================
    */
+
   await requireAdmin();
 
   const {
@@ -64,8 +74,11 @@ export default async function EmployeeOfMonthPage({
         today.getMonth() + 1,
     });
 
-  const currentWinner =
-    await prisma.collector.findFirst({
+  const [
+    currentWinner,
+    scoringSettings,
+  ] = await Promise.all([
+    prisma.collector.findFirst({
       where: {
         active: true,
 
@@ -78,7 +91,14 @@ export default async function EmployeeOfMonthPage({
         name: true,
         preferredName: true,
       },
-    });
+    }),
+
+    prisma.employeeOfMonthSettings.findUnique({
+      where: {
+        id: 1,
+      },
+    }),
+  ]);
 
   const monthLabel =
     today.toLocaleDateString(
@@ -89,35 +109,83 @@ export default async function EmployeeOfMonthPage({
       },
     );
 
+  const productivityWeight =
+    scoringSettings
+      ?.productivityWeight ??
+    35;
+
+  const accuracyWeight =
+    scoringSettings
+      ?.accuracyWeight ??
+    25;
+
+  const qualityWeight =
+    scoringSettings
+      ?.qualityWeight ??
+    25;
+
+  const attendanceWeight =
+    scoringSettings
+      ?.attendanceWeight ??
+    10;
+
+  const recognitionWeight =
+    scoringSettings
+      ?.recognitionWeight ??
+    5;
+
   return (
     <AdminShell
       pageTitle="Employee of the Month"
-      pageDescription="Review the HIVE 70/30 recommendation and make the final management selection."
+      pageDescription="Review the whole-HIVE recommendation and make the final management selection."
       activePath="/settings/workers/employee-of-month"
     >
+      {/* ======================================
+          TOP NAVIGATION
+         ====================================== */}
+
       <div
         style={{
-          display: "flex",
-          flexWrap: "wrap",
+          display:
+            "flex",
+
+          flexWrap:
+            "wrap",
+
           justifyContent:
             "space-between",
-          alignItems: "center",
-          gap: 12,
-          marginBottom: 20,
+
+          alignItems:
+            "center",
+
+          gap:
+            12,
+
+          marginBottom:
+            20,
         }}
       >
         <div
           style={{
-            display: "flex",
-            gap: 14,
-            flexWrap: "wrap",
+            display:
+              "flex",
+
+            gap:
+              14,
+
+            flexWrap:
+              "wrap",
           }}
         >
           <Link
             href="/settings/workers"
             style={{
-              color: "#805c0b",
-              fontWeight: 900,
+              color:
+                "#805c0b",
+
+              fontWeight:
+                900,
+
               textDecoration:
                 "none",
             }}
@@ -126,15 +194,35 @@ export default async function EmployeeOfMonthPage({
           </Link>
 
           <Link
-            href="/settings/workers/emf"
+            href="/settings/workers/performance"
             style={{
-              color: "#805c0b",
-              fontWeight: 900,
+              color:
+                "#805c0b",
+
+              fontWeight:
+                900,
+
               textDecoration:
                 "none",
             }}
           >
-            Quality / EMFs
+            Daily Performance
+          </Link>
+
+          <Link
+            href="/settings/workers/recognition"
+            style={{
+              color:
+                "#805c0b",
+
+              fontWeight:
+                900,
+
+              textDecoration:
+                "none",
+            }}
+          >
+            EOM Scoring
           </Link>
         </div>
 
@@ -142,34 +230,54 @@ export default async function EmployeeOfMonthPage({
           style={{
             padding:
               "8px 13px",
-            borderRadius: 999,
+
+            borderRadius:
+              999,
+
             background:
               "#fff2bd",
+
             color:
               "#755200",
-            fontSize: 12,
-            fontWeight: 900,
+
+            fontSize:
+              12,
+
+            fontWeight:
+              900,
           }}
         >
-          70% Performance •
-          30% Quality
+          Private Management View
         </span>
       </div>
+
+      {/* ======================================
+          STATUS MESSAGES
+         ====================================== */}
 
       {saved === "1" && (
         <div
           style={{
-            marginBottom: 18,
+            marginBottom:
+              18,
+
             padding:
               "12px 15px",
+
             border:
               "1px solid #aad6b0",
-            borderRadius: 11,
+
+            borderRadius:
+              11,
+
             background:
               "#effaf0",
+
             color:
               "#276b32",
-            fontWeight: 800,
+
+            fontWeight:
+              800,
           }}
         >
           Employee of the Month
@@ -180,17 +288,26 @@ export default async function EmployeeOfMonthPage({
       {cleared === "1" && (
         <div
           style={{
-            marginBottom: 18,
+            marginBottom:
+              18,
+
             padding:
               "12px 15px",
+
             border:
               "1px solid #dfcf90",
-            borderRadius: 11,
+
+            borderRadius:
+              11,
+
             background:
               "#fff9df",
+
             color:
               "#755b11",
-            fontWeight: 800,
+
+            fontWeight:
+              800,
           }}
         >
           Employee of the Month
@@ -198,34 +315,57 @@ export default async function EmployeeOfMonthPage({
         </div>
       )}
 
+      {/* ======================================
+          RECOMMENDATION / FINAL SELECTION
+         ====================================== */}
+
       <section
         style={{
-          display: "grid",
+          display:
+            "grid",
+
           gridTemplateColumns:
             "repeat(2, minmax(0, 1fr))",
-          gap: 16,
-          marginBottom: 20,
+
+          gap:
+            16,
+
+          marginBottom:
+            20,
         }}
       >
         <div
           style={{
-            padding: 20,
+            padding:
+              20,
+
             border:
               "1px solid #e0ca78",
-            borderRadius: 18,
+
+            borderRadius:
+              18,
+
             background:
               "linear-gradient(145deg, #fff9dc, #fff1a7)",
           }}
         >
           <p
             style={{
-              margin: 0,
+              margin:
+                0,
+
               color:
                 "#9a6b00",
-              fontSize: 11,
-              fontWeight: 900,
+
+              fontSize:
+                11,
+
+              fontWeight:
+                900,
+
               letterSpacing:
                 "0.12em",
+
               textTransform:
                 "uppercase",
             }}
@@ -237,9 +377,12 @@ export default async function EmployeeOfMonthPage({
             style={{
               margin:
                 "7px 0 3px",
+
               color:
                 "#493408",
-              fontSize: 28,
+
+              fontSize:
+                28,
             }}
           >
             {result.recommendation
@@ -257,10 +400,14 @@ export default async function EmployeeOfMonthPage({
 
           <p
             style={{
-              margin: 0,
+              margin:
+                0,
+
               color:
                 "#75643c",
-              fontWeight: 700,
+
+              fontWeight:
+                700,
             }}
           >
             {result.recommendation
@@ -269,27 +416,64 @@ export default async function EmployeeOfMonthPage({
                 )} / 100`
               : "No qualifying performance data yet."}
           </p>
+
+          {result.recommendation && (
+            <small
+              style={{
+                display:
+                  "block",
+
+                marginTop:
+                  6,
+
+                color:
+                  "#88794e",
+
+                fontWeight:
+                  700,
+              }}
+            >
+              {
+                result
+                  .recommendation
+                  .primaryRole
+              }
+            </small>
+          )}
         </div>
 
         <div
           style={{
-            padding: 20,
+            padding:
+              20,
+
             border:
               "1px solid #ded4ae",
-            borderRadius: 18,
+
+            borderRadius:
+              18,
+
             background:
               "#fffdf6",
           }}
         >
           <p
             style={{
-              margin: 0,
+              margin:
+                0,
+
               color:
                 "#887231",
-              fontSize: 11,
-              fontWeight: 900,
+
+              fontSize:
+                11,
+
+              fontWeight:
+                900,
+
               letterSpacing:
                 "0.12em",
+
               textTransform:
                 "uppercase",
             }}
@@ -301,14 +485,18 @@ export default async function EmployeeOfMonthPage({
             style={{
               margin:
                 "7px 0 3px",
+
               color:
                 "#493408",
-              fontSize: 28,
+
+              fontSize:
+                28,
             }}
           >
             {currentWinner
               ? getDisplayName(
                   currentWinner.name,
+
                   currentWinner
                     .preferredName,
                 )
@@ -317,10 +505,14 @@ export default async function EmployeeOfMonthPage({
 
           <p
             style={{
-              margin: 0,
+              margin:
+                0,
+
               color:
                 "#75643c",
-              fontWeight: 700,
+
+              fontWeight:
+                700,
             }}
           >
             Final management decision
@@ -329,25 +521,99 @@ export default async function EmployeeOfMonthPage({
         </div>
       </section>
 
+      {/* ======================================
+          WEIGHT SUMMARY
+         ====================================== */}
+
       <section
         style={{
-          marginBottom: 20,
-          padding: 20,
+          display:
+            "grid",
+
+          gridTemplateColumns:
+            "repeat(5, minmax(0, 1fr))",
+
+          gap:
+            9,
+
+          marginBottom:
+            20,
+        }}
+      >
+        <WeightCard
+          label="Productivity"
+          value={
+            productivityWeight
+          }
+        />
+
+        <WeightCard
+          label="Accuracy"
+          value={
+            accuracyWeight
+          }
+        />
+
+        <WeightCard
+          label="Quality"
+          value={
+            qualityWeight
+          }
+        />
+
+        <WeightCard
+          label="Attendance"
+          value={
+            attendanceWeight
+          }
+        />
+
+        <WeightCard
+          label="Recognition"
+          value={
+            recognitionWeight
+          }
+        />
+      </section>
+
+      {/* ======================================
+          MONTHLY RANKING
+         ====================================== */}
+
+      <section
+        style={{
+          marginBottom:
+            20,
+
+          padding:
+            20,
+
           border:
             "1px solid #e2d49a",
-          borderRadius: 18,
+
+          borderRadius:
+            18,
+
           background:
             "#fffdf6",
         }}
       >
         <div
           style={{
-            display: "flex",
+            display:
+              "flex",
+
             justifyContent:
               "space-between",
-            alignItems: "center",
-            gap: 12,
-            marginBottom: 14,
+
+            alignItems:
+              "center",
+
+            gap:
+              12,
+
+            marginBottom:
+              14,
           }}
         >
           <div>
@@ -355,22 +621,31 @@ export default async function EmployeeOfMonthPage({
               style={{
                 margin:
                   "0 0 4px",
+
                 color:
                   "#a36d00",
-                fontSize: 10,
-                fontWeight: 900,
+
+                fontSize:
+                  10,
+
+                fontWeight:
+                  900,
+
                 letterSpacing:
                   "0.12em",
+
                 textTransform:
                   "uppercase",
               }}
             >
-              Ranked Recommendation
+              Whole-HIVE Ranking
             </p>
 
             <h2
               style={{
-                margin: 0,
+                margin:
+                  0,
+
                 color:
                   "#44330e",
               }}
@@ -383,11 +658,13 @@ export default async function EmployeeOfMonthPage({
             style={{
               color:
                 "#81734b",
-              fontWeight: 700,
+
+              fontWeight:
+                700,
             }}
           >
-            Management may override
-            the ranking.
+            Management retains final
+            selection authority.
           </small>
         </div>
 
@@ -395,10 +672,15 @@ export default async function EmployeeOfMonthPage({
         0 ? (
           <div
             style={{
-              padding: 20,
-              borderRadius: 12,
+              padding:
+                20,
+
+              borderRadius:
+                12,
+
               background:
                 "#faf7ea",
+
               color:
                 "#7b6e47",
             }}
@@ -410,8 +692,11 @@ export default async function EmployeeOfMonthPage({
         ) : (
           <div
             style={{
-              display: "grid",
-              gap: 10,
+              display:
+                "grid",
+
+              gap:
+                10,
             }}
           >
             {result.rankings.map(
@@ -422,12 +707,18 @@ export default async function EmployeeOfMonthPage({
                 const displayName =
                   getDisplayName(
                     candidate.name,
+
                     candidate
                       .preferredName,
                   );
 
                 const isRecommended =
-                  index === 0;
+                  candidate
+                    .eligible &&
+                  result
+                    .recommendation
+                    ?.collectorId ===
+                    candidate.collectorId;
 
                 const isSelected =
                   currentWinner?.id ===
@@ -443,9 +734,10 @@ export default async function EmployeeOfMonthPage({
                         "grid",
 
                       gridTemplateColumns:
-                        "55px minmax(170px, 1fr) 110px 110px 90px 105px 130px",
+                        "55px minmax(160px, 1.25fr) repeat(5, minmax(80px, .72fr)) 120px",
 
-                      gap: 10,
+                      gap:
+                        10,
 
                       alignItems:
                         "center",
@@ -456,7 +748,10 @@ export default async function EmployeeOfMonthPage({
                       border:
                         isRecommended
                           ? "2px solid #d7a51a"
-                          : "1px solid #eadfb7",
+                          : candidate
+                                .eligible
+                            ? "1px solid #eadfb7"
+                            : "1px solid #ddd7c2",
 
                       borderRadius:
                         13,
@@ -464,17 +759,31 @@ export default async function EmployeeOfMonthPage({
                       background:
                         isRecommended
                           ? "#fff8da"
-                          : "#ffffff",
+                          : candidate
+                                .eligible
+                            ? "#ffffff"
+                            : "#f5f3ed",
+
+                      opacity:
+                        candidate
+                          .eligible
+                          ? 1
+                          : 0.65,
                     }}
                   >
                     <strong
                       style={{
                         color:
                           "#8f6b12",
-                        fontSize: 18,
+
+                        fontSize:
+                          18,
                       }}
                     >
-                      #{index + 1}
+                      {candidate
+                        .eligible
+                        ? `#${index + 1}`
+                        : "—"}
                     </strong>
 
                     <div>
@@ -482,6 +791,7 @@ export default async function EmployeeOfMonthPage({
                         style={{
                           display:
                             "block",
+
                           color:
                             "#49380f",
                         }}
@@ -493,105 +803,206 @@ export default async function EmployeeOfMonthPage({
 
                       <small
                         style={{
+                          display:
+                            "block",
+
+                          marginTop:
+                            2,
+
                           color:
                             "#88794e",
+                        }}
+                      >
+                        {
+                          candidate.primaryRole
+                        }
+                      </small>
+
+                      <small
+                        style={{
+                          display:
+                            "block",
+
+                          marginTop:
+                            3,
+
+                          color:
+                            candidate
+                              .eligible
+                              ? "#6d7c42"
+                              : "#a14c42",
+
+                          fontWeight:
+                            800,
                         }}
                       >
                         {isRecommended
                           ? "HIVE Recommended"
                           : isSelected
                             ? "Management Selected"
-                            : "Eligible Candidate"}
+                            : candidate
+                                  .eligible
+                              ? "Eligible Candidate"
+                              : candidate
+                                  .ineligibleReason ??
+                                "Not Eligible"}
                       </small>
                     </div>
 
                     <Metric
-                      label="Successful"
-                      value={String(
+                      label="Productivity"
+                      value={
                         candidate
-                          .successfulSticks,
-                      )}
+                          .productivityScore ===
+                        null
+                          ? "N/A"
+                          : `${formatScore(
+                              candidate
+                                .productivityScore,
+                            )}%`
+                      }
                     />
 
                     <Metric
-                      label="Success Rate"
-                      value={`${candidate.successRate.toFixed(
+                      label="Accuracy"
+                      value={
+                        candidate
+                          .accuracyScore ===
+                        null
+                          ? "N/A"
+                          : `${formatScore(
+                              candidate
+                                .accuracyScore,
+                            )}%`
+                      }
+                    />
+
+                    <Metric
+                      label="Quality"
+                      value={`${candidate.qualityScore.toFixed(
                         1,
                       )}%`}
                     />
 
                     <Metric
-                      label="EMFs"
-                      value={String(
-                        candidate.emfCount,
-                      )}
+                      label="Attendance"
+                      value={`${candidate.attendanceScore.toFixed(
+                        1,
+                      )}%`}
                     />
 
                     <Metric
-                      label="70% Perf."
-                      value={candidate.performanceScore.toFixed(
+                      label="Recognition"
+                      value={`${candidate.recognitionScore.toFixed(
                         1,
-                      )}
+                      )}%`}
                     />
 
                     <div
                       style={{
-                        display: "grid",
-                        gap: 6,
+                        display:
+                          "grid",
+
+                        gap:
+                          6,
                       }}
                     >
-                      <strong
-                        style={{
-                          color:
-                            "#513a00",
-                          fontSize: 18,
-                        }}
-                      >
-                        {candidate.totalScore.toFixed(
-                          1,
-                        )}
-                      </strong>
-
-                      <form
-                        action={
-                          selectEmployeeOfMonth
-                        }
-                      >
-                        <input
-                          type="hidden"
-                          name="collectorId"
-                          value={
-                            candidate.collectorId
-                          }
-                        />
-
-                        <button
-                          type="submit"
+                      <div>
+                        <span
                           style={{
-                            width:
-                              "100%",
-                            padding:
-                              "8px 10px",
-                            border: 0,
-                            borderRadius:
-                              8,
-                            background:
-                              isSelected
-                                ? "#49704c"
-                                : "#a77500",
+                            display:
+                              "block",
+
                             color:
-                              "#ffffff",
+                              "#8b7a4e",
+
+                            fontSize:
+                              9,
+
                             fontWeight:
                               900,
-                            cursor:
-                              "pointer",
+
+                            letterSpacing:
+                              "0.07em",
+
+                            textTransform:
+                              "uppercase",
                           }}
                         >
-                          {isSelected
-                            ? "Selected"
-                            : "Select"}
-                        </button>
-                      </form>
+                          Overall
+                        </span>
+
+                        <strong
+                          style={{
+                            display:
+                              "block",
+
+                            marginTop:
+                              3,
+
+                            color:
+                              "#513a00",
+
+                            fontSize:
+                              18,
+                          }}
+                        >
+                          {candidate.totalScore.toFixed(
+                            1,
+                          )}
+                        </strong>
+                      </div>
+
+                      {candidate.eligible && (
+                        <form
+                          action={
+                            selectEmployeeOfMonth
+                          }
+                        >
+                          <input
+                            type="hidden"
+                            name="collectorId"
+                            value={
+                              candidate.collectorId
+                            }
+                          />
+
+                          <button
+                            type="submit"
+                            style={{
+                              width:
+                                "100%",
+
+                              padding:
+                                "8px 10px",
+
+                              border:
+                                0,
+
+                              borderRadius:
+                                8,
+
+                              background:
+                                isSelected
+                                  ? "#49704c"
+                                  : "#a77500",
+
+                              color:
+                                "#ffffff",
+
+                              fontWeight:
+                                900,
+
+                              cursor:
+                                "pointer",
+                            }}
+                          >
+                            {isSelected
+                              ? "Selected"
+                              : "Select"}
+                          </button>
+                        </form>
+                      )}
                     </div>
                   </article>
                 );
@@ -601,30 +1012,110 @@ export default async function EmployeeOfMonthPage({
         )}
       </section>
 
+      {/* ======================================
+          PRIVATE QUALITY NOTE
+         ====================================== */}
+
       <section
         style={{
-          padding: 18,
+          marginBottom:
+            20,
+
+          padding:
+            16,
+
+          border:
+            "1px solid #d9ca92",
+
+          borderRadius:
+            14,
+
+          background:
+            "#fff8dc",
+        }}
+      >
+        <strong
+          style={{
+            display:
+              "block",
+
+            color:
+              "#674a08",
+          }}
+        >
+          🔒 Quality scoring is private
+        </strong>
+
+        <span
+          style={{
+            display:
+              "block",
+
+            marginTop:
+              4,
+
+            color:
+              "#7c6a3c",
+
+            fontSize:
+              12,
+
+            lineHeight:
+              1.45,
+          }}
+        >
+          EMFs are included inside the
+          Quality score used by this
+          management-only recommendation.
+          Individual EMF counts are not
+          displayed on public HIVE Meadow
+          pages.
+        </span>
+      </section>
+
+      {/* ======================================
+          MANAGEMENT VETO
+         ====================================== */}
+
+      <section
+        style={{
+          padding:
+            18,
+
           border:
             "1px solid #e4d8ad",
-          borderRadius: 15,
+
+          borderRadius:
+            15,
+
           background:
             "#fffdf7",
         }}
       >
         <div
           style={{
-            display: "flex",
-            flexWrap: "wrap",
+            display:
+              "flex",
+
+            flexWrap:
+              "wrap",
+
             justifyContent:
               "space-between",
-            alignItems: "center",
-            gap: 14,
+
+            alignItems:
+              "center",
+
+            gap:
+              14,
           }}
         >
           <div>
             <strong
               style={{
-                display: "block",
+                display:
+                  "block",
+
                 color:
                   "#49380f",
               }}
@@ -634,16 +1125,22 @@ export default async function EmployeeOfMonthPage({
 
             <span
               style={{
-                display: "block",
-                marginTop: 3,
+                display:
+                  "block",
+
+                marginTop:
+                  3,
+
                 color:
                   "#80714a",
-                fontSize: 12,
+
+                fontSize:
+                  12,
               }}
             >
-              You may clear the
-              selection and recognize
-              no employee until a final
+              Management may clear the
+              current selection until a
+              final Employee of the Month
               decision is made.
             </span>
           </div>
@@ -658,15 +1155,24 @@ export default async function EmployeeOfMonthPage({
               style={{
                 padding:
                   "10px 14px",
+
                 border:
                   "1px solid #c8a661",
-                borderRadius: 9,
+
+                borderRadius:
+                  9,
+
                 background:
                   "#fff8e0",
+
                 color:
                   "#78530a",
-                fontWeight: 900,
-                cursor: "pointer",
+
+                fontWeight:
+                  900,
+
+                cursor:
+                  "pointer",
               }}
             >
               Clear Selection
@@ -689,13 +1195,21 @@ function Metric({
     <div>
       <span
         style={{
-          display: "block",
+          display:
+            "block",
+
           color:
             "#8b7a4e",
-          fontSize: 9,
-          fontWeight: 900,
+
+          fontSize:
+            9,
+
+          fontWeight:
+            900,
+
           letterSpacing:
             "0.07em",
+
           textTransform:
             "uppercase",
         }}
@@ -705,14 +1219,91 @@ function Metric({
 
       <strong
         style={{
-          display: "block",
-          marginTop: 3,
+          display:
+            "block",
+
+          marginTop:
+            3,
+
           color:
             "#4d3d18",
-          fontSize: 15,
+
+          fontSize:
+            15,
         }}
       >
         {value}
+      </strong>
+    </div>
+  );
+}
+
+function WeightCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) {
+  return (
+    <div
+      style={{
+        padding:
+          "11px 12px",
+
+        border:
+          "1px solid #e4d49c",
+
+        borderRadius:
+          11,
+
+        background:
+          "#fffaf0",
+
+        textAlign:
+          "center",
+      }}
+    >
+      <span
+        style={{
+          display:
+            "block",
+
+          color:
+            "#857349",
+
+          fontSize:
+            9,
+
+          fontWeight:
+            900,
+
+          letterSpacing:
+            "0.08em",
+
+          textTransform:
+            "uppercase",
+        }}
+      >
+        {label}
+      </span>
+
+      <strong
+        style={{
+          display:
+            "block",
+
+          marginTop:
+            4,
+
+          color:
+            "#5a4005",
+
+          fontSize:
+            16,
+        }}
+      >
+        {value}%
       </strong>
     </div>
   );
