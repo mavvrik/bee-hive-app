@@ -22,15 +22,20 @@ const navigationItems: AdminNavItem[] = [
     icon: "🏠",
   },
   {
-    title: "Dashboard & KPIs",
-    href: "/settings/hive",
-    icon: "📊",
-  },
-  {
-    title: "Hive Analytics",
-    href: "/settings/analytics",
-    icon: "📈",
-  },
+  title: "Dashboard & KPIs",
+  href: "/settings/hive",
+  icon: "📊",
+},
+{
+  title: "Comparison Metrics",
+  href: "/settings/metrics/comparisons",
+  icon: "↕️",
+},
+{
+  title: "Hive Analytics",
+  href: "/settings/analytics",
+  icon: "📈",
+},
   {
     title: "Worker Bees",
     href: "/settings/workers",
