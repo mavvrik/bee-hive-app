@@ -7,56 +7,40 @@ datasource db {
   provider = "postgresql"
 }
 
-enum MetricSource {
-  CSL
-  HIVE
-  MANUAL
-}
-
 // ======================================================
 // WORKFORCE
 // ======================================================
 
 model Collector {
-  id        Int     @id @default(autoincrement())
-  name      String
-  role      String
-  groupType String
-  position  Int
-  active    Boolean @default(true)
+  id                     Int                      @id @default(autoincrement())
+  name                   String
+  role                   String
+  groupType              String
+  position               Int
+  active                 Boolean                  @default(true)
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
 
-  // ------------------------------------------------------
-  // LEGACY TARGET FIELDS
-  // ------------------------------------------------------
-  // These remain temporarily because current application
-  // logic still references them.
-  // ------------------------------------------------------
+  bio                    String?
+  funFact                String?
+  isEmployeeOfMonth      Boolean                  @default(false)
+  photoUrl               String?
+  preferredName          String?
+  profileTitle           String?
+  recognitionMessage     String?
+  showOnMeetTheBees      Boolean                  @default(true)
 
-  // ------------------------------------------------------
-  // MEET THE BEES PROFILE
-  // ------------------------------------------------------
-
-  preferredName      String?
-  profileTitle       String?
-  bio                String?
-  funFact            String?
-  photoUrl           String?
-  showOnMeetTheBees  Boolean @default(true)
-  isEmployeeOfMonth  Boolean @default(false)
-  recognitionMessage String?
-
-  // ------------------------------------------------------
-  // WORKER-LEVEL PERFORMANCE
-  // ------------------------------------------------------
-
-  stickEntries           WorkerStickEntry[]
   hourlyEntries          HourlyOperationalEntry[]
-  emfEntries             QualityEmfEntry[]
   leadForagerReigns      LeadForagerReign[]
   monthlyLeadForagerWins MonthlyLeadForager[]
+  emfEntries             QualityEmfEntry[]
+  stickEntries           WorkerStickEntry[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  roleAssignments        WorkerRoleAssignment[]
+  performanceEntries     WorkerPerformanceEntry[]
+  attendanceEntries      AttendanceEntry[]
+  recognitionScores      MonthlyRecognitionScore[]
+  employeeOfMonthScores  EmployeeOfMonthScore[]
 
   @@index([active])
   @@index([position])
@@ -65,22 +49,37 @@ model Collector {
 }
 
 // ======================================================
-// WORKER DAILY STICK PERFORMANCE
+// WORKER ROLE ELIGIBILITY / CROSS-TRAINING
+// ======================================================
+
+model WorkerRoleAssignment {
+  id          Int           @id @default(autoincrement())
+  collectorId Int
+  role        WorkforceRole
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  collector   Collector     @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+
+  @@unique([collectorId, role])
+  @@index([collectorId])
+  @@index([role])
+}
+
+// ======================================================
+// PHLEBOTOMY STICK PERFORMANCE
 // ======================================================
 
 model WorkerStickEntry {
-  id Int @id @default(autoincrement())
+  id               Int       @id @default(autoincrement())
+  collectorId      Int
+  entryDate        DateTime
+  totalSticks      Int       @default(0)
+  successfulSticks Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  collectorId Int
-  entryDate   DateTime
-
-  totalSticks      Int @default(0)
-  successfulSticks Int @default(0)
-
-  collector Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  collector        Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
 
   @@unique([collectorId, entryDate])
   @@index([entryDate])
@@ -89,32 +88,63 @@ model WorkerStickEntry {
 }
 
 // ======================================================
-// QUALITY / EMF HISTORY
+// ROLE-BASED PERFORMANCE
 // ======================================================
-//
-// EMFs are errors captured by Quality.
-//
-// Lower monthly EMF totals represent stronger quality
-// performance.
-//
-// These records remain independent from production data
-// and will contribute 30% of the Employee of the Month
-// score.
+
+model WorkerPerformanceEntry {
+  id              Int                   @id @default(autoincrement())
+  collectorId     Int
+  entryDate       DateTime
+  role            WorkforceRole
+  metric          PerformanceMetricType
+  totalCount      Int                   @default(0)
+  successfulCount Int?
+  note            String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  collector       Collector             @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+
+  @@unique([collectorId, entryDate, role, metric])
+  @@index([collectorId])
+  @@index([entryDate])
+  @@index([role, metric])
+  @@index([collectorId, entryDate])
+}
+
+// ======================================================
+// ROLE PRODUCTIVITY TARGETS
+// ======================================================
+
+model RolePerformanceTarget {
+  id                 Int                   @id @default(autoincrement())
+  role               WorkforceRole
+  metric             PerformanceMetricType
+  targetPerDay       Float
+  accuracyApplicable Boolean               @default(false)
+  active             Boolean               @default(true)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  @@unique([role, metric])
+  @@index([role])
+  @@index([active])
+}
+
+// ======================================================
+// QUALITY / EMF
 // ======================================================
 
 model QualityEmfEntry {
-  id Int @id @default(autoincrement())
-
+  id          Int       @id @default(autoincrement())
   collectorId Int
   entryDate   DateTime
+  emfCount    Int       @default(1)
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  emfCount Int     @default(1)
-  note     String?
-
-  collector Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  collector   Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
 
   @@index([collectorId])
   @@index([entryDate])
@@ -122,41 +152,129 @@ model QualityEmfEntry {
 }
 
 // ======================================================
-// REIGNING LEAD FORAGER
+// ATTENDANCE / RELIABILITY
 // ======================================================
 
-model LeadForagerReign {
-  id Int @id @default(1)
+model AttendanceEntry {
+  id          Int                 @id @default(autoincrement())
+  collectorId Int
+  entryDate   DateTime
+  eventType   AttendanceEventType
+  note        String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 
-  collectorId Int?
+  collector   Collector           @relation(fields: [collectorId], references: [id], onDelete: Cascade)
 
-  benchmarkSuccessfulSticks Int       @default(0)
-  crownedAt                 DateTime?
+  @@index([collectorId])
+  @@index([entryDate])
+  @@index([eventType])
+  @@index([collectorId, entryDate])
+}
 
-  collector Collector? @relation(fields: [collectorId], references: [id], onDelete: SetNull)
+// ======================================================
+// MONTHLY RECOGNITION / LEADERSHIP SCORE
+// ======================================================
 
-  updatedAt DateTime @updatedAt
+model MonthlyRecognitionScore {
+  id          Int       @id @default(autoincrement())
+  collectorId Int
+  year        Int
+  month       Int
+  score       Float     @default(0)
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
+  collector   Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+
+  @@unique([collectorId, year, month])
+  @@index([year, month])
   @@index([collectorId])
 }
 
 // ======================================================
-// MONTHLY LEAD FORAGER HISTORY
+// EMPLOYEE OF THE MONTH SETTINGS
 // ======================================================
 
+model EmployeeOfMonthSettings {
+  id                       Int      @id @default(1)
+
+  productivityWeight       Float    @default(35)
+  accuracyWeight           Float    @default(25)
+  qualityWeight            Float    @default(25)
+  attendanceWeight         Float    @default(10)
+  recognitionWeight        Float    @default(5)
+
+  emfPenaltyPoints         Float    @default(15)
+  emfDisqualifyThreshold   Int?
+
+  latePenalty              Float    @default(1)
+  absentPenalty            Float    @default(3)
+  lateFromLunchPenalty     Float    @default(1)
+  leftEarlyPenalty         Float    @default(1.5)
+
+  updatedAt                DateTime @updatedAt
+}
+
+// ======================================================
+// EMPLOYEE OF THE MONTH MONTHLY SCORES
+// ======================================================
+
+model EmployeeOfMonthScore {
+  id                  Int       @id @default(autoincrement())
+  collectorId         Int
+  year                Int
+  month               Int
+
+  productivityScore   Float     @default(0)
+  accuracyScore       Float     @default(0)
+  qualityScore        Float     @default(100)
+  attendanceScore     Float     @default(100)
+  recognitionScore    Float     @default(0)
+
+  weightedScore       Float     @default(0)
+
+  eligible            Boolean   @default(true)
+  ineligibleReason    String?
+
+  calculatedAt        DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  collector           Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+
+  @@unique([collectorId, year, month])
+  @@index([year, month])
+  @@index([collectorId])
+  @@index([year, month, weightedScore])
+}
+
+// ======================================================
+// LEAD FORAGER
+// ======================================================
+
+model LeadForagerReign {
+  id                        Int        @id @default(1)
+  collectorId               Int?
+  benchmarkSuccessfulSticks Int        @default(0)
+  crownedAt                 DateTime?
+  updatedAt                 DateTime   @updatedAt
+
+  collector                 Collector? @relation(fields: [collectorId], references: [id])
+
+  @@index([collectorId])
+}
+
 model MonthlyLeadForager {
-  id Int @id @default(autoincrement())
-
-  year  Int
-  month Int
-
+  id               Int       @id @default(autoincrement())
+  year             Int
+  month            Int
   collectorId      Int
   successfulSticks Int
+  recordedAt       DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  collector Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
-
-  recordedAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  collector        Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
 
   @@unique([year, month])
   @@index([collectorId])
@@ -164,7 +282,7 @@ model MonthlyLeadForager {
 }
 
 // ======================================================
-// OFFICIAL CENTER PRODUCTION
+// CENTER PRODUCTION
 // ======================================================
 
 model DailyCenterProduction {
@@ -172,7 +290,6 @@ model DailyCenterProduction {
   entryDate DateTime @unique
   liters    Float
   donors    Int      @default(0)
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -180,24 +297,21 @@ model DailyCenterProduction {
 }
 
 // ======================================================
-// HOURLY OPERATIONAL INTELLIGENCE
+// HOURLY OPERATIONS
 // ======================================================
 
 model HourlyOperationalEntry {
-  id Int @id @default(autoincrement())
+  id                 Int       @id @default(autoincrement())
+  collectorId        Int
+  entryDate          DateTime
+  operationalHour    Int
+  successfulSticks   Int       @default(0)
+  unsuccessfulSticks Int       @default(0)
+  lostVolumeMl       Float     @default(0)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  collectorId     Int
-  entryDate       DateTime
-  operationalHour Int
-
-  successfulSticks   Int   @default(0)
-  unsuccessfulSticks Int   @default(0)
-  lostVolumeMl       Float @default(0)
-
-  collector Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  collector          Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
 
   @@unique([collectorId, entryDate, operationalHour])
   @@index([entryDate])
@@ -206,99 +320,114 @@ model HourlyOperationalEntry {
 }
 
 // ======================================================
-// CENTER SETTINGS
+// HIVE SETTINGS
 // ======================================================
 
 model HiveSettings {
-  id Int @id @default(1)
-
-  centerName String @default("Riviera Beach 115")
-
-  monthlyGoal   Float @default(3500)
-  weeksInPeriod Float @default(4.33)
-
-  centerOperatingDaysPerWeek Int @default(7)
-  workerDaysPerWeek          Int @default(5)
-
-  openingHour Int @default(6)
-  closingHour Int @default(19)
-
-  currentMonth Int
-  currentYear  Int
-
-  dashboardRotationSeconds Int @default(45)
-
-  updatedAt DateTime @updatedAt
+  id                         Int      @id @default(1)
+  centerName                 String   @default("Riviera Beach 115")
+  monthlyGoal                Float    @default(3500)
+  weeksInPeriod              Float    @default(4.33)
+  currentMonth               Int
+  currentYear                Int
+  updatedAt                  DateTime @updatedAt
+  dashboardRotationSeconds   Int      @default(45)
+  closingHour                Int      @default(19)
+  openingHour                Int      @default(6)
+  centerOperatingDaysPerWeek Int      @default(7)
+  workerDaysPerWeek          Int      @default(5)
 }
 
 // ======================================================
-// MONTHLY BUDGETS
+// MONTHLY BUDGET
 // ======================================================
 
 model MonthlyBudget {
-  id Int @id @default(autoincrement())
-
-  fiscalYear Int
-  month      Int
-
+  id                   Int      @id @default(autoincrement())
+  fiscalYear           Int
+  month                Int
   budgetLiters         Float
   originalBudgetLiters Float
-
-  budgetDonors         Int @default(0)
-  originalBudgetDonors Int @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  budgetDonors         Int      @default(0)
+  originalBudgetDonors Int      @default(0)
 
   @@unique([fiscalYear, month])
   @@index([fiscalYear])
 }
 
 // ======================================================
-// DYNAMIC KPI ENGINE
+// DASHBOARD METRICS
 // ======================================================
 
 model DashboardMetric {
-  id Int @id @default(autoincrement())
+  id            Int             @id @default(autoincrement())
+  key           String          @unique
+  displayName   String
+  description   String?
+  unit          String?
+  decimalPlaces Int             @default(2)
+  publicSource  MetricSource    @default(CSL)
+  isVisible     Boolean         @default(true)
+  displayOrder  Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
-  key         String  @unique
-  displayName String
-  description String?
-  unit        String?
-
-  decimalPlaces Int @default(2)
-
-  publicSource MetricSource @default(CSL)
-
-  isVisible    Boolean @default(true)
-  displayOrder Int     @default(0)
-
-  readings MetricReading[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  readings      MetricReading[]
 
   @@index([isVisible, displayOrder])
 }
 
-// ======================================================
-// KPI HISTORY
-// ======================================================
-
 model MetricReading {
-  id Int @id @default(autoincrement())
+  id         Int             @id @default(autoincrement())
+  metricId   Int
+  source     MetricSource
+  value      Float
+  recordedAt DateTime        @default(now())
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 
-  metricId Int
-  source   MetricSource
-  value    Float
-
-  recordedAt DateTime @default(now())
-
-  metric DashboardMetric @relation(fields: [metricId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  metric     DashboardMetric @relation(fields: [metricId], references: [id], onDelete: Cascade)
 
   @@index([metricId, source, recordedAt])
   @@index([recordedAt])
+}
+
+// ======================================================
+// ENUMS
+// ======================================================
+
+enum WorkforceRole {
+  MANAGEMENT
+  PHLEBOTOMIST
+  GROUP_LEAD
+  PROCESSOR
+  RECEPTION_TECH
+  MSA
+  DST
+  OTHER
+}
+
+enum PerformanceMetricType {
+  STICKS
+  DISCONNECTS
+  SETUPS
+  PHYSICALS
+  INTERVIEWS
+  PROCESSED
+  OTHER
+}
+
+enum AttendanceEventType {
+  LATE
+  ABSENT
+  LATE_FROM_LUNCH
+  LEFT_EARLY
+}
+
+enum MetricSource {
+  CSL
+  HIVE
+  MANUAL
 }

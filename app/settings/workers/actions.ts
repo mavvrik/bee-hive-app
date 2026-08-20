@@ -3,12 +3,25 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 
+const WORKFORCE_ROLES = [
+  "MANAGEMENT",
+  "PHLEBOTOMIST",
+  "GROUP_LEAD",
+  "PROCESSOR",
+  "RECEPTION_TECH",
+  "MSA",
+  "DST",
+  "OTHER",
+] as const;
+
+type WorkforceRoleValue =
+  (typeof WORKFORCE_ROLES)[number];
+
 function readRequiredText(
   formData: FormData,
   fieldName: string,
 ) {
-  const value =
-    formData.get(fieldName);
+  const value = formData.get(fieldName);
 
   if (
     typeof value !== "string" ||
@@ -26,17 +39,13 @@ function readOptionalText(
   formData: FormData,
   fieldName: string,
 ) {
-  const value =
-    formData.get(fieldName);
+  const value = formData.get(fieldName);
 
-  if (
-    typeof value !== "string"
-  ) {
+  if (typeof value !== "string") {
     return null;
   }
 
-  const trimmed =
-    value.trim();
+  const trimmed = value.trim();
 
   return trimmed === ""
     ? null
@@ -48,8 +57,7 @@ function readInteger(
   fieldName: string,
   fallback = 0,
 ) {
-  const value =
-    formData.get(fieldName);
+  const value = formData.get(fieldName);
 
   if (
     typeof value !== "string" ||
@@ -59,14 +67,9 @@ function readInteger(
   }
 
   const parsedValue =
-    Number.parseInt(
-      value,
-      10,
-    );
+    Number.parseInt(value, 10);
 
-  return Number.isFinite(
-    parsedValue,
-  )
+  return Number.isFinite(parsedValue)
     ? parsedValue
     : fallback;
 }
@@ -76,8 +79,65 @@ function readCheckbox(
   fieldName: string,
 ) {
   return (
-    formData.get(fieldName) ===
-    "on"
+    formData.get(fieldName) === "on"
+  );
+}
+
+function primaryRoleToEnum(
+  role: string,
+): WorkforceRoleValue {
+  switch (role) {
+    case "Management":
+      return "MANAGEMENT";
+
+    case "Phlebotomist":
+      return "PHLEBOTOMIST";
+
+    case "Group Lead":
+      return "GROUP_LEAD";
+
+    case "Processor":
+      return "PROCESSOR";
+
+    case "Reception Tech":
+      return "RECEPTION_TECH";
+
+    case "MSA":
+      return "MSA";
+
+    case "DST":
+      return "DST";
+
+    default:
+      return "OTHER";
+  }
+}
+
+function readEligibleRoles(
+  formData: FormData,
+  primaryRole: string,
+) {
+  const submitted =
+    formData.getAll("eligibleRoles");
+
+  const validRoles =
+    submitted.filter(
+      (
+        value,
+      ): value is WorkforceRoleValue =>
+        typeof value === "string" &&
+        WORKFORCE_ROLES.includes(
+          value as WorkforceRoleValue,
+        ),
+    );
+
+  // Primary role should always be an eligible role.
+  validRoles.push(
+    primaryRoleToEnum(primaryRole),
+  );
+
+  return Array.from(
+    new Set(validRoles),
   );
 }
 
@@ -105,6 +165,12 @@ export async function createCollector(
     readRequiredText(
       formData,
       "role",
+    );
+
+  const eligibleRoles =
+    readEligibleRoles(
+      formData,
+      role,
     );
 
   const groupType =
@@ -156,31 +222,47 @@ export async function createCollector(
           0
         ) + 1;
 
-  await prisma.collector.create({
-    data: {
-      name,
-      role,
-      groupType,
-      position:
-        nextPosition,
-      active,
+  await prisma.$transaction(
+    async (tx) => {
+      const collector =
+        await tx.collector.create({
+          data: {
+            name,
+            role,
+            groupType,
+            position:
+              nextPosition,
+            active,
 
-      preferredName: null,
-      profileTitle: null,
-      bio: null,
-      funFact: null,
-      photoUrl: null,
+            preferredName: null,
+            profileTitle: null,
+            bio: null,
+            funFact: null,
+            photoUrl: null,
 
-      showOnMeetTheBees:
-        active,
+            showOnMeetTheBees:
+              active,
 
-      isEmployeeOfMonth:
-        false,
+            isEmployeeOfMonth:
+              false,
 
-      recognitionMessage:
-        null,
+            recognitionMessage:
+              null,
+          },
+        });
+
+      await tx.workerRoleAssignment.createMany({
+        data: eligibleRoles.map(
+          (eligibleRole) => ({
+            collectorId:
+              collector.id,
+            role: eligibleRole,
+          }),
+        ),
+        skipDuplicates: true,
+      });
     },
-  });
+  );
 
   refreshRosterPages();
 }
@@ -210,6 +292,12 @@ export async function updateCollector(
     readRequiredText(
       formData,
       "role",
+    );
+
+  const eligibleRoles =
+    readEligibleRoles(
+      formData,
+      role,
     );
 
   const groupType =
@@ -303,47 +391,69 @@ export async function updateCollector(
     );
   }
 
-  if (isEmployeeOfMonth) {
-    await prisma.collector.updateMany({
-      where: {
-        isEmployeeOfMonth:
-          true,
+  await prisma.$transaction(
+    async (tx) => {
+      if (isEmployeeOfMonth) {
+        await tx.collector.updateMany({
+          where: {
+            isEmployeeOfMonth:
+              true,
 
-        NOT: {
+            NOT: {
+              id: collectorId,
+            },
+          },
+
+          data: {
+            isEmployeeOfMonth:
+              false,
+          },
+        });
+      }
+
+      await tx.collector.update({
+        where: {
           id: collectorId,
         },
-      },
 
-      data: {
-        isEmployeeOfMonth:
-          false,
-      },
-    });
-  }
+        data: {
+          name,
+          role,
+          groupType,
+          position,
+          active,
 
-  await prisma.collector.update({
-    where: {
-      id: collectorId,
+          preferredName,
+          profileTitle,
+          bio,
+          funFact,
+          photoUrl,
+
+          showOnMeetTheBees,
+          isEmployeeOfMonth,
+          recognitionMessage,
+        },
+      });
+
+      // Replace the worker's role eligibility
+      // with the current checkbox selections.
+      await tx.workerRoleAssignment.deleteMany({
+        where: {
+          collectorId,
+        },
+      });
+
+      await tx.workerRoleAssignment.createMany({
+        data: eligibleRoles.map(
+          (eligibleRole) => ({
+            collectorId,
+            role: eligibleRole,
+          }),
+        ),
+        skipDuplicates: true,
+      });
     },
-
-    data: {
-      name,
-      role,
-      groupType,
-      position,
-      active,
-
-      preferredName,
-      profileTitle,
-      bio,
-      funFact,
-      photoUrl,
-
-      showOnMeetTheBees,
-      isEmployeeOfMonth,
-      recognitionMessage,
-    },
-  });
+  );
 
   refreshRosterPages();
 }

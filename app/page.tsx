@@ -45,6 +45,19 @@ import BeeTeam from "./components/BeeTeam";
 export const dynamic =
   "force-dynamic";
 
+type SupportMetric = {
+  label: string;
+
+  value:
+    | number
+    | string;
+
+  emphasis?:
+    | "gold"
+    | "green"
+    | "red";
+};
+
 function safeDivide(
   numerator: number,
   denominator: number,
@@ -53,10 +66,92 @@ function safeDivide(
     return 0;
   }
 
-  return (
-    numerator /
-    denominator
+  return numerator / denominator;
+}
+
+function primaryRoleToEnum(
+  role: string,
+) {
+  switch (role) {
+    case "Management":
+      return "MANAGEMENT";
+
+    case "Phlebotomist":
+      return "PHLEBOTOMIST";
+
+    case "Group Lead":
+      return "GROUP_LEAD";
+
+    case "Processor":
+      return "PROCESSOR";
+
+    case "Reception Tech":
+      return "RECEPTION_TECH";
+
+    case "MSA":
+      return "MSA";
+
+    case "DST":
+      return "DST";
+
+    default:
+      return "OTHER";
+  }
+}
+
+function getEligibleRoleSet(
+  collector: {
+    role: string;
+
+    roleAssignments: {
+      role: string;
+    }[];
+  },
+) {
+  const roles =
+    new Set<string>();
+
+  for (
+    const assignment of
+      collector.roleAssignments
+  ) {
+    roles.add(
+      assignment.role,
+    );
+  }
+
+  // Always include primary role as a safety net.
+  roles.add(
+    primaryRoleToEnum(
+      collector.role,
+    ),
   );
+
+  return roles;
+}
+
+function hasPhlebotomyEligibility(
+  collector: {
+    role: string;
+
+    roleAssignments: {
+      role: string;
+    }[];
+  },
+) {
+  return getEligibleRoleSet(
+    collector,
+  ).has(
+    "PHLEBOTOMIST",
+  );
+}
+
+function supportMetricKey(
+  collectorId: number,
+  role: string,
+  metric: string,
+) {
+  return `${collectorId}:${role}:${metric}`;
 }
 
 export default async function Home() {
@@ -146,12 +241,14 @@ export default async function Home() {
     4.33;
 
   const centerOperatingDaysPerWeek =
-    settings?.centerOperatingDaysPerWeek ??
+    settings
+      ?.centerOperatingDaysPerWeek ??
     7;
 
   const dashboardRotationMs =
     (
-      settings?.dashboardRotationSeconds ??
+      settings
+        ?.dashboardRotationSeconds ??
       45
     ) * 1000;
 
@@ -184,11 +281,13 @@ export default async function Home() {
 
   const monthlyGoal =
     currentBudget
-      ?.budgetLiters ?? 0;
+      ?.budgetLiters ??
+    0;
 
   const monthlyGoalDonors =
     currentBudget
-      ?.budgetDonors ?? 0;
+      ?.budgetDonors ??
+    0;
 
   const weeklyGoalLiters =
     safeDivide(
@@ -267,13 +366,14 @@ export default async function Home() {
 
   /*
    * ==========================================
-   * OFFICIAL CENTER TOTALS
+   * CENTER TOTALS
    * ==========================================
    */
 
   const currentLiters =
-    monthToDateProduction._sum
-      .liters ?? 0;
+    monthToDateProduction
+      ._sum.liters ??
+    0;
 
   const weeklyCurrentLiters =
     currentWeekEntries.reduce(
@@ -298,16 +398,18 @@ export default async function Home() {
     );
 
   const dailyCurrentLiters =
-    currentDayProduction._sum
-      .liters ?? 0;
+    currentDayProduction
+      ._sum.liters ??
+    0;
 
   const dailyCurrentDonors =
-    currentDayProduction._sum
-      .donors ?? 0;
+    currentDayProduction
+      ._sum.donors ??
+    0;
 
   /*
    * ==========================================
-   * SHARED DAILY TARGET ENGINE
+   * DAILY TARGET ENGINE
    * ==========================================
    */
 
@@ -343,8 +445,7 @@ export default async function Home() {
    */
 
   const weeklyLitersPerDonor =
-    weeklyCurrentDonors >
-    0
+    weeklyCurrentDonors > 0
       ? weeklyCurrentLiters /
         weeklyCurrentDonors
       : 0;
@@ -365,8 +466,9 @@ export default async function Home() {
    */
 
   const hourlyOperationalSummary =
-    await prisma.hourlyOperationalEntry.aggregate(
-      {
+    await prisma
+      .hourlyOperationalEntry
+      .aggregate({
         where: {
           entryDate: {
             gte:
@@ -387,22 +489,24 @@ export default async function Home() {
           lostVolumeMl:
             true,
         },
-      },
-    );
+      });
 
   const successfulSticks =
-    hourlyOperationalSummary._sum
+    hourlyOperationalSummary
+      ._sum
       .successfulSticks ??
     0;
 
   const unsuccessfulSticks =
-    hourlyOperationalSummary._sum
+    hourlyOperationalSummary
+      ._sum
       .unsuccessfulSticks ??
     0;
 
   const lostVolume =
     (
-      hourlyOperationalSummary._sum
+      hourlyOperationalSummary
+        ._sum
         .lostVolumeMl ??
       0
     ) / 1000;
@@ -422,11 +526,17 @@ export default async function Home() {
         active: true,
       },
 
+      include: {
+        roleAssignments:
+          true,
+      },
+
       orderBy: [
         {
           position:
             "asc",
         },
+
         {
           name:
             "asc",
@@ -436,12 +546,48 @@ export default async function Home() {
 
   /*
    * ==========================================
-   * CURRENT WEEK WORKER PERFORMANCE
+   * TWO-MEADOW SPLIT
+   * ==========================================
+   *
+   * PHLEBOTOMY MEADOW:
+   * Any worker eligible for Phlebotomy.
+   *
+   * SUPPORT MEADOW:
+   * Any worker without Phlebotomy eligibility.
+   *
+   * IMPORTANT:
+   * A Support Meadow worker may still have
+   * several eligible support roles.
    * ==========================================
    */
 
-  const currentWeekStickEntries =
-    await prisma.workerStickEntry.findMany({
+  const phlebotomyCollectors =
+    collectors.filter(
+      (collector) =>
+        hasPhlebotomyEligibility(
+          collector,
+        ),
+    );
+
+  const supportCollectors =
+    collectors.filter(
+      (collector) =>
+        !hasPhlebotomyEligibility(
+          collector,
+        ),
+    );
+
+  /*
+   * ==========================================
+   * WEEKLY PERFORMANCE DATA
+   * ==========================================
+   */
+
+  const [
+    currentWeekStickEntries,
+    currentWeekSupportEntries,
+  ] = await Promise.all([
+    prisma.workerStickEntry.findMany({
       where: {
         entryDate: {
           gte:
@@ -462,7 +608,40 @@ export default async function Home() {
         successfulSticks:
           true,
       },
-    });
+    }),
+
+    prisma.workerPerformanceEntry.findMany({
+      where: {
+        entryDate: {
+          gte:
+            startOfCurrentWeek,
+
+          lt:
+            startOfNextWeek,
+        },
+      },
+
+      select: {
+        collectorId:
+          true,
+
+        role:
+          true,
+
+        metric:
+          true,
+
+        totalCount:
+          true,
+      },
+    }),
+  ]);
+
+  /*
+   * ==========================================
+   * PHLEBOTOMY WEEKLY TOTALS
+   * ==========================================
+   */
 
   const weeklyWorkerPerformance =
     new Map<
@@ -481,8 +660,11 @@ export default async function Home() {
       weeklyWorkerPerformance.get(
         entry.collectorId,
       ) ?? {
-        totalSticks: 0,
-        successfulSticks: 0,
+        totalSticks:
+          0,
+
+        successfulSticks:
+          0,
       };
 
     current.totalSticks +=
@@ -499,15 +681,277 @@ export default async function Home() {
 
   /*
    * ==========================================
-   * VERIFIED VARIANCE-FREE STREAKS
+   * SUPPORT WEEKLY TOTALS
+   * ==========================================
+   */
+
+  const weeklySupportPerformance =
+    new Map<
+      string,
+      number
+    >();
+
+  for (
+    const entry of
+      currentWeekSupportEntries
+  ) {
+    const key =
+      supportMetricKey(
+        entry.collectorId,
+        entry.role,
+        entry.metric,
+      );
+
+    const current =
+      weeklySupportPerformance.get(
+        key,
+      ) ?? 0;
+
+    weeklySupportPerformance.set(
+      key,
+      current +
+        entry.totalCount,
+    );
+  }
+
+  /*
+   * ==========================================
+   * SUPPORT MEADOW METRICS
    * ==========================================
    *
-   * Only completed prior-day worker data
-   * is considered verified.
+   * ALL eligible support-role activities are
+   * shown on the worker's Meadow card.
    *
-   * 0 or 1 stick = neutral day
-   * 2+ sticks and 0 unsuccessful = streak +1
-   * 2+ sticks and 1+ unsuccessful = reset
+   * Primary role controls appearance ONLY.
+   *
+   * EMFs are intentionally excluded.
+   * ==========================================
+   */
+
+  function getSupportMetrics(
+    collector: {
+      id: number;
+      role: string;
+
+      roleAssignments: {
+        role: string;
+      }[];
+    },
+  ): SupportMetric[] {
+    const metrics:
+      SupportMetric[] = [];
+
+    const eligibleRoles =
+      getEligibleRoleSet(
+        collector,
+      );
+
+    /*
+     * MSA
+     * ------------------------------------------
+     * Physicals
+     */
+
+    if (
+      eligibleRoles.has(
+        "MSA",
+      )
+    ) {
+      metrics.push({
+        label:
+          "Weekly Physicals",
+
+        value:
+          weeklySupportPerformance.get(
+            supportMetricKey(
+              collector.id,
+              "MSA",
+              "PHYSICALS",
+            ),
+          ) ?? 0,
+
+        emphasis:
+          "gold",
+      });
+    }
+
+    /*
+     * RECEPTION TECH
+     * ------------------------------------------
+     * Interviews
+     */
+
+    if (
+      eligibleRoles.has(
+        "RECEPTION_TECH",
+      )
+    ) {
+      metrics.push({
+        label:
+          "Weekly Interviews",
+
+        value:
+          weeklySupportPerformance.get(
+            supportMetricKey(
+              collector.id,
+              "RECEPTION_TECH",
+              "INTERVIEWS",
+            ),
+          ) ?? 0,
+
+        emphasis:
+          "gold",
+      });
+    }
+
+    /*
+     * DST
+     * ------------------------------------------
+     * Setups + Disconnects
+     */
+
+    if (
+      eligibleRoles.has(
+        "DST",
+      )
+    ) {
+      metrics.push({
+        label:
+          "Weekly Setups",
+
+        value:
+          weeklySupportPerformance.get(
+            supportMetricKey(
+              collector.id,
+              "DST",
+              "SETUPS",
+            ),
+          ) ?? 0,
+
+        emphasis:
+          "gold",
+      });
+
+      metrics.push({
+        label:
+          "Weekly Disconnects",
+
+        value:
+          weeklySupportPerformance.get(
+            supportMetricKey(
+              collector.id,
+              "DST",
+              "DISCONNECTS",
+            ),
+          ) ?? 0,
+
+        emphasis:
+          "gold",
+      });
+    }
+
+    /*
+     * PROCESSOR
+     * ------------------------------------------
+     * Bottles Processed
+     */
+
+    if (
+      eligibleRoles.has(
+        "PROCESSOR",
+      )
+    ) {
+      metrics.push({
+        label:
+          "Bottles Processed",
+
+        value:
+          weeklySupportPerformance.get(
+            supportMetricKey(
+              collector.id,
+              "PROCESSOR",
+              "PROCESSED",
+            ),
+          ) ?? 0,
+
+        emphasis:
+          "gold",
+      });
+    }
+
+    /*
+     * MANAGEMENT
+     * ------------------------------------------
+     * No invented quantitative metric yet.
+     */
+
+    if (
+      eligibleRoles.has(
+        "MANAGEMENT",
+      )
+    ) {
+      metrics.push({
+        label:
+          "Management",
+
+        value:
+          "Team Support",
+
+        emphasis:
+          "gold",
+      });
+    }
+
+    /*
+     * GROUP LEAD
+     * ------------------------------------------
+     * No invented quantitative metric yet.
+     */
+
+    if (
+      eligibleRoles.has(
+        "GROUP_LEAD",
+      )
+    ) {
+      metrics.push({
+        label:
+          "Group Lead",
+
+        value:
+          "Team Support",
+
+        emphasis:
+          "gold",
+      });
+    }
+
+    /*
+     * OTHER
+     */
+
+    if (
+      metrics.length ===
+      0
+    ) {
+      metrics.push({
+        label:
+          "Role Contribution",
+
+        value:
+          "Worker Bee",
+
+        emphasis:
+          "gold",
+      });
+    }
+
+    return metrics;
+  }
+
+  /*
+   * ==========================================
+   * VERIFIED VARIANCE-FREE STREAKS
+   * ==========================================
    */
 
   const verifiedWorkerStickEntries =
@@ -557,7 +1001,8 @@ export default async function Home() {
     collectors
       .filter(
         (collector) =>
-          collector.showOnMeetTheBees,
+          collector
+            .showOnMeetTheBees,
       )
       .map(
         (collector) => ({
@@ -589,7 +1034,8 @@ export default async function Home() {
             collector.isEmployeeOfMonth,
 
           recognitionMessage:
-            collector.recognitionMessage,
+            collector
+              .recognitionMessage,
         }),
       );
 
@@ -611,6 +1057,7 @@ export default async function Home() {
           displayOrder:
             "asc",
         },
+
         {
           displayName:
             "asc",
@@ -624,7 +1071,8 @@ export default async function Home() {
               "desc",
           },
 
-          take: 50,
+          take:
+            50,
         },
       },
     });
@@ -719,10 +1167,12 @@ export default async function Home() {
 
   const hivePerformance =
     getHivePerformanceStatus(
-      intelligence.center
+      intelligence
+        .center
         .currentWeekLiters,
 
-      intelligence.goals
+      intelligence
+        .goals
         .weeklyLiters,
     );
 
@@ -817,7 +1267,7 @@ export default async function Home() {
         }
       >
         {/* =====================================
-            PAGE 1 — MAIN HIVE DASHBOARD
+            PAGE 1 — PHLEBOTOMY MEADOW
            ===================================== */}
 
         <DashboardPage>
@@ -849,12 +1299,14 @@ export default async function Home() {
             }
 
             weeklyCurrentLiters={
-              intelligence.center
+              intelligence
+                .center
                 .currentWeekLiters
             }
 
             weeklyTarget={
-              intelligence.goals
+              intelligence
+                .goals
                 .weeklyLiters
             }
 
@@ -893,24 +1345,28 @@ export default async function Home() {
           >
             <HoneyPotExecutive
               monthlyGoal={
-                intelligence.goals
+                intelligence
+                  .goals
                   .monthlyLiters
               }
 
               currentLiters={
-                intelligence.center
+                intelligence
+                  .center
                   .currentMonthLiters
               }
             />
 
             <DonorMeadow
               weeklyCurrentLiters={
-                intelligence.center
+                intelligence
+                  .center
                   .currentWeekLiters
               }
 
               weeklyTarget={
-                intelligence.goals
+                intelligence
+                  .goals
                   .weeklyLiters
               }
 
@@ -930,12 +1386,14 @@ export default async function Home() {
 
             <ProjectionExecutiveCard
               currentLiters={
-                intelligence.projection
+                intelligence
+                  .projection
                   .currentLiters
               }
 
               projectedFinish={
-                intelligence.projection
+                intelligence
+                  .projection
                   .projectedFinish
               }
 
@@ -945,35 +1403,41 @@ export default async function Home() {
               }
 
               confidence={
-                intelligence.projection
+                intelligence
+                  .projection
                   .confidence
               }
 
               projectedVariance={
-                intelligence.projection
+                intelligence
+                  .projection
                   .projectedVariance
               }
 
               additionalDonorsNeeded={
-                intelligence.projection
+                intelligence
+                  .projection
                   .additionalDonorsNeeded
               }
 
               currentHourlyPace={
-                intelligence.projection
+                intelligence
+                  .projection
                   .currentHourlyPace
               }
 
               hoursRemaining={
-                intelligence.projection
+                intelligence
+                  .projection
                   .hoursRemaining
               }
             />
           </section>
 
           <BeeTeam
+            mode="phlebotomy"
             collectors={
-              collectors.map(
+              phlebotomyCollectors.map(
                 (collector) => {
                   const performance =
                     weeklyWorkerPerformance.get(
@@ -986,38 +1450,46 @@ export default async function Home() {
                     );
 
                   const totalSticks =
-                    performance?.totalSticks ??
+                    performance
+                      ?.totalSticks ??
                     0;
 
-                  const successfulSticks =
+                  const successful =
                     performance
                       ?.successfulSticks ??
                     0;
 
-                  const successRate =
-                    totalSticks > 0
+                  const rate =
+                    totalSticks >
+                    0
                       ? (
-                          successfulSticks /
+                          successful /
                           totalSticks
-                        ) * 100
+                        ) *
+                        100
                       : null;
 
                   return {
                     ...collector,
 
                     weeklySuccessfulSticks:
-                      successfulSticks,
+                      successful,
 
                     weeklySuccessRate:
-                      successRate,
+                      rate,
 
                     varianceFreeStreak:
-                      streak?.streakDays ??
+                      streak
+                        ?.streakDays ??
                       0,
 
                     streakVerifiedThrough:
-                      streak?.latestVerifiedDate ??
+                      streak
+                        ?.latestVerifiedDate ??
                       null,
+
+                    supportMetrics:
+                      [],
                   };
                 },
               )
@@ -1026,7 +1498,54 @@ export default async function Home() {
         </DashboardPage>
 
         {/* =====================================
-            PAGE 2 — EXECUTIVE INTELLIGENCE
+            PAGE 2 — SUPPORT MEADOW
+           ===================================== */}
+
+        {supportCollectors.length >
+          0 && (
+          <DashboardPage>
+            <HiveHeader
+              centerName={
+                centerName
+              }
+
+              reportingYear={
+                reportingYear
+              }
+            />
+
+            <BeeTeam
+              mode="support"
+              collectors={
+                supportCollectors.map(
+                  (collector) => ({
+                    ...collector,
+
+                    weeklySuccessfulSticks:
+                      0,
+
+                    weeklySuccessRate:
+                      null,
+
+                    varianceFreeStreak:
+                      0,
+
+                    streakVerifiedThrough:
+                      null,
+
+                    supportMetrics:
+                      getSupportMetrics(
+                        collector,
+                      ),
+                  }),
+                )
+              }
+            />
+          </DashboardPage>
+        )}
+
+        {/* =====================================
+            PAGE 3 — EXECUTIVE INTELLIGENCE
            ===================================== */}
 
         <DashboardPage>
@@ -1049,22 +1568,26 @@ export default async function Home() {
             }
 
             projectedFinish={
-              intelligence.projection
+              intelligence
+                .projection
                 .projectedFinish
             }
 
             projectedVariance={
-              intelligence.projection
+              intelligence
+                .projection
                 .projectedVariance
             }
 
             confidence={
-              intelligence.projection
+              intelligence
+                .projection
                 .confidence
             }
 
             additionalDonorsNeeded={
-              intelligence.projection
+              intelligence
+                .projection
                 .additionalDonorsNeeded
             }
 
@@ -1091,8 +1614,7 @@ export default async function Home() {
         </DashboardPage>
 
         {/* =====================================
-            PAGE 3 — RIVIERA BEEch
-            MEET THE BEES
+            PAGE 4 — MEET THE BEES
            ===================================== */}
 
         <DashboardPage>

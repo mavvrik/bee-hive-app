@@ -1,0 +1,190 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Collector {
+  id                     Int                      @id @default(autoincrement())
+  name                   String
+  role                   String
+  groupType              String
+  position               Int
+  active                 Boolean                  @default(true)
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  bio                    String?
+  funFact                String?
+  isEmployeeOfMonth      Boolean                  @default(false)
+  photoUrl               String?
+  preferredName          String?
+  profileTitle           String?
+  recognitionMessage     String?
+  showOnMeetTheBees      Boolean                  @default(true)
+  hourlyEntries          HourlyOperationalEntry[]
+  leadForagerReigns      LeadForagerReign[]
+  monthlyLeadForagerWins MonthlyLeadForager[]
+  emfEntries             QualityEmfEntry[]
+  stickEntries           WorkerStickEntry[]
+
+  @@index([active])
+  @@index([position])
+  @@index([showOnMeetTheBees])
+  @@index([isEmployeeOfMonth])
+}
+
+model WorkerStickEntry {
+  id               Int       @id @default(autoincrement())
+  collectorId      Int
+  entryDate        DateTime
+  totalSticks      Int       @default(0)
+  successfulSticks Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  collector        Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+
+  @@unique([collectorId, entryDate])
+  @@index([entryDate])
+  @@index([collectorId])
+  @@index([collectorId, entryDate])
+}
+
+model QualityEmfEntry {
+  id          Int       @id @default(autoincrement())
+  collectorId Int
+  entryDate   DateTime
+  emfCount    Int       @default(1)
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  collector   Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+
+  @@index([collectorId])
+  @@index([entryDate])
+  @@index([collectorId, entryDate])
+}
+
+model LeadForagerReign {
+  id                        Int        @id @default(1)
+  collectorId               Int?
+  benchmarkSuccessfulSticks Int        @default(0)
+  crownedAt                 DateTime?
+  updatedAt                 DateTime   @updatedAt
+  collector                 Collector? @relation(fields: [collectorId], references: [id])
+
+  @@index([collectorId])
+}
+
+model MonthlyLeadForager {
+  id               Int       @id @default(autoincrement())
+  year             Int
+  month            Int
+  collectorId      Int
+  successfulSticks Int
+  recordedAt       DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  collector        Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+
+  @@unique([year, month])
+  @@index([collectorId])
+  @@index([year, month])
+}
+
+model DailyCenterProduction {
+  id        Int      @id @default(autoincrement())
+  entryDate DateTime @unique
+  liters    Float
+  donors    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([entryDate])
+}
+
+model HourlyOperationalEntry {
+  id                 Int       @id @default(autoincrement())
+  collectorId        Int
+  entryDate          DateTime
+  operationalHour    Int
+  successfulSticks   Int       @default(0)
+  unsuccessfulSticks Int       @default(0)
+  lostVolumeMl       Float     @default(0)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  collector          Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+
+  @@unique([collectorId, entryDate, operationalHour])
+  @@index([entryDate])
+  @@index([entryDate, operationalHour])
+  @@index([collectorId])
+}
+
+model HiveSettings {
+  id                         Int      @id @default(1)
+  centerName                 String   @default("Riviera Beach 115")
+  monthlyGoal                Float    @default(3500)
+  weeksInPeriod              Float    @default(4.33)
+  currentMonth               Int
+  currentYear                Int
+  updatedAt                  DateTime @updatedAt
+  dashboardRotationSeconds   Int      @default(45)
+  closingHour                Int      @default(19)
+  openingHour                Int      @default(6)
+  centerOperatingDaysPerWeek Int      @default(7)
+  workerDaysPerWeek          Int      @default(5)
+}
+
+model MonthlyBudget {
+  id                   Int      @id @default(autoincrement())
+  fiscalYear           Int
+  month                Int
+  budgetLiters         Float
+  originalBudgetLiters Float
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  budgetDonors         Int      @default(0)
+  originalBudgetDonors Int      @default(0)
+
+  @@unique([fiscalYear, month])
+  @@index([fiscalYear])
+}
+
+model DashboardMetric {
+  id            Int             @id @default(autoincrement())
+  key           String          @unique
+  displayName   String
+  description   String?
+  unit          String?
+  decimalPlaces Int             @default(2)
+  publicSource  MetricSource    @default(CSL)
+  isVisible     Boolean         @default(true)
+  displayOrder  Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  readings      MetricReading[]
+
+  @@index([isVisible, displayOrder])
+}
+
+model MetricReading {
+  id         Int             @id @default(autoincrement())
+  metricId   Int
+  source     MetricSource
+  value      Float
+  recordedAt DateTime        @default(now())
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  metric     DashboardMetric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+
+  @@index([metricId, source, recordedAt])
+  @@index([recordedAt])
+}
+
+enum MetricSource {
+  CSL
+  HIVE
+  MANUAL
+}

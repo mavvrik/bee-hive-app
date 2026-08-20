@@ -1,6 +1,15 @@
 import BeezyStreakTour from "./BeezyStreakTour";
-
 import WorkerBeeCard from "./WorkerBeeCard";
+
+type SupportMetric = {
+  label: string;
+  value: number | string;
+
+  emphasis?:
+    | "gold"
+    | "green"
+    | "red";
+};
 
 type CollectorForBeeTeam = {
   id: number;
@@ -20,14 +29,22 @@ type CollectorForBeeTeam = {
 
   varianceFreeStreak?: number;
   streakVerifiedThrough?: Date | null;
+
+  supportMetrics?: SupportMetric[];
 };
 
 type BeeTeamProps = {
-  collectors: CollectorForBeeTeam[];
+  collectors:
+    CollectorForBeeTeam[];
+
+  mode:
+    | "phlebotomy"
+    | "support";
 };
 
 export default function BeeTeam({
   collectors,
+  mode,
 }: BeeTeamProps) {
   const activeBees =
     collectors.filter(
@@ -35,14 +52,29 @@ export default function BeeTeam({
         collector.active,
     );
 
+  const isPhlebotomy =
+    mode ===
+    "phlebotomy";
+
   const activeStreakers =
-    activeBees.filter(
-      (collector) =>
-        (
-          collector.varianceFreeStreak ??
-          0
-        ) > 0,
-    ).length;
+    isPhlebotomy
+      ? activeBees.filter(
+          (collector) =>
+            (
+              collector
+                .varianceFreeStreak ??
+              0
+            ) > 0,
+        ).length
+      : 0;
+
+  const uniquePrimaryRoles =
+    new Set(
+      activeBees.map(
+        (collector) =>
+          collector.role,
+      ),
+    ).size;
 
   return (
     <section className="bee-team-section">
@@ -52,7 +84,9 @@ export default function BeeTeam({
 
       <div className="honey-glow honey-glow-right" />
 
-      <BeezyStreakTour />
+      {isPhlebotomy && (
+        <BeezyStreakTour />
+      )}
 
       <header className="bee-team-header">
         <div className="bee-team-title-area">
@@ -62,12 +96,15 @@ export default function BeeTeam({
             </p>
 
             <h2>
-              Worker Bee Team
+              {isPhlebotomy
+                ? "Phlebotomy Meadow"
+                : "Support Meadow"}
             </h2>
 
             <p className="bee-team-subtitle">
-              Weekly performance across
-              the Hive
+              {isPhlebotomy
+                ? "Weekly stick performance from our collection Worker Bees"
+                : "Weekly contribution from the Worker Bees supporting every stage of collection"}
             </p>
           </div>
         </div>
@@ -75,39 +112,60 @@ export default function BeeTeam({
         <div className="team-summary-area">
           <div className="team-summary">
             <span>
-              Active Team
+              {isPhlebotomy
+                ? "Phlebotomy Team"
+                : "Support Team"}
             </span>
 
             <strong>
-              {
-                activeBees.length
-              }{" "}
+              {activeBees.length}{" "}
               Bees
             </strong>
 
             <small>
-              Weekly workforce
-              performance
+              {isPhlebotomy
+                ? "Weekly collection performance"
+                : "Weekly support performance"}
             </small>
           </div>
 
-          <div className="streak-summary">
-            <span className="streak-summary-icon">
-              🔥
-            </span>
-
-            <div>
-              <span>
-                Active Streaks
+          {isPhlebotomy ? (
+            <div className="streak-summary">
+              <span className="streak-summary-icon">
+                🔥
               </span>
 
-              <strong>
-                {
-                  activeStreakers
-                }
-              </strong>
+              <div>
+                <span>
+                  Active Streaks
+                </span>
+
+                <strong>
+                  {
+                    activeStreakers
+                  }
+                </strong>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="streak-summary">
+              <span className="streak-summary-icon">
+                🐝
+              </span>
+
+              <div>
+                <span>
+                  Role Coverage
+                </span>
+
+                <strong>
+                  {
+                    uniquePrimaryRoles
+                  }
+                </strong>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
@@ -124,9 +182,17 @@ export default function BeeTeam({
                   bee.id
                 }
 
+                mode={
+                  mode
+                }
+
                 name={
                   bee.preferredName ||
                   bee.name
+                }
+
+                primaryRole={
+                  bee.role
                 }
 
                 roleLabel={
@@ -154,6 +220,11 @@ export default function BeeTeam({
                   null
                 }
 
+                supportMetrics={
+                  bee.supportMetrics ??
+                  []
+                }
+
                 isManagement={
                   bee.role ===
                     "Management" ||
@@ -162,11 +233,7 @@ export default function BeeTeam({
                 }
 
                 isPhlebotomist={
-                  bee.role
-                    .toLowerCase()
-                    .includes(
-                      "phlebotomist",
-                    )
+                  isPhlebotomy
                 }
               />
             ),
@@ -225,25 +292,11 @@ export default function BeeTeam({
                 69,
                 5,
                 0.2
-              ),
-              inset
-              0 1px 0
-              rgba(
-                255,
-                255,
-                255,
-                0.88
               );
 
             box-sizing:
               border-box;
           }
-
-          /*
-           * ==========================================
-           * NORTH STAR BACKGROUND
-           * ==========================================
-           */
 
           .honeycomb-background {
             position: absolute;
@@ -260,94 +313,18 @@ export default function BeeTeam({
                 #c79014 12%,
                 transparent 12.5%,
                 transparent 87%,
-                #c79014 87.5%,
-                #c79014
+                #c79014 87.5%
               ),
               linear-gradient(
                 150deg,
                 #c79014 12%,
                 transparent 12.5%,
                 transparent 87%,
-                #c79014 87.5%,
-                #c79014
-              ),
-              linear-gradient(
-                30deg,
-                #c79014 12%,
-                transparent 12.5%,
-                transparent 87%,
-                #c79014 87.5%,
-                #c79014
-              ),
-              linear-gradient(
-                150deg,
-                #c79014 12%,
-                transparent 12.5%,
-                transparent 87%,
-                #c79014 87.5%,
-                #c79014
-              ),
-              linear-gradient(
-                60deg,
-                rgba(
-                  150,
-                  96,
-                  7,
-                  0.12
-                )
-                25%,
-                transparent 25.5%,
-                transparent 75%,
-                rgba(
-                  150,
-                  96,
-                  7,
-                  0.12
-                )
-                75%,
-                rgba(
-                  150,
-                  96,
-                  7,
-                  0.12
-                )
-              ),
-              linear-gradient(
-                60deg,
-                rgba(
-                  150,
-                  96,
-                  7,
-                  0.12
-                )
-                25%,
-                transparent 25.5%,
-                transparent 75%,
-                rgba(
-                  150,
-                  96,
-                  7,
-                  0.12
-                )
-                75%,
-                rgba(
-                  150,
-                  96,
-                  7,
-                  0.12
-                )
+                #c79014 87.5%
               );
 
             background-size:
               42px 74px;
-
-            background-position:
-              0 0,
-              0 0,
-              21px 37px,
-              21px 37px,
-              0 0,
-              21px 37px;
 
             pointer-events:
               none;
@@ -362,9 +339,7 @@ export default function BeeTeam({
               50%;
 
             filter:
-              blur(
-                34px
-              );
+              blur(34px);
 
             pointer-events:
               none;
@@ -401,12 +376,6 @@ export default function BeeTeam({
                 0.32
               );
           }
-
-          /*
-           * ==========================================
-           * HEADER
-           * ==========================================
-           */
 
           .bee-team-header {
             position: relative;
@@ -446,24 +415,21 @@ export default function BeeTeam({
           }
 
           .bee-team-eyebrow {
-            margin:
-              0 0 2px;
+            margin: 0 0 2px;
 
-            color:
-              #8e5b09;
+            color: #8e5b09;
 
             font-size:
               clamp(
-                0.52rem,
-                0.62vw,
-                0.66rem
+                .52rem,
+                .62vw,
+                .66rem
               );
 
-            font-weight:
-              1000;
+            font-weight: 1000;
 
             letter-spacing:
-              0.16em;
+              .16em;
 
             text-transform:
               uppercase;
@@ -472,10 +438,7 @@ export default function BeeTeam({
           .bee-team-header h2 {
             margin: 0;
 
-            overflow: hidden;
-
-            color:
-              #4a2803;
+            color: #4a2803;
 
             font-size:
               clamp(
@@ -484,53 +447,26 @@ export default function BeeTeam({
                 2rem
               );
 
-            font-weight:
-              1000;
+            font-weight: 1000;
 
-            line-height: 0.96;
-
-            letter-spacing:
-              -0.035em;
-
-            text-shadow:
-              0 1px 0
-              rgba(
-                255,
-                255,
-                255,
-                0.62
-              );
-
-            text-overflow:
-              ellipsis;
-
-            white-space:
-              nowrap;
+            line-height: .96;
           }
 
           .bee-team-subtitle {
             margin:
               4px 0 0;
 
-            color:
-              #795018;
+            color: #795018;
 
             font-size:
               clamp(
-                0.48rem,
-                0.57vw,
-                0.62rem
+                .48rem,
+                .57vw,
+                .62rem
               );
 
-            font-weight:
-              800;
+            font-weight: 800;
           }
-
-          /*
-           * ==========================================
-           * TEAM SUMMARY
-           * ==========================================
-           */
 
           .team-summary-area {
             display: flex;
@@ -554,14 +490,10 @@ export default function BeeTeam({
 
             width: 170px;
 
-            min-height:
-              46px;
+            min-height: 46px;
 
             padding:
               6px 11px;
-
-            overflow:
-              hidden;
 
             border:
               1px solid
@@ -569,7 +501,7 @@ export default function BeeTeam({
                 171,
                 107,
                 7,
-                0.46
+                .46
               );
 
             border-radius:
@@ -578,111 +510,46 @@ export default function BeeTeam({
             background:
               linear-gradient(
                 145deg,
-                rgba(
-                  255,
-                  252,
-                  225,
-                  0.98
-                ),
-                rgba(
-                  255,
-                  228,
-                  136,
-                  0.94
-                )
-              );
-
-            box-shadow:
-              0 4px 9px
-              rgba(
-                107,
-                65,
-                3,
-                0.11
-              ),
-              inset
-              0 1px 0
-              rgba(
-                255,
-                255,
-                255,
-                0.8
+                #fffce1,
+                #ffe488
               );
 
             text-align:
               right;
-
-            box-sizing:
-              border-box;
           }
 
           .team-summary span,
           .streak-summary div span {
-            overflow:
-              hidden;
-
-            color:
-              #8a5d12;
+            color: #8a5d12;
 
             font-size:
-              0.45rem;
+              .45rem;
 
-            font-weight:
-              1000;
+            font-weight: 1000;
 
             letter-spacing:
-              0.08em;
-
-            text-overflow:
-              ellipsis;
+              .08em;
 
             text-transform:
               uppercase;
-
-            white-space:
-              nowrap;
           }
 
           .team-summary strong {
-            overflow:
-              hidden;
-
-            color:
-              #432606;
+            color: #432606;
 
             font-size:
-              0.9rem;
-
-            line-height: 1.05;
-
-            text-overflow:
-              ellipsis;
-
-            white-space:
-              nowrap;
+              .9rem;
           }
 
           .team-summary small {
-            overflow:
-              hidden;
+            margin-top: 2px;
 
-            margin-top:
-              2px;
-
-            color:
-              #73511e;
+            color: #73511e;
 
             font-size:
-              0.48rem;
+              .48rem;
 
-            font-weight:
-              700;
-
-            text-overflow:
-              ellipsis;
-
-            white-space:
-              nowrap;
+            font-weight: 700;
           }
 
           .streak-summary {
@@ -705,7 +572,7 @@ export default function BeeTeam({
                 192,
                 112,
                 8,
-                0.45
+                .45
               );
 
             border-radius:
@@ -717,18 +584,6 @@ export default function BeeTeam({
                 #fff5c6,
                 #ffd15c
               );
-
-            box-shadow:
-              0 4px 9px
-              rgba(
-                107,
-                65,
-                3,
-                0.11
-              );
-
-            box-sizing:
-              border-box;
           }
 
           .streak-summary-icon {
@@ -748,20 +603,11 @@ export default function BeeTeam({
                 255,
                 255,
                 255,
-                0.58
+                .58
               );
 
             font-size:
-              0.9rem;
-
-            box-shadow:
-              0 0 9px
-              rgba(
-                240,
-                145,
-                12,
-                0.32
-              );
+              .9rem;
           }
 
           .streak-summary div {
@@ -772,20 +618,11 @@ export default function BeeTeam({
           }
 
           .streak-summary strong {
-            color:
-              #512c04;
+            color: #512c04;
 
             font-size:
-              0.95rem;
-
-            line-height: 1;
+              .95rem;
           }
-
-          /*
-           * ==========================================
-           * WORKFORCE STAGE
-           * ==========================================
-           */
 
           .bee-performance-stage {
             position: relative;
@@ -799,11 +636,9 @@ export default function BeeTeam({
             min-width: 0;
             min-height: 0;
 
-            padding:
-              5px;
+            padding: 5px;
 
-            overflow:
-              hidden;
+            overflow: hidden;
 
             border:
               1px solid
@@ -811,41 +646,19 @@ export default function BeeTeam({
                 156,
                 96,
                 6,
-                0.14
+                .14
               );
 
             border-radius:
               17px;
 
             background:
-              linear-gradient(
-                180deg,
-                rgba(
-                  255,
-                  246,
-                  202,
-                  0.4
-                ),
-                rgba(
-                  255,
-                  231,
-                  146,
-                  0.22
-                )
-              );
-
-            box-shadow:
-              inset
-              0 1px 0
               rgba(
                 255,
-                255,
-                255,
-                0.54
+                246,
+                202,
+                .4
               );
-
-            box-sizing:
-              border-box;
           }
 
           .stage-highlight {
@@ -855,9 +668,7 @@ export default function BeeTeam({
               50%;
 
             filter:
-              blur(
-                24px
-              );
+              blur(24px);
 
             pointer-events:
               none;
@@ -875,7 +686,7 @@ export default function BeeTeam({
                 255,
                 255,
                 224,
-                0.42
+                .42
               );
           }
 
@@ -891,15 +702,9 @@ export default function BeeTeam({
                 226,
                 143,
                 17,
-                0.18
+                .18
               );
           }
-
-          /*
-           * ==========================================
-           * GRID
-           * ==========================================
-           */
 
           .bee-performance-grid {
             position: relative;
@@ -935,20 +740,13 @@ export default function BeeTeam({
             min-width: 0;
             min-height: 0;
 
-            overflow:
-              hidden;
+            overflow: hidden;
           }
 
           .bee-performance-grid > * {
             min-width: 0;
             min-height: 0;
           }
-
-          /*
-           * ==========================================
-           * RESPONSIVE
-           * ==========================================
-           */
 
           @media (
             max-width: 1100px
@@ -965,7 +763,8 @@ export default function BeeTeam({
                 visible;
             }
 
-            .bee-performance-stage {
+            .bee-performance-stage,
+            .bee-performance-grid {
               overflow:
                 visible;
             }
@@ -982,9 +781,6 @@ export default function BeeTeam({
 
               grid-template-rows:
                 auto;
-
-              overflow:
-                visible;
             }
           }
 
@@ -1004,11 +800,6 @@ export default function BeeTeam({
                 column;
             }
 
-            .bee-team-header h2 {
-              white-space:
-                normal;
-            }
-
             .team-summary-area {
               width: 100%;
             }
@@ -1020,10 +811,6 @@ export default function BeeTeam({
 
               text-align:
                 left;
-            }
-
-            .streak-summary {
-              flex: 0 0 auto;
             }
 
             .bee-performance-grid {

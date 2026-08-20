@@ -11,9 +11,24 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const workforceRoles = [
+  ["PHLEBOTOMIST", "Phlebotomist"],
+  ["GROUP_LEAD", "Group Lead"],
+  ["MANAGEMENT", "Management"],
+  ["PROCESSOR", "Processor"],
+  ["RECEPTION_TECH", "Reception Tech"],
+  ["MSA", "MSA"],
+  ["DST", "DST"],
+  ["OTHER", "Other"],
+] as const;
+
 export default async function WorkerRosterPage() {
   const collectors =
     await prisma.collector.findMany({
+      include: {
+        roleAssignments: true,
+      },
+
       orderBy: [
         {
           active: "desc",
@@ -62,7 +77,7 @@ export default async function WorkerRosterPage() {
   return (
     <AdminShell
       pageTitle="Worker Bees"
-      pageDescription="Manage the Riviera Beach team, Meet the Bees profiles, recognition, and worker visibility."
+      pageDescription="Manage the Riviera Beach team, role eligibility, Meet the Bees profiles, recognition, and worker visibility."
       activePath="/settings/workers"
     >
       <section className="roster-summary">
@@ -136,15 +151,16 @@ export default async function WorkerRosterPage() {
           </p>
 
           <h2>
-            Stick Performance
+            Performance Management
           </h2>
 
           <p>
-            Individual Worker Bees are
-            measured using total sticks
-            and successful sticks. Liters
-            remain a center-level
-            production metric.
+            Worker Bees can hold a primary
+            role plus additional eligible
+            cross-trained roles. Performance
+            can then be measured according
+            to the work each employee is
+            qualified to perform.
           </p>
         </div>
 
@@ -152,7 +168,7 @@ export default async function WorkerRosterPage() {
           href="/settings/workers/performance"
           className="performance-button"
         >
-          View Stick Performance →
+          View Performance →
         </Link>
       </section>
 
@@ -189,7 +205,9 @@ export default async function WorkerRosterPage() {
           </label>
 
           <label className="form-field">
-            <span>Role</span>
+            <span>
+              Primary Role
+            </span>
 
             <select
               name="role"
@@ -208,6 +226,22 @@ export default async function WorkerRosterPage() {
                 Management
               </option>
 
+              <option value="Processor">
+                Processor
+              </option>
+
+              <option value="Reception Tech">
+                Reception Tech
+              </option>
+
+              <option value="MSA">
+                MSA
+              </option>
+
+              <option value="DST">
+                DST
+              </option>
+
               <option value="Other">
                 Other
               </option>
@@ -215,7 +249,9 @@ export default async function WorkerRosterPage() {
           </label>
 
           <label className="form-field">
-            <span>Group Type</span>
+            <span>
+              Group Type
+            </span>
 
             <select
               name="groupType"
@@ -248,6 +284,50 @@ export default async function WorkerRosterPage() {
               required
             />
           </label>
+
+          <div className="new-worker-role-section">
+            <div className="role-heading-row">
+              <div>
+                <span className="role-section-title">
+                  Eligible Roles
+                </span>
+
+                <p className="role-help">
+                  Select every additional
+                  role this Worker Bee is
+                  trained and eligible to
+                  perform. The Primary Role
+                  above is automatically
+                  included.
+                </p>
+              </div>
+
+              <span className="role-badge">
+                Cross-Training
+              </span>
+            </div>
+
+            <div className="role-checkbox-grid">
+              {workforceRoles.map(
+                ([value, label]) => (
+                  <label
+                    key={value}
+                    className="role-checkbox"
+                  >
+                    <input
+                      type="checkbox"
+                      name="eligibleRoles"
+                      value={value}
+                    />
+
+                    <span>
+                      {label}
+                    </span>
+                  </label>
+                ),
+              )}
+            </div>
+          </div>
 
           <label className="checkbox-field add-active">
             <input
@@ -288,8 +368,7 @@ export default async function WorkerRosterPage() {
           </span>
         </div>
 
-        {activeCollectors.length >
-        0 ? (
+        {activeCollectors.length > 0 ? (
           <div className="worker-grid">
             {activeCollectors.map(
               (collector) => {
@@ -419,7 +498,9 @@ export default async function WorkerRosterPage() {
                         </label>
 
                         <label className="form-field">
-                          <span>Role</span>
+                          <span>
+                            Primary Role
+                          </span>
 
                           <select
                             name="role"
@@ -438,6 +519,22 @@ export default async function WorkerRosterPage() {
 
                             <option value="Management">
                               Management
+                            </option>
+
+                            <option value="Processor">
+                              Processor
+                            </option>
+
+                            <option value="Reception Tech">
+                              Reception Tech
+                            </option>
+
+                            <option value="MSA">
+                              MSA
+                            </option>
+
+                            <option value="DST">
+                              DST
                             </option>
 
                             <option value="Other">
@@ -502,23 +599,102 @@ export default async function WorkerRosterPage() {
                         </label>
                       </div>
 
+                      <div className="role-eligibility-section">
+                        <div className="role-heading-row">
+                          <div>
+                            <div className="profile-section-label no-border">
+                              Cross-Trained /
+                              Eligible Roles
+                            </div>
+
+                            <p className="role-help">
+                              Select every
+                              role this
+                              Worker Bee is
+                              trained and
+                              eligible to
+                              perform.
+                            </p>
+                          </div>
+
+                          <span className="role-badge">
+                            {
+                              collector
+                                .roleAssignments
+                                .length
+                            }{" "}
+                            Assigned
+                          </span>
+                        </div>
+
+                        <div className="role-checkbox-grid">
+                          {workforceRoles.map(
+                            ([
+                              value,
+                              label,
+                            ]) => {
+                              const assigned =
+                                collector.roleAssignments.some(
+                                  (
+                                    assignment,
+                                  ) =>
+                                    assignment.role ===
+                                    value,
+                                );
+
+                              return (
+                                <label
+                                  key={
+                                    value
+                                  }
+                                  className={`role-checkbox ${
+                                    assigned
+                                      ? "selected"
+                                      : ""
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    name="eligibleRoles"
+                                    value={
+                                      value
+                                    }
+                                    defaultChecked={
+                                      assigned
+                                    }
+                                  />
+
+                                  <span>
+                                    {
+                                      label
+                                    }
+                                  </span>
+                                </label>
+                              );
+                            },
+                          )}
+                        </div>
+                      </div>
+
                       <div className="profile-section-label profile-gap">
                         Meet the Bees Profile
                       </div>
 
                       <div className="profile-form-grid">
                         <div className="full-width">
-  <WorkerPhotoUpload
-    workerId={collector.id}
-    workerName={
-      collector.preferredName ||
-      collector.name
-    }
-    initialPhotoUrl={
-      collector.photoUrl
-    }
-  />
-</div>
+                          <WorkerPhotoUpload
+                            workerId={
+                              collector.id
+                            }
+                            workerName={
+                              collector.preferredName ||
+                              collector.name
+                            }
+                            initialPhotoUrl={
+                              collector.photoUrl
+                            }
+                          />
+                        </div>
 
                         <label className="form-field full-width">
                           <span>
@@ -669,8 +845,7 @@ export default async function WorkerRosterPage() {
         )}
       </section>
 
-      {inactiveCollectors.length >
-        0 && (
+      {inactiveCollectors.length > 0 && (
         <section className="inactive-section">
           <div className="section-heading">
             <div>
@@ -831,7 +1006,7 @@ export default async function WorkerRosterPage() {
           }
 
           .performance-banner p:not(.section-eyebrow) {
-            max-width: 680px;
+            max-width: 720px;
             margin: 0;
             color: #f5e8bd;
             line-height: 1.5;
@@ -911,7 +1086,8 @@ export default async function WorkerRosterPage() {
           }
 
           .form-field > span,
-          .profile-section-label {
+          .profile-section-label,
+          .role-section-title {
             color: #5d4b1c;
             font-size: .72rem;
             font-weight: 900;
@@ -990,6 +1166,88 @@ export default async function WorkerRosterPage() {
           .primary-button {
             height: 42px;
             padding: 0 18px;
+          }
+
+          .new-worker-role-section {
+            grid-column: 1 / -1;
+            padding: 16px;
+            border: 1px solid #eadba8;
+            border-radius: 14px;
+            background: #fff9e7;
+          }
+
+          .role-eligibility-section {
+            margin-top: 18px;
+            padding: 16px;
+            border: 1px solid #eadba8;
+            border-radius: 14px;
+            background: #fffdf5;
+          }
+
+          .role-heading-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 18px;
+          }
+
+          .role-help {
+            max-width: 650px;
+            margin: 7px 0 14px;
+            color: #75694c;
+            font-size: .8rem;
+            line-height: 1.45;
+          }
+
+          .role-badge {
+            flex: 0 0 auto;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: #f5e7af;
+            color: #775800;
+            font-size: .64rem;
+            font-weight: 900;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+          }
+
+          .role-checkbox-grid {
+            display: grid;
+            grid-template-columns:
+              repeat(4, minmax(0, 1fr));
+            gap: 10px;
+          }
+
+          .role-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            padding: 10px 11px;
+            border: 1px solid #e4d49e;
+            border-radius: 10px;
+            background: white;
+            color: #554519;
+            font-size: .78rem;
+            font-weight: 800;
+            cursor: pointer;
+          }
+
+          .role-checkbox.selected {
+            border-color: #d1a92f;
+            background: #fff5c9;
+          }
+
+          .role-checkbox input {
+            flex: 0 0 auto;
+            width: 17px;
+            height: 17px;
+            accent-color: #d29a0a;
+          }
+
+          .no-border {
+            padding-bottom: 0;
+            border-bottom: none !important;
           }
 
           .worker-grid {
@@ -1251,6 +1509,11 @@ export default async function WorkerRosterPage() {
             .worker-grid {
               grid-template-columns: 1fr;
             }
+
+            .role-checkbox-grid {
+              grid-template-columns:
+                repeat(2, minmax(0, 1fr));
+            }
           }
 
           @media (max-width: 700px) {
@@ -1263,7 +1526,8 @@ export default async function WorkerRosterPage() {
 
             .performance-banner,
             .section-heading,
-            .worker-card-header {
+            .worker-card-header,
+            .role-heading-row {
               align-items: flex-start;
               flex-direction: column;
             }
@@ -1285,6 +1549,10 @@ export default async function WorkerRosterPage() {
               align-items: flex-start;
               flex-direction: column;
               gap: 10px;
+            }
+
+            .role-checkbox-grid {
+              grid-template-columns: 1fr;
             }
           }
         `}
