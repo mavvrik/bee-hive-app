@@ -8,19 +8,57 @@ import {
   useState,
 } from "react";
 
+type DailyComparison = {
+  dayName: string;
+
+  currentDate: string;
+  previousDate: string;
+
+  currentValue: number | null;
+  previousValue: number | null;
+
+  difference: number | null;
+  percentChange: number | null;
+
+  direction:
+    | "UP"
+    | "DOWN"
+    | "FLAT"
+    | "NONE";
+
+  outcome:
+    | "POSITIVE"
+    | "NEGATIVE"
+    | "NEUTRAL"
+    | "NO_DATA";
+};
+
 type IntelligenceMetric = {
-  id: number;
+  metricId: number;
+
+  key: string;
   displayName: string;
-  description: string | null;
+
   unit: string | null;
   decimalPlaces: number;
-  value: number | null;
-  source: "CSL" | "HIVE" | "MANUAL";
+
+  improvementDirection:
+    string;
+
+  source:
+    | "CSL"
+    | "HIVE"
+    | "MANUAL";
+
+  days:
+    DailyComparison[];
 };
 
 type ExecutiveIntelligencePageProps = {
   centerName: string;
-  metrics: IntelligenceMetric[];
+
+  metrics:
+    IntelligenceMetric[];
 
   todaysLitersTarget: number;
   todaysLitersCollected: number;
@@ -34,8 +72,11 @@ type ExecutiveIntelligencePageProps = {
   unsuccessfulSticks: number;
   lostVolumeLiters: number;
 
-  topWorkerName?: string | null;
-  topWorkerPercentage?: number | null;
+  topWorkerName?:
+    string | null;
+
+  topWorkerPercentage?:
+    number | null;
 };
 
 function formatMetricValue(
@@ -43,8 +84,10 @@ function formatMetricValue(
   decimalPlaces: number,
   unit: string | null,
 ) {
-  if (value === null) {
-    return "No reading";
+  if (
+    value === null
+  ) {
+    return "—";
   }
 
   const formatted =
@@ -59,15 +102,25 @@ function formatMetricValue(
       },
     );
 
-  if (!unit) {
-    return formatted;
-  }
-
-  if (unit === "%") {
+  if (
+    unit === "%"
+  ) {
     return `${formatted}%`;
   }
 
-  return `${formatted} ${unit}`;
+  if (
+    unit === "L"
+  ) {
+    return `${formatted} L`;
+  }
+
+  if (
+    unit === "min"
+  ) {
+    return `${formatted}m`;
+  }
+
+  return formatted;
 }
 
 function formatLiters(
@@ -97,6 +150,55 @@ function clampPercentage(
   );
 }
 
+function arrowFor(
+  direction:
+    DailyComparison["direction"],
+) {
+  if (
+    direction ===
+    "UP"
+  ) {
+    return "↑";
+  }
+
+  if (
+    direction ===
+    "DOWN"
+  ) {
+    return "↓";
+  }
+
+  if (
+    direction ===
+    "FLAT"
+  ) {
+    return "→";
+  }
+
+  return "";
+}
+
+function outcomeClass(
+  outcome:
+    DailyComparison["outcome"],
+) {
+  if (
+    outcome ===
+    "POSITIVE"
+  ) {
+    return "positive";
+  }
+
+  if (
+    outcome ===
+    "NEGATIVE"
+  ) {
+    return "negative";
+  }
+
+  return "neutral";
+}
+
 export default function ExecutiveIntelligencePage({
   centerName,
   metrics,
@@ -113,15 +215,19 @@ export default function ExecutiveIntelligencePage({
   unsuccessfulSticks,
   lostVolumeLiters,
 
-  topWorkerName = null,
-  topWorkerPercentage = null,
+  topWorkerName =
+    null,
+
+  topWorkerPercentage =
+    null,
 }: ExecutiveIntelligencePageProps) {
   const [
     now,
     setNow,
-  ] = useState<Date | null>(
-    null,
-  );
+  ] =
+    useState<Date | null>(
+      null,
+    );
 
   useEffect(() => {
     setNow(
@@ -138,18 +244,11 @@ export default function ExecutiveIntelligencePage({
         1000,
       );
 
-    return () => {
+    return () =>
       window.clearInterval(
         timer,
       );
-    };
   }, []);
-
-  /*
-   * ==========================================
-   * TODAY'S MISSION
-   * ==========================================
-   */
 
   const remainingLiters =
     Math.max(
@@ -159,11 +258,13 @@ export default function ExecutiveIntelligencePage({
     );
 
   const missionPercentage =
-    todaysLitersTarget > 0
+    todaysLitersTarget >
+    0
       ? (
           todaysLitersCollected /
           todaysLitersTarget
-        ) * 100
+        ) *
+        100
       : 0;
 
   const missionProgress =
@@ -171,29 +272,19 @@ export default function ExecutiveIntelligencePage({
       missionPercentage,
     );
 
-  /*
-   * ==========================================
-   * STICK PERFORMANCE
-   * ==========================================
-   */
-
   const totalAttempts =
     successfulSticks +
     unsuccessfulSticks;
 
   const successfulStickRate =
-    totalAttempts > 0
+    totalAttempts >
+    0
       ? (
           successfulSticks /
           totalAttempts
-        ) * 100
+        ) *
+        100
       : 0;
-
-  /*
-   * ==========================================
-   * STATUS
-   * ==========================================
-   */
 
   const status =
     useMemo(() => {
@@ -243,14 +334,9 @@ export default function ExecutiveIntelligencePage({
       projectedVariance,
     ]);
 
-  /*
-   * ==========================================
-   * INTELLIGENCE SUMMARY
-   * ==========================================
-   */
-
   const intelligenceSummary =
-    projectedVariance >= 0
+    projectedVariance >=
+    0
       ? `Current production is projected to finish ${formatLiters(
           projectedVariance,
         )} above today's liters target.`
@@ -261,60 +347,29 @@ export default function ExecutiveIntelligencePage({
         )} below today's liters target.`;
 
   const beezyMessage =
-    projectedVariance >= 5
+    projectedVariance >=
+    5
       ? "The Hive is outperforming today's requirement. Protect the pace and finish strong."
-      : projectedVariance >= 0
+      : projectedVariance >=
+          0
         ? "The Hive is currently on pace. Maintain consistency through the remainder of the day."
         : `We still need ${formatLiters(
             remainingLiters,
           )} toward today's target. Focus the team on closing the remaining gap.`;
 
-  /*
-   * Keep the command center readable.
-   * If many KPIs are configured, show
-   * the first six on television.
-   */
-
-  const visibleMetrics =
-    metrics.slice(
-      0,
-      6,
-    );
+  const dayHeaders =
+    metrics[0]
+      ?.days ??
+    [];
 
   return (
     <section className="intelligence-page">
-      {/* =====================================
-          BACKGROUND ATMOSPHERE
-         ===================================== */}
-
       <div className="command-grid" />
-
-      <div className="ambient ambient-one" />
-      <div className="ambient ambient-two" />
-
-      <div className="hex-decoration hex-decoration-one">
-        <span />
-        <span />
-        <span />
-        <span />
-      </div>
-
-      <div className="hex-decoration hex-decoration-two">
-        <span />
-        <span />
-        <span />
-      </div>
-
-      {/* =====================================
-          HEADER
-         ===================================== */}
 
       <header className="intelligence-header">
         <div className="header-brand">
           <div className="hive-mark">
-            <span>
-              H
-            </span>
+            H
           </div>
 
           <div>
@@ -350,9 +405,7 @@ export default function ExecutiveIntelligencePage({
               Local Time
             </span>
 
-            <strong
-              suppressHydrationWarning
-            >
+            <strong suppressHydrationWarning>
               {now
                 ? now.toLocaleTimeString(
                     "en-US",
@@ -370,14 +423,8 @@ export default function ExecutiveIntelligencePage({
         </div>
       </header>
 
-      {/* =====================================
-          PRIMARY INTELLIGENCE GRID
-         ===================================== */}
-
       <main className="command-layout">
-        {/* ===================================
-            LEFT — TODAY'S MISSION
-           =================================== */}
+        {/* LEFT */}
 
         <section className="mission-panel command-panel">
           <div className="panel-heading">
@@ -389,10 +436,6 @@ export default function ExecutiveIntelligencePage({
               <h2>
                 Daily Production
               </h2>
-            </div>
-
-            <div className="mission-day-indicator">
-              Live
             </div>
           </div>
 
@@ -476,9 +519,7 @@ export default function ExecutiveIntelligencePage({
           </div>
         </section>
 
-        {/* ===================================
-            CENTER — INTELLIGENCE CORE
-           =================================== */}
+        {/* CENTER */}
 
         <section className="core-panel command-panel">
           <div className="panel-heading">
@@ -488,7 +529,7 @@ export default function ExecutiveIntelligencePage({
               </p>
 
               <h2>
-                Performance Network
+                Weekly Comparative Intelligence
               </h2>
             </div>
 
@@ -497,10 +538,8 @@ export default function ExecutiveIntelligencePage({
             </div>
           </div>
 
-          <div className="projection-core">
-            <div className="projection-glow" />
-
-            <div className="projection-hex">
+          <div className="projection-bar">
+            <div>
               <span>
                 Projected Finish
               </span>
@@ -510,85 +549,148 @@ export default function ExecutiveIntelligencePage({
                   projectedFinish,
                 )}
               </strong>
+            </div>
 
-              <small
+            <div>
+              <span>
+                Projected Variance
+              </span>
+
+              <strong
                 className={
                   projectedVariance >=
                   0
-                    ? "variance-positive"
-                    : "variance-negative"
+                    ? "good"
+                    : "bad"
                 }
               >
                 {projectedVariance >=
                 0
                   ? "+"
-                  : "-"}
+                  : ""}
                 {formatLiters(
-                  Math.abs(
-                    projectedVariance,
-                  ),
-                )}{" "}
-                variance
-              </small>
+                  projectedVariance,
+                )}
+              </strong>
             </div>
           </div>
 
-          <div className="metric-honeycomb">
-            {visibleMetrics.length ===
-            0 ? (
-              <div className="empty-metrics">
-                No executive KPIs are
-                currently configured.
-              </div>
-            ) : (
-              visibleMetrics.map(
-                (
-                  metric,
-                  index,
-                ) => (
-                  <article
-                    key={
-                      metric.id
-                    }
-                    className={`metric-hex metric-hex-${
-                      index + 1
-                    }`}
-                    title={
-                      metric.description ??
-                      undefined
-                    }
-                  >
-                    <div>
-                      <span>
-                        {
-                          metric.displayName
-                        }
-                      </span>
+          <div className="weekly-table-wrap">
+            <table className="weekly-table">
+              <thead>
+                <tr>
+                  <th>
+                    Metric
+                  </th>
 
-                      <strong>
-                        {formatMetricValue(
-                          metric.value,
-                          metric.decimalPlaces,
-                          metric.unit,
+                  {dayHeaders.map(
+                    (
+                      day,
+                    ) => (
+                      <th
+                        key={
+                          day.currentDate
+                        }
+                      >
+                        {day.dayName.slice(
+                          0,
+                          3,
                         )}
-                      </strong>
+                      </th>
+                    ),
+                  )}
+                </tr>
+              </thead>
 
-                      <small>
-                        {
-                          metric.source
-                        }
-                      </small>
-                    </div>
-                  </article>
-                ),
-              )
-            )}
+              <tbody>
+                {metrics.map(
+                  (
+                    metric,
+                  ) => (
+                    <tr
+                      key={
+                        metric.metricId
+                      }
+                    >
+                      <td className="metric-name">
+                        <strong>
+                          {
+                            metric.displayName
+                          }
+                        </strong>
+
+                        <small>
+                          {
+                            metric.source
+                          }
+                        </small>
+                      </td>
+
+                      {metric.days.map(
+                        (
+                          day,
+                        ) => (
+                          <td
+                            key={
+                              day.currentDate
+                            }
+                          >
+                            <div className="day-cell">
+                              <strong>
+                                {formatMetricValue(
+                                  day.currentValue,
+                                  metric.decimalPlaces,
+                                  metric.unit,
+                                )}
+                              </strong>
+
+                              {day.direction !==
+                              "NONE" ? (
+                                <span
+                                  className={outcomeClass(
+                                    day.outcome,
+                                  )}
+                                >
+                                  {arrowFor(
+                                    day.direction,
+                                  )}
+
+                                  {day.percentChange !==
+                                  null
+                                    ? ` ${Math.abs(
+                                        day.percentChange,
+                                      ).toFixed(
+                                        1,
+                                      )}%`
+                                    : ""}
+                                </span>
+                              ) : (
+                                <span className="neutral">
+                                  —
+                                </span>
+                              )}
+
+                              <small>
+                                Prev{" "}
+                                {formatMetricValue(
+                                  day.previousValue,
+                                  metric.decimalPlaces,
+                                  metric.unit,
+                                )}
+                              </small>
+                            </div>
+                          </td>
+                        ),
+                      )}
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
           </div>
         </section>
 
-        {/* ===================================
-            RIGHT — HIVE PERFORMANCE
-           =================================== */}
+        {/* RIGHT */}
 
         <section className="performance-panel command-panel">
           <div className="panel-heading">
@@ -630,24 +732,16 @@ export default function ExecutiveIntelligencePage({
           </div>
 
           <div className="stick-performance-card">
-            <div className="stick-rate-header">
-              <div>
-                <span>
-                  Successful Stick Rate
-                </span>
+            <span>
+              Successful Stick Rate
+            </span>
 
-                <strong>
-                  {successfulStickRate.toFixed(
-                    1,
-                  )}
-                  %
-                </strong>
-              </div>
-
-              <div className="stick-rate-icon">
-                ✓
-              </div>
-            </div>
+            <strong>
+              {successfulStickRate.toFixed(
+                1,
+              )}
+              %
+            </strong>
 
             <div className="stick-rate-track">
               <div
@@ -686,7 +780,7 @@ export default function ExecutiveIntelligencePage({
               </strong>
             </article>
 
-            <article className="lost-volume-card">
+            <article className="wide">
               <span>
                 Lost Volume
               </span>
@@ -698,38 +792,11 @@ export default function ExecutiveIntelligencePage({
               </strong>
             </article>
           </div>
-
-          <div className="trajectory-card">
-            <div>
-              <span>
-                Trajectory
-              </span>
-
-              <strong>
-                {
-                  status.shortLabel
-                }
-              </strong>
-            </div>
-
-            <div
-              className={`trajectory-light ${status.className}`}
-            />
-          </div>
         </section>
 
-        {/* ===================================
-            BOTTOM LEFT / CENTER
-            INTELLIGENCE SUMMARY
-           =================================== */}
+        {/* SUMMARY */}
 
         <section className="summary-panel command-panel">
-          <div className="summary-light" />
-
-          <div className="summary-icon">
-            ◆
-          </div>
-
           <div>
             <p className="eyebrow">
               Hive Intelligence
@@ -747,19 +814,16 @@ export default function ExecutiveIntelligencePage({
           </div>
         </section>
 
-        {/* ===================================
-            BOTTOM RIGHT — BEEZY ADVISOR
-           =================================== */}
+        {/* BEEZY */}
 
         <section className="beezy-panel command-panel">
-          <div className="beezy-image-wrap">
-  <Beezy
-    size={100}
-    className="beezy-image"
-  />
-</div>
+          <Beezy
+            size={
+              92
+            }
+          />
 
-          <div className="beezy-copy">
+          <div>
             <p className="eyebrow">
               Beezy Says
             </p>
@@ -775,43 +839,12 @@ export default function ExecutiveIntelligencePage({
         </section>
       </main>
 
-      {/* =====================================
-          FOOTER
-         ===================================== */}
-
-      <footer className="intelligence-footer">
-        <div className="footer-status">
-          <span className="status-dot" />
-
-          <div>
-            <span>
-              Intelligence Status
-            </span>
-
-            <strong>
-              HIVE Systems Active
-            </strong>
-          </div>
-        </div>
-
-        <p>
-          Every Drop Counts. Every Bee
-          Matters.
-        </p>
-
-        <div className="powered-by">
-          <span>
-            Powered by
-          </span>
-
-          <strong>
-            THE HIVE
-          </strong>
-        </div>
-      </footer>
-
       <style>
         {`
+          * {
+            box-sizing: border-box;
+          }
+
           .intelligence-page {
             position: relative;
             display: flex;
@@ -822,16 +855,12 @@ export default function ExecutiveIntelligencePage({
             min-height: 0;
             overflow: hidden;
             padding: 18px 22px 14px;
+
             background:
               radial-gradient(
                 circle at 20% 20%,
-                rgba(242, 183, 34, 0.08),
+                rgba(242,183,34,.08),
                 transparent 28%
-              ),
-              radial-gradient(
-                circle at 84% 72%,
-                rgba(73, 135, 159, 0.08),
-                transparent 30%
               ),
               linear-gradient(
                 145deg,
@@ -839,119 +868,41 @@ export default function ExecutiveIntelligencePage({
                 #18201c 48%,
                 #0d1210
               );
+
             color: #f7f2df;
             font-family:
               Arial,
               Helvetica,
               sans-serif;
-            box-sizing: border-box;
           }
 
           .command-grid {
             position: absolute;
             inset: 0;
-            opacity: 0.18;
             pointer-events: none;
+            opacity: .15;
+
             background-image:
               linear-gradient(
-                rgba(255,255,255,0.025)
-                1px,
+                rgba(255,255,255,.025) 1px,
                 transparent 1px
               ),
               linear-gradient(
                 90deg,
-                rgba(255,255,255,0.025)
-                1px,
+                rgba(255,255,255,.025) 1px,
                 transparent 1px
               );
+
             background-size:
               34px 34px;
           }
 
-          .ambient {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(70px);
-            pointer-events: none;
-          }
-
-          .ambient-one {
-            top: -12%;
-            left: -5%;
-            width: 340px;
-            height: 340px;
-            background:
-              rgba(
-                245,
-                183,
-                32,
-                0.15
-              );
-          }
-
-          .ambient-two {
-            right: -8%;
-            bottom: -10%;
-            width: 420px;
-            height: 420px;
-            background:
-              rgba(
-                27,
-                118,
-                148,
-                0.12
-              );
-          }
-
-          .hex-decoration {
-            position: absolute;
-            display: grid;
-            grid-template-columns:
-              repeat(
-                2,
-                34px
-              );
-            gap: 4px;
-            opacity: 0.08;
-            pointer-events: none;
-          }
-
-          .hex-decoration span {
-            width: 34px;
-            height: 30px;
-            border:
-              2px solid
-              #efb523;
-            clip-path:
-              polygon(
-                25% 0,
-                75% 0,
-                100% 50%,
-                75% 100%,
-                25% 100%,
-                0 50%
-              );
-          }
-
-          .hex-decoration-one {
-            top: 19%;
-            left: 1%;
-          }
-
-          .hex-decoration-two {
-            right: 2%;
-            bottom: 17%;
-          }
-
           .intelligence-header {
             position: relative;
-            z-index: 10;
+            z-index: 5;
             display: flex;
             align-items: center;
-            justify-content:
-              space-between;
-            gap: 18px;
-            flex: 0 0 auto;
+            justify-content: space-between;
           }
 
           .header-brand {
@@ -965,15 +916,18 @@ export default function ExecutiveIntelligencePage({
             width: 54px;
             height: 48px;
             place-items: center;
+
             background:
               linear-gradient(
                 145deg,
                 #f6c33c,
                 #b57c08
               );
+
             color: #191408;
             font-size: 1.6rem;
             font-weight: 1000;
+
             clip-path:
               polygon(
                 25% 0,
@@ -983,56 +937,33 @@ export default function ExecutiveIntelligencePage({
                 25% 100%,
                 0 50%
               );
-            box-shadow:
-              0 0 26px
-              rgba(
-                240,
-                183,
-                31,
-                0.28
-              );
           }
 
           .eyebrow {
             margin: 0 0 4px;
             color: #e9ae24;
-            font-size:
-              clamp(
-                0.54rem,
-                0.65vw,
-                0.68rem
-              );
+            font-size: .58rem;
             font-weight: 1000;
-            letter-spacing:
-              0.15em;
-            text-transform:
-              uppercase;
+            letter-spacing: .14em;
+            text-transform: uppercase;
           }
 
-          .intelligence-header h1 {
+          h1 {
             margin: 0;
             color: #fff7d5;
-            font-size:
-              clamp(
-                2rem,
-                2.8vw,
-                3rem
-              );
-            line-height: 0.96;
-            letter-spacing:
-              -0.04em;
+            font-size: 2.3rem;
+          }
+
+          h2 {
+            margin: 0;
+            color: #fff6cf;
+            font-size: 1.02rem;
           }
 
           .center-name {
-            margin: 6px 0 0;
+            margin: 4px 0 0;
             color: #9ca99f;
-            font-size:
-              clamp(
-                0.72rem,
-                0.9vw,
-                0.92rem
-              );
-            font-weight: 800;
+            font-size: .8rem;
           }
 
           .header-right {
@@ -1044,54 +975,19 @@ export default function ExecutiveIntelligencePage({
           .command-clock {
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            min-width: 150px;
-            padding:
-              9px 13px;
-            border:
-              1px solid
-              rgba(
-                255,
-                255,
-                255,
-                0.08
-              );
-            border-radius:
-              12px;
-            background:
-              rgba(
-                255,
-                255,
-                255,
-                0.035
-              );
-            box-shadow:
-              inset 0 1px 0
-              rgba(
-                255,
-                255,
-                255,
-                0.04
-              );
+            min-width: 145px;
+            padding: 8px 12px;
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 11px;
+            background: rgba(255,255,255,.03);
           }
 
           .center-status span,
           .command-clock span {
             color: #859088;
-            font-size:
-              0.5rem;
+            font-size: .48rem;
             font-weight: 900;
-            letter-spacing:
-              0.1em;
-            text-transform:
-              uppercase;
-          }
-
-          .center-status strong,
-          .command-clock strong {
-            margin-top: 3px;
-            font-size:
-              0.9rem;
+            text-transform: uppercase;
           }
 
           .status-ahead {
@@ -1108,126 +1004,57 @@ export default function ExecutiveIntelligencePage({
 
           .command-layout {
             position: relative;
-            z-index: 5;
+            z-index: 4;
             display: grid;
             flex: 1 1 0;
+
             grid-template-columns:
-              0.9fr
-              1.5fr
-              1fr;
+  .68fr
+  2.75fr
+  .72fr;
+
             grid-template-rows:
-              minmax(0, 1fr)
-              118px;
-            gap: 12px;
+              minmax(0,1fr)
+              105px;
+
+            gap: 10px;
             min-height: 0;
-            margin-top: 12px;
+            margin-top: 10px;
           }
 
           .command-panel {
-            position: relative;
             min-width: 0;
             min-height: 0;
             overflow: hidden;
+            padding: 13px;
+
             border:
               1px solid
-              rgba(
-                225,
-                174,
-                48,
-                0.22
-              );
-            border-radius:
-              16px;
+              rgba(225,174,48,.22);
+
+            border-radius: 15px;
+
             background:
               linear-gradient(
                 150deg,
-                rgba(
-                  31,
-                  40,
-                  35,
-                  0.96
-                ),
-                rgba(
-                  18,
-                  25,
-                  21,
-                  0.98
-                )
+                rgba(31,40,35,.96),
+                rgba(18,25,21,.98)
               );
-            box-shadow:
-              0 12px 30px
-              rgba(
-                0,
-                0,
-                0,
-                0.28
-              ),
-              inset 0 1px 0
-              rgba(
-                255,
-                255,
-                255,
-                0.035
-              );
-            box-sizing: border-box;
-          }
-
-          .mission-panel,
-          .core-panel,
-          .performance-panel {
-            padding: 15px;
           }
 
           .panel-heading {
             display: flex;
-            align-items:
-              flex-start;
-            justify-content:
-              space-between;
-            gap: 12px;
+            justify-content: space-between;
+            gap: 10px;
           }
 
-          .panel-heading h2,
-          .summary-panel h2,
-          .beezy-panel h2 {
-            margin: 0;
-            color: #fff6cf;
-            font-size:
-              clamp(
-                0.95rem,
-                1.15vw,
-                1.18rem
-              );
-          }
-
-          .mission-day-indicator {
-            padding:
-              5px 8px;
-            border:
-              1px solid
-              rgba(
-                111,
-                206,
-                98,
-                0.28
-              );
-            border-radius:
-              999px;
-            background:
-              rgba(
-                76,
-                167,
-                70,
-                0.09
-              );
-            color: #8cdf7c;
-            font-size:
-              0.5rem;
-            font-weight: 1000;
-            letter-spacing:
-              0.08em;
-            text-transform:
-              uppercase;
+          .confidence-pill {
+            padding: 5px 8px;
+            border-radius: 999px;
+            background: rgba(38,129,153,.12);
+            color: #76c6dd;
+            font-size: .46rem;
+            font-weight: 900;
           }
 
           .mission-ring-wrapper {
@@ -1238,1203 +1065,346 @@ export default function ExecutiveIntelligencePage({
 
           .mission-ring {
             display: grid;
-            width:
-              clamp(
-                110px,
-                9vw,
-                145px
-              );
-            height:
-              clamp(
-                110px,
-                9vw,
-                145px
-              );
+            width: 125px;
+            height: 125px;
             place-items: center;
             border-radius: 50%;
-            box-shadow:
-              0 0 28px
-              rgba(
-                240,
-                181,
-                34,
-                0.16
-              );
           }
 
           .mission-ring-inner {
             display: flex;
-            flex-direction:
-              column;
-            align-items: center;
+            flex-direction: column;
             justify-content: center;
-            width: 76%;
-            height: 76%;
+            align-items: center;
+
+            width: 77%;
+            height: 77%;
             border-radius: 50%;
-            background:
-              radial-gradient(
-                circle,
-                #263028,
-                #111814
-              );
-            box-shadow:
-              inset 0 0 24px
-              rgba(
-                0,
-                0,
-                0,
-                0.35
-              );
+            background: #172019;
           }
 
           .mission-ring-inner span,
-          .mission-ring-inner small {
-            color: #8f9d92;
-            font-size:
-              0.48rem;
+          .mission-ring-inner small,
+          .mission-target span,
+          .mission-stats span,
+          .donor-need span,
+          .performance-grid span,
+          .stick-performance-card span {
+            color: #859188;
+            font-size: .47rem;
             font-weight: 900;
-            letter-spacing:
-              0.08em;
-            text-transform:
-              uppercase;
+            text-transform: uppercase;
           }
 
           .mission-ring-inner strong {
-            margin:
-              2px 0;
             color: #f5c440;
-            font-size:
-              clamp(
-                1.8rem,
-                2.4vw,
-                2.5rem
-              );
-            line-height: 1;
+            font-size: 2rem;
           }
 
           .mission-target {
-            margin-top:
-              12px;
+            margin-top: 10px;
             text-align: center;
-          }
-
-          .mission-target span {
-            display: block;
-            color: #859188;
-            font-size:
-              0.54rem;
-            font-weight: 900;
-            letter-spacing:
-              0.08em;
-            text-transform:
-              uppercase;
           }
 
           .mission-target strong {
             display: block;
             margin-top: 3px;
             color: #fff4bf;
-            font-size:
-              clamp(
-                1.2rem,
-                1.5vw,
-                1.55rem
-              );
           }
 
-          .mission-stats {
+          .mission-stats,
+          .performance-grid {
             display: grid;
             grid-template-columns:
-              repeat(
-                2,
-                minmax(
-                  0,
-                  1fr
-                )
-              );
-            gap: 7px;
-            margin-top: 10px;
+              repeat(2,minmax(0,1fr));
+            gap: 6px;
+            margin-top: 9px;
           }
 
           .mission-stats article,
           .performance-grid article {
-            padding:
-              9px 10px;
-            border:
-              1px solid
-              rgba(
-                255,
-                255,
-                255,
-                0.06
-              );
-            border-radius:
-              10px;
-            background:
-              rgba(
-                255,
-                255,
-                255,
-                0.025
-              );
-          }
-
-          .mission-stats span,
-          .performance-grid span,
-          .donor-need span,
-          .trajectory-card span {
-            display: block;
-            color: #809086;
-            font-size:
-              0.48rem;
-            font-weight: 900;
-            letter-spacing:
-              0.07em;
-            text-transform:
-              uppercase;
+            padding: 8px;
+            border-radius: 9px;
+            background: rgba(255,255,255,.03);
           }
 
           .mission-stats strong,
           .performance-grid strong {
             display: block;
             margin-top: 3px;
-            color: #f6eed0;
-            font-size:
-              0.9rem;
           }
 
           .donor-need {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content:
-              space-between;
-            gap: 12px;
-            margin-top: 8px;
-            padding:
-              8px 10px;
-            border:
-              1px solid
-              rgba(
-                232,
-                171,
-                31,
-                0.17
-              );
-            border-radius:
-              9px;
-            background:
-              rgba(
-                240,
-                178,
-                31,
-                0.055
-              );
+            margin-top: 7px;
+            padding: 8px;
+            border-radius: 9px;
+            background: rgba(240,178,31,.06);
           }
 
           .donor-need strong {
             color: #f3bd35;
-            font-size:
-              1.15rem;
           }
 
-          .confidence-pill {
-            padding:
-              5px 8px;
-            border-radius:
-              999px;
-            background:
-              rgba(
-                38,
-                129,
-                153,
-                0.12
-              );
-            color: #76c6dd;
-            font-size:
-              0.48rem;
-            font-weight: 1000;
-            letter-spacing:
-              0.05em;
-            text-transform:
-              uppercase;
-          }
-
-          .projection-core {
-            position: relative;
-            display: grid;
-            place-items: center;
-            height: 38%;
-            min-height: 112px;
-            margin-top: 5px;
-          }
-
-          .projection-glow {
-            position: absolute;
-            width: 180px;
-            height: 130px;
-            border-radius: 50%;
-            background:
-              radial-gradient(
-                circle,
-                rgba(
-                  242,
-                  180,
-                  36,
-                  0.22
-                ),
-                transparent
-                  65%
-              );
-            filter: blur(8px);
-            animation:
-              intelligencePulse
-              3.5s ease-in-out
-              infinite;
-          }
-
-          .projection-hex {
-            position: relative;
-            z-index: 2;
-            display: flex;
-            flex-direction:
-              column;
-            align-items: center;
-            justify-content: center;
-            width:
-              clamp(
-                180px,
-                18vw,
-                255px
-              );
-            height:
-              clamp(
-                100px,
-                10vw,
-                140px
-              );
-            border:
-              2px solid
-              rgba(
-                242,
-                185,
-                46,
-                0.55
-              );
-            background:
-              linear-gradient(
-                145deg,
-                rgba(
-                  55,
-                  47,
-                  22,
-                  0.94
-                ),
-                rgba(
-                  24,
-                  29,
-                  24,
-                  0.98
-                )
-              );
-            clip-path:
-              polygon(
-                14% 0,
-                86% 0,
-                100% 50%,
-                86% 100%,
-                14% 100%,
-                0 50%
-              );
-          }
-
-          .projection-hex span {
-            color: #9b9d87;
-            font-size:
-              0.5rem;
-            font-weight: 900;
-            letter-spacing:
-              0.08em;
-            text-transform:
-              uppercase;
-          }
-
-          .projection-hex strong {
-            margin:
-              5px 0 3px;
-            color: #ffd55f;
-            font-size:
-              clamp(
-                1.8rem,
-                2.6vw,
-                2.8rem
-              );
-            line-height: 1;
-          }
-
-          .projection-hex small {
-            font-size:
-              0.58rem;
-            font-weight: 900;
-          }
-
-          .variance-positive {
-            color: #80d873;
-          }
-
-          .variance-negative {
-            color: #ff8d68;
-          }
-
-          .metric-honeycomb {
+          .projection-bar {
             display: grid;
             grid-template-columns:
-              repeat(
-                3,
-                minmax(
-                  0,
-                  1fr
-                )
-              );
-            gap:
-              7px 5px;
-            margin-top:
-              6px;
+              repeat(2,minmax(0,1fr));
+            gap: 8px;
+            margin-top: 7px;
           }
 
-          .metric-hex {
-            display: grid;
-            min-width: 0;
-            min-height: 92px;
-            place-items: center;
-            padding: 8px;
-            border:
-              1px solid
-              rgba(
-                242,
-                181,
-                43,
-                0.23
-              );
-            background:
-              linear-gradient(
-                145deg,
-                rgba(
-                  54,
-                  60,
-                  47,
-                  0.86
-                ),
-                rgba(
-                  22,
-                  30,
-                  25,
-                  0.94
-                )
-              );
-            clip-path:
-              polygon(
-                12% 0,
-                88% 0,
-                100% 50%,
-                88% 100%,
-                12% 100%,
-                0 50%
-              );
-            text-align: center;
+          .projection-bar > div {
+            padding: 7px 10px;
+            border-radius: 9px;
+            background: rgba(255,255,255,.035);
           }
 
-          .metric-hex div {
-            min-width: 0;
-          }
-
-          .metric-hex span {
+          .projection-bar span {
             display: block;
-            overflow: hidden;
-            color: #a4aa9d;
-            font-size:
-              clamp(
-                0.42rem,
-                0.5vw,
-                0.53rem
-              );
+            color: #8f998f;
+            font-size: .43rem;
             font-weight: 900;
-            letter-spacing:
-              0.06em;
-            line-height: 1.15;
-            text-overflow:
-              ellipsis;
-            text-transform:
-              uppercase;
-            white-space:
-              nowrap;
+            text-transform: uppercase;
           }
 
-          .metric-hex strong {
+          .projection-bar strong {
             display: block;
-            margin-top:
-              5px;
-            overflow: hidden;
-            color: #f4c74d;
-            font-size:
-              clamp(
-                1rem,
-                1.3vw,
-                1.35rem
-              );
-            line-height: 1;
-            text-overflow:
-              ellipsis;
-            white-space:
-              nowrap;
+            margin-top: 2px;
+            color: #f3c647;
+            font-size: .95rem;
           }
 
-          .metric-hex small {
-            display: block;
-            margin-top:
-              4px;
+          .good {
+            color: #79d36e !important;
+          }
+
+          .bad {
+            color: #ff8065 !important;
+          }
+
+          .weekly-table-wrap {
+            height: calc(100% - 74px);
+            margin-top: 8px;
+            overflow: auto;
+          }
+
+          .weekly-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 3px;
+            table-layout: fixed;
+          }
+
+          .weekly-table th {
+            padding: 4px;
+            color: #9aa59c;
+            font-size: .43rem;
+            font-weight: 900;
+            text-transform: uppercase;
+          }
+
+          .weekly-table th:first-child {
+            width: 170px;
+            text-align: left;
+          }
+
+          .weekly-table td {
+            padding: 4px;
+            vertical-align: middle;
+          }
+
+          .metric-name {
+            padding-left: 6px !important;
+          }
+
+          .metric-name strong {
+  display: block;
+  color: #fff0b3;
+
+  font-size:
+    clamp(
+      .68rem,
+      .82vw,
+      .9rem
+    );
+
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+          .metric-name small {
             color: #68746c;
-            font-size:
-              0.4rem;
-            font-weight: 900;
+            font-size: .36rem;
           }
 
-          .empty-metrics {
-            grid-column:
-              1 / -1;
-            padding: 20px;
-            border:
-              1px dashed
-              rgba(
-                234,
-                181,
-                47,
-                0.28
-              );
-            border-radius:
-              12px;
-            color: #7f8b82;
-            text-align:
-              center;
+          .day-cell {
+  display: grid;
+
+  min-height: 68px;
+
+  place-items: center;
+
+  padding: 6px 5px;
+
+  border:
+    1px solid
+    rgba(
+      242,
+      181,
+      43,
+      .18
+    );
+
+  border-radius: 9px;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      .035
+    );
+
+  text-align: center;
+}
+
+          .day-cell > strong {
+  color: #ffd75c;
+
+  font-size:
+    clamp(
+      .82rem,
+      1vw,
+      1.08rem
+    );
+
+  font-weight: 1000;
+}
+
+          ..day-cell > span {
+  margin-top: 2px;
+
+  font-size:
+    clamp(
+      .58rem,
+      .68vw,
+      .74rem
+    );
+
+  font-weight: 1000;
+}
+.day-cell > small {
+  margin-top: 2px;
+
+  color: #a5aea7;
+
+  font-size:
+    clamp(
+      .48rem,
+      .55vw,
+      .6rem
+    );
+
+  font-weight: 700;
+}
+
+          .positive {
+            color: #71d369;
+          }
+
+          .negative {
+            color: #ff735c;
+          }
+
+          .neutral {
+            color: #9ba29e;
           }
 
           .lead-forager-card {
             display: grid;
             grid-template-columns:
               auto 1fr;
-            gap: 10px;
-            align-items: center;
+            gap: 9px;
             margin-top: 14px;
-            padding:
-              11px;
-            border:
-              1px solid
-              rgba(
-                238,
-                183,
-                43,
-                0.27
-              );
-            border-radius:
-              12px;
-            background:
-              linear-gradient(
-                145deg,
-                rgba(
-                  239,
-                  179,
-                  39,
-                  0.09
-                ),
-                rgba(
-                  255,
-                  255,
-                  255,
-                  0.02
-                )
-              );
+            padding: 10px;
+            border-radius: 10px;
+            background: rgba(239,179,39,.07);
           }
 
           .crown {
-            display: grid;
-            width: 42px;
-            height: 42px;
-            place-items: center;
-            border-radius:
-              10px;
-            background:
-              rgba(
-                244,
-                184,
-                37,
-                0.12
-              );
-            font-size:
-              1.3rem;
+            font-size: 1.3rem;
           }
 
           .lead-forager-card span {
             display: block;
             color: #8e9a91;
-            font-size:
-              0.48rem;
+            font-size: .45rem;
             font-weight: 900;
-            letter-spacing:
-              0.08em;
-            text-transform:
-              uppercase;
+            text-transform: uppercase;
           }
 
           .lead-forager-card strong {
             display: block;
-            margin-top: 3px;
+            margin-top: 2px;
             color: #ffdf72;
-            font-size:
-              1rem;
           }
 
           .lead-forager-card small {
-            display: block;
-            margin-top: 2px;
             color: #7b897f;
-            font-size:
-              0.48rem;
-            font-weight: 700;
+            font-size: .44rem;
           }
 
           .stick-performance-card {
-            margin-top: 9px;
-            padding:
-              11px;
-            border:
-              1px solid
-              rgba(
-                255,
-                255,
-                255,
-                0.06
-              );
-            border-radius:
-              12px;
-            background:
-              rgba(
-                255,
-                255,
-                255,
-                0.025
-              );
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 10px;
+            background: rgba(255,255,255,.025);
           }
 
-          .stick-rate-header {
-            display: flex;
-            align-items: center;
-            justify-content:
-              space-between;
-          }
-
-          .stick-rate-header span {
+          .stick-performance-card strong {
             display: block;
-            color: #849188;
-            font-size:
-              0.48rem;
-            font-weight: 900;
-            text-transform:
-              uppercase;
-          }
-
-          .stick-rate-header strong {
-            display: block;
-            margin-top: 2px;
+            margin-top: 3px;
             color: #88dc78;
-            font-size:
-              1.25rem;
-          }
-
-          .stick-rate-icon {
-            display: grid;
-            width: 30px;
-            height: 30px;
-            place-items: center;
-            border-radius:
-              50%;
-            background:
-              rgba(
-                77,
-                176,
-                81,
-                0.12
-              );
-            color: #79d36e;
-            font-weight: 1000;
+            font-size: 1.2rem;
           }
 
           .stick-rate-track {
             height: 5px;
-            margin-top: 9px;
-            overflow: hidden;
-            border-radius:
-              999px;
-            background:
-              rgba(
-                255,
-                255,
-                255,
-                0.07
-              );
+            margin-top: 7px;
+            border-radius: 99px;
+            background: rgba(255,255,255,.07);
           }
 
           .stick-rate-fill {
             height: 100%;
-            border-radius:
-              inherit;
-            background:
-              linear-gradient(
-                90deg,
-                #3d9b4b,
-                #93da73
-              );
-            transition:
-              width
-              900ms ease;
+            border-radius: inherit;
+            background: #73cc66;
           }
 
-          .performance-grid {
-            display: grid;
-            grid-template-columns:
-              repeat(
-                2,
-                minmax(
-                  0,
-                  1fr
-                )
-              );
-            gap: 7px;
-            margin-top: 8px;
-          }
-
-          .lost-volume-card {
-            grid-column:
-              1 / -1;
-          }
-
-          .trajectory-card {
-            display: flex;
-            align-items: center;
-            justify-content:
-              space-between;
-            margin-top: 8px;
-            padding:
-              9px 11px;
-            border-radius:
-              10px;
-            background:
-              rgba(
-                255,
-                255,
-                255,
-                0.025
-              );
-          }
-
-          .trajectory-card strong {
-            display: block;
-            margin-top: 3px;
-            color: #f4eed4;
-            font-size:
-              0.9rem;
-          }
-
-          .trajectory-light {
-            width: 13px;
-            height: 13px;
-            border-radius:
-              50%;
-            box-shadow:
-              0 0 16px
-              currentColor;
-          }
-
-          .trajectory-light.status-ahead {
-            background:
-              #7fd16f;
-          }
-
-          .trajectory-light.status-track {
-            background:
-              #eeb846;
-          }
-
-          .trajectory-light.status-risk {
-            background:
-              #ff8260;
+          .wide {
+            grid-column: 1 / -1;
           }
 
           .summary-panel {
-            grid-column:
-              1 / 3;
-            display: grid;
-            grid-template-columns:
-              auto 1fr;
-            gap: 12px;
-            align-items: center;
-            padding:
-              13px 15px;
+            grid-column: 1 / 3;
           }
 
-          .summary-light {
-            position: absolute;
-            top: -50px;
-            right: 12%;
-            width: 180px;
-            height: 120px;
-            border-radius:
-              50%;
-            background:
-              rgba(
-                238,
-                175,
-                32,
-                0.08
-              );
-            filter:
-              blur(30px);
-          }
-
-          .summary-icon {
-            display: grid;
-            width: 46px;
-            height: 46px;
-            place-items: center;
-            border:
-              1px solid
-              rgba(
-                239,
-                177,
-                35,
-                0.26
-              );
-            background:
-              rgba(
-                238,
-                177,
-                37,
-                0.07
-              );
-            color: #f3ba34;
-            clip-path:
-              polygon(
-                25% 0,
-                75% 0,
-                100% 50%,
-                75% 100%,
-                25% 100%,
-                0 50%
-              );
-          }
-
-          .summary-panel p:not(
-            .eyebrow
-          ) {
-            margin:
-              4px 0 0;
+          .summary-panel p,
+          .beezy-panel p {
+            margin: 4px 0 0;
             color: #a8b0a9;
-            font-size:
-              clamp(
-                0.65rem,
-                0.75vw,
-                0.78rem
-              );
-            font-weight: 700;
-            line-height: 1.35;
+            font-size: .65rem;
           }
 
           .beezy-panel {
             display: grid;
             grid-template-columns:
-              92px 1fr;
-            gap: 12px;
-            align-items: center;
-            padding:
-              10px 12px;
-          }
-
-          .beezy-image-wrap {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  min-width: 0;
-}
-
-.beezy-image {
-  filter:
-    drop-shadow(
-      0 8px 18px
-      rgba(0, 0, 0, 0.42)
-    )
-    drop-shadow(
-      0 0 18px
-      rgba(241, 181, 35, 0.22)
-    );
-}
-
-          .beezy-image-wrap {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  min-width: 0;
-}
-
-.beezy-image {
-  filter:
-    drop-shadow(
-      0 8px 18px
-      rgba(0, 0, 0, 0.42)
-    )
-    drop-shadow(
-      0 0 18px
-      rgba(241, 181, 35, 0.22)
-    );
-}
-
-          .beezy-image-wrap {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  min-width: 0;
-}
-
-.beezy-image {
-  filter:
-    drop-shadow(
-      0 8px 18px
-      rgba(0, 0, 0, 0.42)
-    )
-    drop-shadow(
-      0 0 18px
-      rgba(241, 181, 35, 0.22)
-    );
-}
-
-          .beezy-image-wrap {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  min-width: 0;
-}
-
-.beezy-image {
-  filter:
-    drop-shadow(
-      0 8px 18px
-      rgba(0, 0, 0, 0.42)
-    )
-    drop-shadow(
-      0 0 18px
-      rgba(241, 181, 35, 0.22)
-    );
-}
-
-          .beezy-image-wrap {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  min-width: 0;
-}
-
-.beezy-image {
-  filter:
-    drop-shadow(
-      0 8px 18px
-      rgba(0, 0, 0, 0.42)
-    )
-    drop-shadow(
-      0 0 18px
-      rgba(241, 181, 35, 0.22)
-    );
-}
-
-          .beezy-image-wrap {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  min-width: 0;
-}
-
-.beezy-image {
-  filter:
-    drop-shadow(
-      0 8px 18px
-      rgba(0, 0, 0, 0.42)
-    )
-    drop-shadow(
-      0 0 18px
-      rgba(241, 181, 35, 0.22)
-    );
-}
-
-          .beezy-image-wrap {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  min-width: 0;
-}
-
-.beezy-image {
-  filter:
-    drop-shadow(
-      0 8px 18px
-      rgba(0, 0, 0, 0.42)
-    )
-    drop-shadow(
-      0 0 18px
-      rgba(241, 181, 35, 0.22)
-    );
-}
-
-          .beezy-image-wrap {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  min-width: 0;
-}
-
-.beezy-image {
-  filter:
-    drop-shadow(
-      0 8px 18px
-      rgba(0, 0, 0, 0.42)
-    )
-    drop-shadow(
-      0 0 18px
-      rgba(241, 181, 35, 0.22)
-    );
-}
-
-          .beezy-image-wrap {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  min-width: 0;
-}
-
-.beezy-image {
-  filter:
-    drop-shadow(
-      0 8px 18px
-      rgba(0, 0, 0, 0.42)
-    )
-    drop-shadow(
-      0 0 18px
-      rgba(241, 181, 35, 0.22)
-    );
-}
-
-          .beezy-body span {
-            display: block;
-            height: 8px;
-            margin-top: 7px;
-            background:
-              #151713;
-          }
-
-          .beezy-image-wrap {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  min-width: 0;
-}
-
-.beezy-image {
-  filter:
-    drop-shadow(
-      0 8px 18px
-      rgba(0, 0, 0, 0.42)
-    )
-    drop-shadow(
-      0 0 18px
-      rgba(241, 181, 35, 0.22)
-    );
-}
-
-          .beezy-image-wrap {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  min-width: 0;
-}
-
-.beezy-image {
-  filter:
-    drop-shadow(
-      0 8px 18px
-      rgba(0, 0, 0, 0.42)
-    )
-    drop-shadow(
-      0 0 18px
-      rgba(241, 181, 35, 0.22)
-    );
-}
-
-          .beezy-image-wrap {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  min-width: 0;
-}
-
-.beezy-image {
-  filter:
-    drop-shadow(
-      0 8px 18px
-      rgba(0, 0, 0, 0.42)
-    )
-    drop-shadow(
-      0 0 18px
-      rgba(241, 181, 35, 0.22)
-    );
-}
-
-          .beezy-copy p:not(
-            .eyebrow
-          ) {
-            margin:
-              4px 0 0;
-            color: #9ea8a1;
-            font-size:
-              clamp(
-                0.6rem,
-                0.7vw,
-                0.72rem
-              );
-            font-weight: 700;
-            line-height: 1.3;
-          }
-
-          .intelligence-footer {
-            position: relative;
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            justify-content:
-              space-between;
-            gap: 18px;
-            flex: 0 0 auto;
-            margin-top: 10px;
-            padding:
-              7px 11px;
-            border-top:
-              1px solid
-              rgba(
-                233,
-                178,
-                41,
-                0.16
-              );
-            color: #88948c;
-          }
-
-          .footer-status {
-            display: flex;
+              86px 1fr;
             align-items: center;
             gap: 8px;
-          }
-
-          .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius:
-              50%;
-            background:
-              #7fd170;
-            box-shadow:
-              0 0 10px
-              rgba(
-                111,
-                214,
-                103,
-                0.7
-              );
-            animation:
-              statusPulse
-              1.7s ease-in-out
-              infinite;
-          }
-
-          .footer-status div,
-          .powered-by {
-            display: flex;
-            flex-direction:
-              column;
-          }
-
-          .intelligence-footer span {
-            font-size:
-              0.43rem;
-            font-weight: 900;
-            letter-spacing:
-              0.08em;
-            text-transform:
-              uppercase;
-          }
-
-          .intelligence-footer strong {
-            margin-top: 1px;
-            color: #d6d8ce;
-            font-size:
-              0.64rem;
-          }
-
-          .intelligence-footer p {
-            margin: 0;
-            color: #d7b24c;
-            font-size:
-              0.7rem;
-            font-weight: 900;
-          }
-
-          .powered-by {
-            text-align: right;
-          }
-
-          @keyframes intelligencePulse {
-            0%,
-            100% {
-              opacity: 0.55;
-              transform:
-                scale(0.94);
-            }
-
-            50% {
-              opacity: 1;
-              transform:
-                scale(1.08);
-            }
-          }
-
-          @keyframes statusPulse {
-            0%,
-            100% {
-              opacity: 0.55;
-              transform:
-                scale(0.85);
-            }
-
-            50% {
-              opacity: 1;
-              transform:
-                scale(1.2);
-            }
           }
 
           @media (
@@ -2442,31 +1412,17 @@ export default function ExecutiveIntelligencePage({
           ) {
             .intelligence-page {
               height: auto;
-              min-height:
-                100vh;
+              min-height: 100vh;
               overflow: auto;
             }
 
             .command-layout {
-              grid-template-columns:
-                1fr;
-              grid-template-rows:
-                auto;
+              grid-template-columns: 1fr;
+              grid-template-rows: auto;
             }
 
             .summary-panel {
-              grid-column:
-                auto;
-            }
-          }
-
-          @media (
-            prefers-reduced-motion:
-              reduce
-          ) {
-            .projection-glow,
-            .status-dot {
-              animation: none;
+              grid-column: auto;
             }
           }
         `}

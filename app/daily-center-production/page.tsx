@@ -21,6 +21,8 @@ import {
   saveDailyCenterProduction,
 } from "./actions";
 
+import DailyProductionEntryForm from "./DailyProductionEntryForm";
+
 export const dynamic =
   "force-dynamic";
 
@@ -33,12 +35,18 @@ function formatDateInput(
   const month =
     String(
       date.getMonth() + 1,
-    ).padStart(2, "0");
+    ).padStart(
+      2,
+      "0",
+    );
 
   const day =
     String(
       date.getDate(),
-    ).padStart(2, "0");
+    ).padStart(
+      2,
+      "0",
+    );
 
   return `${year}-${month}-${day}`;
 }
@@ -49,8 +57,11 @@ function formatLiters(
   return `${value.toLocaleString(
     "en-US",
     {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1,
+      minimumFractionDigits:
+        1,
+
+      maximumFractionDigits:
+        1,
     },
   )} L`;
 }
@@ -61,8 +72,11 @@ function formatPercent(
   return `${value.toLocaleString(
     "en-US",
     {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1,
+      minimumFractionDigits:
+        1,
+
+      maximumFractionDigits:
+        1,
     },
   )}%`;
 }
@@ -71,11 +85,16 @@ function safeDivide(
   numerator: number,
   denominator: number,
 ) {
-  if (denominator <= 0) {
+  if (
+    denominator <= 0
+  ) {
     return 0;
   }
 
-  return numerator / denominator;
+  return (
+    numerator /
+    denominator
+  );
 }
 
 function startOfDay(
@@ -98,6 +117,7 @@ function getDayLabel(
   return date.toLocaleDateString(
     "en-US",
     {
+      timeZone: "UTC",
       weekday: "long",
     },
   );
@@ -109,12 +129,32 @@ function getShortDate(
   return date.toLocaleDateString(
     "en-US",
     {
+      timeZone: "UTC",
       month: "short",
       day: "numeric",
     },
   );
 }
 
+function formatOperationalDate(
+  date: Date,
+  includeYear = false,
+) {
+  return date.toLocaleDateString(
+    "en-US",
+    {
+      timeZone: "UTC",
+      month: "short",
+      day: "numeric",
+
+      ...(includeYear
+        ? {
+            year: "numeric" as const,
+          }
+        : {}),
+    },
+  );
+}
 export default async function DailyCenterProductionPage() {
   await requireAdmin();
 
@@ -122,7 +162,9 @@ export default async function DailyCenterProductionPage() {
     new Date();
 
   const today =
-    startOfDay(now);
+    startOfDay(
+      now,
+    );
 
   /*
    * ==========================================
@@ -133,7 +175,8 @@ export default async function DailyCenterProductionPage() {
   const settings =
     await prisma.hiveSettings.findUnique({
       where: {
-        id: 1,
+        id:
+          1,
       },
     });
 
@@ -163,11 +206,13 @@ export default async function DailyCenterProductionPage() {
 
   const monthlyGoalLiters =
     currentBudget
-      ?.budgetLiters ?? 0;
+      ?.budgetLiters ??
+    0;
 
   const monthlyGoalDonors =
     currentBudget
-      ?.budgetDonors ?? 0;
+      ?.budgetDonors ??
+    0;
 
   const weeklyGoalLiters =
     safeDivide(
@@ -198,7 +243,8 @@ export default async function DailyCenterProductionPage() {
     );
 
   weekEnd.setDate(
-    weekEnd.getDate() + 7,
+    weekEnd.getDate() +
+      7,
   );
 
   const monthStart =
@@ -215,7 +261,8 @@ export default async function DailyCenterProductionPage() {
   const nextMonthStart =
     new Date(
       now.getFullYear(),
-      now.getMonth() + 1,
+      now.getMonth() +
+        1,
       1,
       0,
       0,
@@ -233,50 +280,82 @@ export default async function DailyCenterProductionPage() {
     weekEntries,
     monthProduction,
     recentEntries,
-  ] = await Promise.all([
-    prisma.dailyCenterProduction.findMany({
-      where: {
-        entryDate: {
-          gte:
-            weekStart,
+    existingEntries,
+  ] =
+    await Promise.all([
+      prisma.dailyCenterProduction.findMany({
+        where: {
+          entryDate: {
+            gte:
+              weekStart,
 
-          lt:
-            weekEnd,
+            lt:
+              weekEnd,
+          },
         },
-      },
 
-      orderBy: {
-        entryDate:
-          "asc",
-      },
-    }),
-
-    prisma.dailyCenterProduction.aggregate({
-      where: {
-        entryDate: {
-          gte:
-            monthStart,
-
-          lt:
-            nextMonthStart,
+        orderBy: {
+          entryDate:
+            "asc",
         },
-      },
+      }),
 
-      _sum: {
-        liters: true,
-        donors: true,
-      },
-    }),
+      prisma.dailyCenterProduction.aggregate({
+        where: {
+          entryDate: {
+            gte:
+              monthStart,
 
-    prisma.dailyCenterProduction.findMany({
-      orderBy: {
-        entryDate:
-          "desc",
-      },
+            lt:
+              nextMonthStart,
+          },
+        },
 
-      take: 14,
-    }),
-  ]);
+        _sum: {
+          liters:
+            true,
+
+          donors:
+            true,
+        },
+      }),
+
+      prisma.dailyCenterProduction.findMany({
+        orderBy: {
+          entryDate:
+            "desc",
+        },
+
+        take:
+          14,
+      }),
+
+      /*
+       * Full historical list used by the
+       * client entry form.
+       *
+       * Selecting an existing date loads
+       * that date's authoritative values.
+       */
+
+      prisma.dailyCenterProduction.findMany({
+        orderBy: {
+          entryDate:
+            "asc",
+        },
+
+        select: {
+          entryDate:
+            true,
+
+          liters:
+            true,
+
+          donors:
+            true,
+        },
+      }),
+    ]);
 
   /*
    * ==========================================
@@ -294,7 +373,9 @@ export default async function DailyCenterProductionPage() {
 
       entries:
         weekEntries.map(
-          (entry) => ({
+          (
+            entry,
+          ) => ({
             entryDate:
               entry.entryDate,
 
@@ -307,12 +388,6 @@ export default async function DailyCenterProductionPage() {
         ),
     });
 
-  const todayRow =
-    targetPlan.days.find(
-      (day) =>
-        day.isToday,
-    ) ?? null;
-
   /*
    * ==========================================
    * MONTHLY PROGRESS
@@ -320,18 +395,21 @@ export default async function DailyCenterProductionPage() {
    */
 
   const monthlyActualLiters =
-    monthProduction._sum
-      .liters ?? 0;
+    monthProduction
+      ._sum.liters ??
+    0;
 
   const monthlyActualDonors =
-    monthProduction._sum
-      .donors ?? 0;
+    monthProduction
+      ._sum.donors ??
+    0;
 
   const monthlyCompletion =
     safeDivide(
       monthlyActualLiters,
       monthlyGoalLiters,
-    ) * 100;
+    ) *
+    100;
 
   const latestEntry =
     recentEntries[0] ??
@@ -522,21 +600,41 @@ export default async function DailyCenterProductionPage() {
               styles.weekTableHeader
             }
           >
-            <span>Day</span>
-            <span>Target</span>
-            <span>Actual</span>
-            <span>Variance</span>
-            <span>Achievement</span>
-            <span>Donors</span>
+            <span>
+              Day
+            </span>
+
+            <span>
+              Target
+            </span>
+
+            <span>
+              Actual
+            </span>
+
+            <span>
+              Variance
+            </span>
+
+            <span>
+              Achievement
+            </span>
+
+            <span>
+              Donors
+            </span>
           </div>
 
           {targetPlan.days.map(
-            (row) => {
+            (
+              row,
+            ) => {
               const positive =
                 (
                   row.varianceLiters ??
                   0
-                ) >= 0;
+                ) >=
+                0;
 
               return (
                 <div
@@ -677,148 +775,47 @@ export default async function DailyCenterProductionPage() {
           </span>
         </div>
 
-        <form
+        <DailyProductionEntryForm
           action={
             saveDailyCenterProduction
           }
-          style={
-            styles.entryForm
+
+          defaultDate={
+            formatDateInput(
+              today,
+            )
           }
-        >
-          <label
-            style={
-              styles.field
-            }
-          >
-            <span
-              style={
-                styles.label
-              }
-            >
-              Production Date
-            </span>
 
-            <small
-              style={
-                styles.helpText
-              }
-            >
-              One official record is stored
-              for each operational day.
-            </small>
+          existingEntries={
+            existingEntries.map(
+              (
+                entry,
+              ) => ({
+                entryDate:
+                  entry.entryDate
+                    .toISOString()
+                    .slice(
+                      0,
+                      10,
+                    ),
 
-            <input
-              name="entryDate"
-              type="date"
-              defaultValue={
-                formatDateInput(
-                  today,
-                )
-              }
-              required
-              style={
-                styles.input
-              }
-            />
-          </label>
+                liters:
+                  entry.liters,
 
-          <label
-            style={
-              styles.field
-            }
-          >
-            <span
-              style={
-                styles.label
-              }
-            >
-              Total Liters
-            </span>
+                donors:
+                  entry.donors,
+              }),
+            )
+          }
 
-            <small
-              style={
-                styles.helpText
-              }
-            >
-              Today&apos;s rolling requirement is{" "}
-              {formatLiters(
-                targetPlan.todaysTargetLiters,
-              )}.
-            </small>
+          todaysTargetLiters={
+            targetPlan.todaysTargetLiters
+          }
 
-            <input
-              name="liters"
-              type="number"
-              min="0"
-              step="0.1"
-              placeholder="0.0"
-              defaultValue={
-                todayRow
-                  ?.actualLiters ??
-                undefined
-              }
-              required
-              style={
-                styles.input
-              }
-            />
-          </label>
-
-          <label
-            style={
-              styles.field
-            }
-          >
-            <span
-              style={
-                styles.label
-              }
-            >
-              Total Donors
-            </span>
-
-            <small
-              style={
-                styles.helpText
-              }
-            >
-              Current rolling donor target:{" "}
-              {targetPlan.todaysTargetDonors}.
-            </small>
-
-            <input
-              name="donors"
-              type="number"
-              min="0"
-              step="1"
-              placeholder="0"
-              defaultValue={
-                todayRow
-                  ?.actualDonors ??
-                undefined
-              }
-              required
-              style={
-                styles.input
-              }
-            />
-          </label>
-
-          <div
-            style={
-              styles.formActions
-            }
-          >
-            <button
-              type="submit"
-              style={
-                styles.primaryButton
-              }
-            >
-              Save Daily Production
-            </button>
-          </div>
-        </form>
+          todaysTargetDonors={
+            targetPlan.todaysTargetDonors
+          }
+        />
       </section>
 
       {/* =====================================
@@ -898,16 +895,10 @@ export default async function DailyCenterProductionPage() {
 
           <small>
             {latestEntry
-              ? latestEntry.entryDate.toLocaleDateString(
-                  "en-US",
-                  {
-                    month:
-                      "short",
-                    day:
-                      "numeric",
-                  },
-                )
-              : "No production entered"}
+  ? formatOperationalDate(
+      latestEntry.entryDate,
+    )
+  : "No production entered"}
           </small>
         </article>
       </section>
@@ -966,13 +957,23 @@ export default async function DailyCenterProductionPage() {
                 styles.tableHeader
               }
             >
-              <span>Date</span>
-              <span>Liters</span>
-              <span>Donors</span>
+              <span>
+                Date
+              </span>
+
+              <span>
+                Liters
+              </span>
+
+              <span>
+                Donors
+              </span>
             </div>
 
             {recentEntries.map(
-              (entry) => (
+              (
+                entry,
+              ) => (
                 <div
                   key={
                     entry.id
@@ -982,17 +983,10 @@ export default async function DailyCenterProductionPage() {
                   }
                 >
                   <strong>
-                    {entry.entryDate.toLocaleDateString(
-                      "en-US",
-                      {
-                        month:
-                          "short",
-                        day:
-                          "numeric",
-                        year:
-                          "numeric",
-                      },
-                    )}
+                    {formatOperationalDate(
+  entry.entryDate,
+  true,
+)}
                   </strong>
 
                   <span>
@@ -1018,108 +1012,188 @@ export default async function DailyCenterProductionPage() {
 
 const styles = {
   topActions: {
-    marginBottom: 18,
+    marginBottom:
+      18,
   },
 
   backLink: {
-    color: "#805c0b",
-    fontWeight: 800,
-    textDecoration: "none",
+    color:
+      "#805c0b",
+
+    fontWeight:
+      800,
+
+    textDecoration:
+      "none",
   },
 
   summaryGrid: {
-    display: "grid",
+    display:
+      "grid",
+
     gridTemplateColumns:
       "repeat(auto-fit,minmax(205px,1fr))",
-    gap: 14,
-    marginBottom: 20,
+
+    gap:
+      14,
+
+    marginBottom:
+      20,
   },
 
   summaryCard: {
-    display: "flex",
+    display:
+      "flex",
+
     flexDirection:
       "column" as const,
-    padding: 18,
+
+    padding:
+      18,
+
     border:
       "1px solid #dfc36c",
-    borderRadius: 16,
+
+    borderRadius:
+      16,
+
     background:
       "linear-gradient(145deg,#ffffff,#fff7d1)",
+
     boxShadow:
       "0 8px 20px rgba(76,53,6,.08)",
-    color: "#3d2a07",
+
+    color:
+      "#3d2a07",
   },
 
   summaryCardHighlight: {
-    display: "flex",
+    display:
+      "flex",
+
     flexDirection:
       "column" as const,
-    padding: 18,
+
+    padding:
+      18,
+
     border:
       "2px solid #d6a518",
-    borderRadius: 16,
+
+    borderRadius:
+      16,
+
     background:
       "linear-gradient(145deg,#fff4ad,#ffe379)",
+
     boxShadow:
       "0 8px 22px rgba(126,88,0,.13)",
-    color: "#3d2a07",
+
+    color:
+      "#3d2a07",
   },
 
   rollingCard: {
-    marginBottom: 24,
-    padding: 22,
+    marginBottom:
+      24,
+
+    padding:
+      22,
+
     border:
       "1px solid #e2cd83",
-    borderRadius: 20,
+
+    borderRadius:
+      20,
+
     background:
       "#ffffff",
+
     boxShadow:
       "0 10px 24px rgba(76,53,6,.07)",
   },
 
   sectionHeader: {
-    display: "flex",
-    alignItems: "center",
+    display:
+      "flex",
+
+    alignItems:
+      "center",
+
     justifyContent:
       "space-between",
-    gap: 18,
-    marginBottom: 20,
+
+    gap:
+      18,
+
+    marginBottom:
+      20,
   },
 
   eyebrow: {
-    margin: "0 0 6px",
-    color: "#9a6b08",
-    fontSize: 11,
-    fontWeight: 900,
+    margin:
+      "0 0 6px",
+
+    color:
+      "#9a6b08",
+
+    fontSize:
+      11,
+
+    fontWeight:
+      900,
+
     letterSpacing:
       "0.14em",
+
     textTransform:
       "uppercase" as const,
   },
 
   sectionTitle: {
-    margin: 0,
-    color: "#3d2a07",
+    margin:
+      0,
+
+    color:
+      "#3d2a07",
   },
 
   sectionCopy: {
-    maxWidth: 720,
+    maxWidth:
+      720,
+
     margin:
       "7px 0 0",
-    color: "#75653e",
-    fontSize: 12,
-    lineHeight: 1.5,
+
+    color:
+      "#75653e",
+
+    fontSize:
+      12,
+
+    lineHeight:
+      1.5,
   },
 
   badge: {
     padding:
       "7px 11px",
-    borderRadius: 999,
+
+    borderRadius:
+      999,
+
     background:
       "#fff0b7",
-    color: "#825900",
-    fontSize: 11,
-    fontWeight: 900,
+
+    color:
+      "#825900",
+
+    fontSize:
+      11,
+
+    fontWeight:
+      900,
+
     textTransform:
       "uppercase" as const,
   },
@@ -1127,161 +1201,169 @@ const styles = {
   weekTable: {
     overflow:
       "hidden",
+
     border:
       "1px solid #eadba7",
-    borderRadius: 14,
+
+    borderRadius:
+      14,
   },
 
   weekTableHeader: {
-    display: "grid",
+    display:
+      "grid",
+
     gridTemplateColumns:
       "1.25fr 1fr 1fr 1fr 1fr 1fr",
-    gap: 10,
+
+    gap:
+      10,
+
     padding:
       "10px 14px",
+
     background:
       "#fff1b8",
-    color: "#6d4d08",
-    fontSize: 10,
-    fontWeight: 900,
+
+    color:
+      "#6d4d08",
+
+    fontSize:
+      10,
+
+    fontWeight:
+      900,
+
     textTransform:
       "uppercase" as const,
   },
 
   weekTableRow: {
-    display: "grid",
+    display:
+      "grid",
+
     gridTemplateColumns:
       "1.25fr 1fr 1fr 1fr 1fr 1fr",
-    gap: 10,
+
+    gap:
+      10,
+
     alignItems:
       "center",
+
     padding:
       "12px 14px",
+
     borderTop:
       "1px solid #eee2b8",
-    color: "#49350b",
-    fontSize: 12,
+
+    color:
+      "#49350b",
+
+    fontSize:
+      12,
   },
 
   todayRow: {
     background:
       "#fff9df",
+
     boxShadow:
       "inset 4px 0 0 #d59d00",
   },
 
   rowDate: {
-    display: "block",
-    marginTop: 2,
-    color: "#88794e",
-    fontSize: 10,
+    display:
+      "block",
+
+    marginTop:
+      2,
+
+    color:
+      "#88794e",
+
+    fontSize:
+      10,
   },
 
   entryCard: {
-    marginBottom: 24,
-    padding: 24,
+    marginBottom:
+      24,
+
+    padding:
+      24,
+
     border:
       "1px solid #e2cd83",
-    borderRadius: 20,
-    background: "#ffffff",
+
+    borderRadius:
+      20,
+
+    background:
+      "#ffffff",
+
     boxShadow:
       "0 10px 24px rgba(76,53,6,.07)",
   },
 
-  entryForm: {
-    display: "grid",
-    gridTemplateColumns:
-      "repeat(auto-fit,minmax(220px,1fr))",
-    gap: 18,
-  },
-
-  field: {
-    display: "grid",
-    gap: 7,
-  },
-
-  label: {
-    color: "#49350b",
-    fontSize: 13,
-    fontWeight: 900,
-  },
-
-  helpText: {
-    minHeight: 34,
-    color: "#7b6c47",
-    fontSize: 12,
-    lineHeight: 1.4,
-  },
-
-  input: {
-    width: "100%",
-    padding:
-      "12px 13px",
-    border:
-      "1px solid #dbc77f",
-    borderRadius: 10,
-    background:
-      "#fffef9",
-    color: "#302204",
-    font: "inherit",
-    fontWeight: 700,
-    boxSizing:
-      "border-box" as const,
-  },
-
-  formActions: {
-    display: "flex",
-    alignItems:
-      "flex-end",
-    justifyContent:
-      "flex-end",
-  },
-
-  primaryButton: {
-    padding:
-      "13px 19px",
-    border: 0,
-    borderRadius: 10,
-    background:
-      "linear-gradient(135deg,#4c3506,#805b08)",
-    color: "#ffffff",
-    fontWeight: 900,
-    cursor: "pointer",
-  },
-
   secondarySummary: {
-    display: "grid",
+    display:
+      "grid",
+
     gridTemplateColumns:
       "repeat(auto-fit,minmax(220px,1fr))",
-    gap: 14,
-    marginBottom: 24,
+
+    gap:
+      14,
+
+    marginBottom:
+      24,
   },
 
   secondaryCard: {
-    display: "flex",
+    display:
+      "flex",
+
     flexDirection:
       "column" as const,
-    padding: 16,
+
+    padding:
+      16,
+
     border:
       "1px solid #e4d6a4",
-    borderRadius: 14,
+
+    borderRadius:
+      14,
+
     background:
       "#fffdf5",
-    color: "#3d2a07",
+
+    color:
+      "#3d2a07",
   },
 
   historySection: {
-    marginTop: 12,
+    marginTop:
+      12,
   },
 
   emptyState: {
-    padding: 30,
+    padding:
+      30,
+
     border:
       "1px dashed #d5bd6d",
-    borderRadius: 16,
+
+    borderRadius:
+      16,
+
     background:
       "#fffdf5",
-    color: "#76643a",
+
+    color:
+      "#76643a",
+
     textAlign:
       "center" as const,
   },
@@ -1289,36 +1371,57 @@ const styles = {
   historyTable: {
     overflow:
       "hidden",
+
     border:
       "1px solid #e2cd83",
-    borderRadius: 16,
+
+    borderRadius:
+      16,
+
     background:
       "#ffffff",
   },
 
   tableHeader: {
-    display: "grid",
+    display:
+      "grid",
+
     gridTemplateColumns:
       "1.4fr 1fr 1fr",
+
     padding:
       "12px 16px",
+
     background:
       "#fff1b8",
-    color: "#6d4d08",
-    fontSize: 12,
-    fontWeight: 900,
+
+    color:
+      "#6d4d08",
+
+    fontSize:
+      12,
+
+    fontWeight:
+      900,
+
     textTransform:
       "uppercase" as const,
   },
 
   tableRow: {
-    display: "grid",
+    display:
+      "grid",
+
     gridTemplateColumns:
       "1.4fr 1fr 1fr",
+
     padding:
       "14px 16px",
+
     borderTop:
       "1px solid #eee2b8",
-    color: "#49350b",
+
+    color:
+      "#49350b",
   },
 };

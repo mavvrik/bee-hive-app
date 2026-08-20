@@ -18,6 +18,10 @@ import {
 } from "@/app/lib/centerIntelligence";
 
 import {
+  getExecutiveMetricComparisons,
+} from "@/app/lib/executiveComparisonEngine";
+
+import {
   getDailyTargets,
 } from "@/app/lib/dailyTargetEngine";
 
@@ -62,17 +66,24 @@ function safeDivide(
   numerator: number,
   denominator: number,
 ) {
-  if (denominator <= 0) {
+  if (
+    denominator <= 0
+  ) {
     return 0;
   }
 
-  return numerator / denominator;
+  return (
+    numerator /
+    denominator
+  );
 }
 
 function primaryRoleToEnum(
   role: string,
 ) {
-  switch (role) {
+  switch (
+    role
+  ) {
     case "Management":
       return "MANAGEMENT";
 
@@ -120,7 +131,11 @@ function getEligibleRoleSet(
     );
   }
 
-  // Always include primary role as a safety net.
+  /*
+   * Always include primary role
+   * as a compatibility safety net.
+   */
+
   roles.add(
     primaryRoleToEnum(
       collector.role,
@@ -197,7 +212,8 @@ export default async function Home() {
   const startOfNextMonth =
     new Date(
       today.getFullYear(),
-      today.getMonth() + 1,
+      today.getMonth() +
+        1,
       1,
     );
 
@@ -212,7 +228,8 @@ export default async function Home() {
     new Date(
       today.getFullYear(),
       today.getMonth(),
-      today.getDate() + 1,
+      today.getDate() +
+        1,
     );
 
   /*
@@ -224,7 +241,8 @@ export default async function Home() {
   const settings =
     await prisma.hiveSettings.findUnique({
       where: {
-        id: 1,
+        id:
+          1,
       },
     });
 
@@ -250,7 +268,8 @@ export default async function Home() {
       settings
         ?.dashboardRotationSeconds ??
       45
-    ) * 1000;
+    ) *
+    1000;
 
   const openingHour =
     settings?.openingHour ??
@@ -311,58 +330,65 @@ export default async function Home() {
     monthToDateProduction,
     currentWeekEntries,
     currentDayProduction,
-  ] = await Promise.all([
-    prisma.dailyCenterProduction.aggregate({
-      where: {
-        entryDate: {
-          gte:
-            startOfCurrentMonth,
+  ] =
+    await Promise.all([
+      prisma.dailyCenterProduction.aggregate({
+        where: {
+          entryDate: {
+            gte:
+              startOfCurrentMonth,
 
-          lt:
-            startOfNextMonth,
+            lt:
+              startOfNextMonth,
+          },
         },
-      },
 
-      _sum: {
-        liters: true,
-        donors: true,
-      },
-    }),
+        _sum: {
+          liters:
+            true,
 
-    prisma.dailyCenterProduction.findMany({
-      where: {
-        entryDate: {
-          gte:
-            startOfCurrentWeek,
-
-          lt:
-            startOfNextWeek,
+          donors:
+            true,
         },
-      },
+      }),
 
-      orderBy: {
-        entryDate:
-          "asc",
-      },
-    }),
+      prisma.dailyCenterProduction.findMany({
+        where: {
+          entryDate: {
+            gte:
+              startOfCurrentWeek,
 
-    prisma.dailyCenterProduction.aggregate({
-      where: {
-        entryDate: {
-          gte:
-            startOfToday,
-
-          lt:
-            startOfTomorrow,
+            lt:
+              startOfNextWeek,
+          },
         },
-      },
 
-      _sum: {
-        liters: true,
-        donors: true,
-      },
-    }),
-  ]);
+        orderBy: {
+          entryDate:
+            "asc",
+        },
+      }),
+
+      prisma.dailyCenterProduction.aggregate({
+        where: {
+          entryDate: {
+            gte:
+              startOfToday,
+
+            lt:
+              startOfTomorrow,
+          },
+        },
+
+        _sum: {
+          liters:
+            true,
+
+          donors:
+            true,
+        },
+      }),
+    ]);
 
   /*
    * ==========================================
@@ -425,7 +451,9 @@ export default async function Home() {
 
       entries:
         currentWeekEntries.map(
-          (entry) => ({
+          (
+            entry,
+          ) => ({
             entryDate:
               entry.entryDate,
 
@@ -445,7 +473,8 @@ export default async function Home() {
    */
 
   const weeklyLitersPerDonor =
-    weeklyCurrentDonors > 0
+    weeklyCurrentDonors >
+    0
       ? weeklyCurrentLiters /
         weeklyCurrentDonors
       : 0;
@@ -466,30 +495,28 @@ export default async function Home() {
    */
 
   const hourlyOperationalSummary =
-    await prisma
-      .hourlyOperationalEntry
-      .aggregate({
-        where: {
-          entryDate: {
-            gte:
-              startOfToday,
+    await prisma.hourlyOperationalEntry.aggregate({
+      where: {
+        entryDate: {
+          gte:
+            startOfToday,
 
-            lt:
-              startOfTomorrow,
-          },
+          lt:
+            startOfTomorrow,
         },
+      },
 
-        _sum: {
-          successfulSticks:
-            true,
+      _sum: {
+        successfulSticks:
+          true,
 
-          unsuccessfulSticks:
-            true,
+        unsuccessfulSticks:
+          true,
 
-          lostVolumeMl:
-            true,
-        },
-      });
+        lostVolumeMl:
+          true,
+      },
+    });
 
   const successfulSticks =
     hourlyOperationalSummary
@@ -509,7 +536,8 @@ export default async function Home() {
         ._sum
         .lostVolumeMl ??
       0
-    ) / 1000;
+    ) /
+    1000;
 
   const currentHour =
     today.getHours();
@@ -523,7 +551,8 @@ export default async function Home() {
   const collectors =
     await prisma.collector.findMany({
       where: {
-        active: true,
+        active:
+          true,
       },
 
       include: {
@@ -548,22 +577,13 @@ export default async function Home() {
    * ==========================================
    * TWO-MEADOW SPLIT
    * ==========================================
-   *
-   * PHLEBOTOMY MEADOW:
-   * Any worker eligible for Phlebotomy.
-   *
-   * SUPPORT MEADOW:
-   * Any worker without Phlebotomy eligibility.
-   *
-   * IMPORTANT:
-   * A Support Meadow worker may still have
-   * several eligible support roles.
-   * ==========================================
    */
 
   const phlebotomyCollectors =
     collectors.filter(
-      (collector) =>
+      (
+        collector,
+      ) =>
         hasPhlebotomyEligibility(
           collector,
         ),
@@ -571,7 +591,9 @@ export default async function Home() {
 
   const supportCollectors =
     collectors.filter(
-      (collector) =>
+      (
+        collector,
+      ) =>
         !hasPhlebotomyEligibility(
           collector,
         ),
@@ -586,56 +608,57 @@ export default async function Home() {
   const [
     currentWeekStickEntries,
     currentWeekSupportEntries,
-  ] = await Promise.all([
-    prisma.workerStickEntry.findMany({
-      where: {
-        entryDate: {
-          gte:
-            startOfCurrentWeek,
+  ] =
+    await Promise.all([
+      prisma.workerStickEntry.findMany({
+        where: {
+          entryDate: {
+            gte:
+              startOfCurrentWeek,
 
-          lt:
-            startOfNextWeek,
+            lt:
+              startOfNextWeek,
+          },
         },
-      },
 
-      select: {
-        collectorId:
-          true,
+        select: {
+          collectorId:
+            true,
 
-        totalSticks:
-          true,
+          totalSticks:
+            true,
 
-        successfulSticks:
-          true,
-      },
-    }),
-
-    prisma.workerPerformanceEntry.findMany({
-      where: {
-        entryDate: {
-          gte:
-            startOfCurrentWeek,
-
-          lt:
-            startOfNextWeek,
+          successfulSticks:
+            true,
         },
-      },
+      }),
 
-      select: {
-        collectorId:
-          true,
+      prisma.workerPerformanceEntry.findMany({
+        where: {
+          entryDate: {
+            gte:
+              startOfCurrentWeek,
 
-        role:
-          true,
+            lt:
+              startOfNextWeek,
+          },
+        },
 
-        metric:
-          true,
+        select: {
+          collectorId:
+            true,
 
-        totalCount:
-          true,
-      },
-    }),
-  ]);
+          role:
+            true,
+
+          metric:
+            true,
+
+          totalCount:
+            true,
+        },
+      }),
+    ]);
 
   /*
    * ==========================================
@@ -705,7 +728,8 @@ export default async function Home() {
     const current =
       weeklySupportPerformance.get(
         key,
-      ) ?? 0;
+      ) ??
+      0;
 
     weeklySupportPerformance.set(
       key,
@@ -718,19 +742,12 @@ export default async function Home() {
    * ==========================================
    * SUPPORT MEADOW METRICS
    * ==========================================
-   *
-   * ALL eligible support-role activities are
-   * shown on the worker's Meadow card.
-   *
-   * Primary role controls appearance ONLY.
-   *
-   * EMFs are intentionally excluded.
-   * ==========================================
    */
 
   function getSupportMetrics(
     collector: {
       id: number;
+
       role: string;
 
       roleAssignments: {
@@ -739,7 +756,8 @@ export default async function Home() {
     },
   ): SupportMetric[] {
     const metrics:
-      SupportMetric[] = [];
+      SupportMetric[] =
+      [];
 
     const eligibleRoles =
       getEligibleRoleSet(
@@ -748,8 +766,6 @@ export default async function Home() {
 
     /*
      * MSA
-     * ------------------------------------------
-     * Physicals
      */
 
     if (
@@ -768,7 +784,8 @@ export default async function Home() {
               "MSA",
               "PHYSICALS",
             ),
-          ) ?? 0,
+          ) ??
+          0,
 
         emphasis:
           "gold",
@@ -777,8 +794,6 @@ export default async function Home() {
 
     /*
      * RECEPTION TECH
-     * ------------------------------------------
-     * Interviews
      */
 
     if (
@@ -797,7 +812,8 @@ export default async function Home() {
               "RECEPTION_TECH",
               "INTERVIEWS",
             ),
-          ) ?? 0,
+          ) ??
+          0,
 
         emphasis:
           "gold",
@@ -806,8 +822,6 @@ export default async function Home() {
 
     /*
      * DST
-     * ------------------------------------------
-     * Setups + Disconnects
      */
 
     if (
@@ -826,7 +840,8 @@ export default async function Home() {
               "DST",
               "SETUPS",
             ),
-          ) ?? 0,
+          ) ??
+          0,
 
         emphasis:
           "gold",
@@ -843,7 +858,8 @@ export default async function Home() {
               "DST",
               "DISCONNECTS",
             ),
-          ) ?? 0,
+          ) ??
+          0,
 
         emphasis:
           "gold",
@@ -852,8 +868,6 @@ export default async function Home() {
 
     /*
      * PROCESSOR
-     * ------------------------------------------
-     * Bottles Processed
      */
 
     if (
@@ -872,7 +886,8 @@ export default async function Home() {
               "PROCESSOR",
               "PROCESSED",
             ),
-          ) ?? 0,
+          ) ??
+          0,
 
         emphasis:
           "gold",
@@ -881,8 +896,6 @@ export default async function Home() {
 
     /*
      * MANAGEMENT
-     * ------------------------------------------
-     * No invented quantitative metric yet.
      */
 
     if (
@@ -904,8 +917,6 @@ export default async function Home() {
 
     /*
      * GROUP LEAD
-     * ------------------------------------------
-     * No invented quantitative metric yet.
      */
 
     if (
@@ -1000,12 +1011,16 @@ export default async function Home() {
   const meetTheBeesProfiles =
     collectors
       .filter(
-        (collector) =>
+        (
+          collector,
+        ) =>
           collector
             .showOnMeetTheBees,
       )
       .map(
-        (collector) => ({
+        (
+          collector,
+        ) => ({
           id:
             collector.id,
 
@@ -1031,7 +1046,8 @@ export default async function Home() {
             collector.photoUrl,
 
           isEmployeeOfMonth:
-            collector.isEmployeeOfMonth,
+            collector
+              .isEmployeeOfMonth,
 
           recognitionMessage:
             collector
@@ -1041,77 +1057,32 @@ export default async function Home() {
 
   /*
    * ==========================================
-   * DYNAMIC KPI ENGINE
+   * EXECUTIVE COMPARATIVE KPI ENGINE
+   * ==========================================
+   *
+   * This replaces the old "latest KPI reading"
+   * pipeline.
+   *
+   * Active comparative metrics are resolved
+   * dynamically.
+   *
+   * Gross Procedures:
+   * WorkerStickEntry.totalSticks
+   *
+   * Gross Liters:
+   * DailyCenterProduction.liters
+   *
+   * Manual/custom metrics:
+   * MetricReading
+   *
+   * Comparison:
+   * same weekday from immediately prior week.
    * ==========================================
    */
 
-  const visibleDashboardMetrics =
-    await prisma.dashboardMetric.findMany({
-      where: {
-        isVisible:
-          true,
-      },
-
-      orderBy: [
-        {
-          displayOrder:
-            "asc",
-        },
-
-        {
-          displayName:
-            "asc",
-        },
-      ],
-
-      include: {
-        readings: {
-          orderBy: {
-            recordedAt:
-              "desc",
-          },
-
-          take:
-            50,
-        },
-      },
-    });
-
-  const executiveMetrics =
-    visibleDashboardMetrics.map(
-      (metric) => {
-        const publicReading =
-          metric.readings.find(
-            (reading) =>
-              reading.source ===
-              metric.publicSource,
-          );
-
-        return {
-          id:
-            metric.id,
-
-          displayName:
-            metric.displayName,
-
-          description:
-            metric.description,
-
-          unit:
-            metric.unit,
-
-          decimalPlaces:
-            metric.decimalPlaces,
-
-          value:
-            publicReading
-              ?.value ??
-            null,
-
-          source:
-            metric.publicSource,
-        };
-      },
+  const executiveMetricComparisons =
+    await getExecutiveMetricComparisons(
+      today,
     );
 
   /*
@@ -1220,7 +1191,8 @@ export default async function Home() {
             .successfulSticks /
           reigningLeadForager
             .totalSticks
-        ) * 100
+        ) *
+        100
       : null;
 
   /*
@@ -1238,6 +1210,12 @@ export default async function Home() {
         today.getMonth() +
         1,
     });
+
+  /*
+   * ==========================================
+   * PAGE RENDER
+   * ==========================================
+   */
 
   return (
     <main
@@ -1436,9 +1414,12 @@ export default async function Home() {
 
           <BeeTeam
             mode="phlebotomy"
+
             collectors={
               phlebotomyCollectors.map(
-                (collector) => {
+                (
+                  collector,
+                ) => {
                   const performance =
                     weeklyWorkerPerformance.get(
                       collector.id,
@@ -1516,9 +1497,12 @@ export default async function Home() {
 
             <BeeTeam
               mode="support"
+
               collectors={
                 supportCollectors.map(
-                  (collector) => ({
+                  (
+                    collector,
+                  ) => ({
                     ...collector,
 
                     weeklySuccessfulSticks:
@@ -1555,7 +1539,7 @@ export default async function Home() {
             }
 
             metrics={
-              executiveMetrics
+              executiveMetricComparisons
             }
 
             todaysLitersTarget={

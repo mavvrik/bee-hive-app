@@ -362,21 +362,45 @@ model MonthlyBudget {
 // ======================================================
 
 model DashboardMetric {
-  id            Int             @id @default(autoincrement())
-  key           String          @unique
+  id            Int          @id @default(autoincrement())
+  key           String       @unique
   displayName   String
   description   String?
   unit          String?
-  decimalPlaces Int             @default(2)
-  publicSource  MetricSource    @default(CSL)
-  isVisible     Boolean         @default(true)
-  displayOrder  Int             @default(0)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  decimalPlaces Int          @default(2)
+  publicSource  MetricSource @default(CSL)
 
-  readings      MetricReading[]
+  // Public Executive Intelligence visibility
+  isVisible     Boolean      @default(true)
+
+  displayOrder  Int          @default(0)
+
+  // ------------------------------------------
+  // EXECUTIVE COMPARATIVE INTELLIGENCE
+  // ------------------------------------------
+
+  comparisonEnabled Boolean @default(false)
+
+  // HIGHER = higher value is favorable
+  // LOWER  = lower value is favorable
+  // NEUTRAL = direction is informational only
+  improvementDirection String @default("HIGHER")
+
+  // Used when HIVE can resolve the value itself.
+  // Null means MetricReading supplies the value.
+  dataSourceKey String?
+
+  // Built-ins stay in the metric library even
+  // when temporarily hidden.
+  isBuiltIn Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  readings MetricReading[]
 
   @@index([isVisible, displayOrder])
+  @@index([comparisonEnabled, isVisible])
 }
 
 model MetricReading {
