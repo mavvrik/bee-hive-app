@@ -42,10 +42,50 @@ model Collector {
   recognitionScores     MonthlyRecognitionScore[]
   employeeOfMonthScores EmployeeOfMonthScore[]
 
+  scheduledShifts ScheduledShift[]
+
   @@index([active])
   @@index([position])
   @@index([showOnMeetTheBees])
   @@index([isEmployeeOfMonth])
+}
+
+// ======================================================
+// WEEKLY STAFF SCHEDULE IMPORTS
+// ======================================================
+
+model ScheduleImport {
+  id          Int      @id @default(autoincrement())
+  fileName    String
+  periodStart DateTime @db.Date
+  periodEnd   DateTime @db.Date
+  importedAt  DateTime @default(now())
+
+  shifts ScheduledShift[]
+
+  @@index([periodStart])
+  @@index([periodEnd])
+}
+
+model ScheduledShift {
+  id               Int      @id @default(autoincrement())
+  scheduleImportId Int
+  collectorId      Int?
+  employeeName     String
+  primaryJob       String?
+  shiftDate        DateTime @db.Date
+  startTime        String
+  endTime          String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  scheduleImport ScheduleImport @relation(fields: [scheduleImportId], references: [id], onDelete: Cascade)
+  collector      Collector?     @relation(fields: [collectorId], references: [id], onDelete: SetNull)
+
+  @@unique([scheduleImportId, employeeName, shiftDate, startTime, endTime])
+  @@index([shiftDate])
+  @@index([collectorId])
+  @@index([scheduleImportId])
 }
 
 // ======================================================
