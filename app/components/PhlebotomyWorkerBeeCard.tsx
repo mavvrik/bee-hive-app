@@ -37,7 +37,7 @@ function getStreakIntensity(
 
   return Math.min(
     1,
-    .16 + streak * .1,
+    0.16 + streak * 0.1,
   );
 }
 
@@ -45,7 +45,9 @@ function formatMetricValue(
   value: number | string,
 ) {
   return typeof value === "number"
-    ? value.toLocaleString("en-US")
+    ? value.toLocaleString(
+        "en-US",
+      )
     : value;
 }
 
@@ -58,7 +60,7 @@ function cleanMetricLabel(
   );
 }
 
-function hasMetricValue(
+function metricHasValue(
   metric: SupportMetric,
 ) {
   if (
@@ -98,7 +100,7 @@ export default function PhlebotomyWorkerBeeCard({
 }: PhlebotomyWorkerBeeCardProps) {
   const visibleSupportMetrics =
     supportMetrics.filter(
-      hasMetricValue,
+      metricHasValue,
     );
 
   const hasActiveStreak =
@@ -112,11 +114,11 @@ export default function PhlebotomyWorkerBeeCard({
   const streakStyle =
     hasActiveStreak
       ? ({
-          "--streak-glow":
+          "--streak-strength":
             String(
-              .18 +
+              0.24 +
                 streakIntensity *
-                  .24,
+                  0.42,
             ),
         } as CSSProperties)
       : undefined;
@@ -144,148 +146,214 @@ export default function PhlebotomyWorkerBeeCard({
   const supportGridClass =
     visibleSupportMetrics.length ===
     1
-      ? "support-grid-one"
+      ? "support-one"
       : visibleSupportMetrics.length ===
           2
-        ? "support-grid-two"
-        : "support-grid-three";
+        ? "support-two"
+        : visibleSupportMetrics.length ===
+            3
+          ? "support-three"
+          : "support-many";
 
   return (
     <article
-      className={`phleb-worker-card ${
+      className={`north-star-worker-card ${
         isManagement
-          ? "management-card"
+          ? "north-star-management"
           : ""
       } ${
         hasActiveStreak
-          ? "active-streak-card"
+          ? "north-star-streak"
           : ""
       }`}
       style={streakStyle}
     >
-      <div className="corner-honeycomb corner-honeycomb-top" />
-      <div className="corner-honeycomb corner-honeycomb-bottom" />
+      <div className="card-light-wash" />
 
-      <header className="worker-header">
-        <div className="worker-main">
-          <div className="bee-area">
-            {isManagement ? (
-              <ManagementBees />
-            ) : (
-              <BeeIllustration
-                primaryRole={
-                  primaryRole
-                }
-              />
-            )}
-          </div>
+      <div className="card-honeycomb card-honeycomb-top" />
 
-          <div className="worker-identity">
-            <strong>
-              {name}
-            </strong>
+      <div className="card-honeycomb card-honeycomb-bottom" />
 
-            <span>
-              {roleLabel}
-            </span>
-          </div>
-        </div>
+      {/* =====================================
+          SHOWCASE BEE SIDE
+         ===================================== */}
 
+      <div className="bee-showcase-panel">
         <div
-          className={`streak-badge ${
+          className={`bee-showcase ${
             hasActiveStreak
-              ? "streak-badge-active"
+              ? "bee-showcase-active"
               : ""
           }`}
           title={
             hasActiveStreak
               ? verifiedLabel
-                ? `Variance-free through ${verifiedLabel}`
+                ? `${varianceFreeStreak}-day variance-free streak through ${verifiedLabel}`
                 : `${varianceFreeStreak}-day variance-free streak`
               : undefined
           }
         >
-          <span className="streak-icon">
+          <div className="bee-showcase-halo" />
+
+          <div className="bee-showcase-platform" />
+
+          {isManagement ? (
+            <ManagementBees />
+          ) : (
+            <BeeIllustration
+              primaryRole={
+                primaryRole
+              }
+            />
+          )}
+
+          {hasActiveStreak && (
+            <div className="streak-flare">
+              🔥
+            </div>
+          )}
+        </div>
+
+        <div className="showcase-identity">
+          <strong>
+            {name}
+          </strong>
+
+          <span>
+            {roleLabel}
+          </span>
+        </div>
+
+        <div
+          className={`showcase-streak ${
+            hasActiveStreak
+              ? "showcase-streak-active"
+              : ""
+          }`}
+        >
+          <span>
             {hasActiveStreak
               ? "🔥"
               : "○"}
           </span>
 
-          <div>
-            <strong>
-              {varianceFreeStreak}
-            </strong>
+          <strong>
+            {
+              varianceFreeStreak
+            }
+          </strong>
 
-            <small>
-              {varianceFreeStreak === 1
-                ? "DAY"
-                : "DAYS"}
-            </small>
-          </div>
+          <small>
+            {varianceFreeStreak === 1
+              ? "DAY"
+              : "DAYS"}
+          </small>
         </div>
-      </header>
-
-      <div className="primary-metrics">
-        <MetricTile
-          label="Successful Sticks"
-          value={successfulSticks.toLocaleString(
-            "en-US",
-          )}
-          primary
-        />
-
-        <MetricTile
-          label="Success Rate"
-          value={successRateLabel}
-          emphasis={
-            successRate !== null &&
-            successRate >= 90
-              ? "green"
-              : "gold"
-          }
-          primary
-        />
       </div>
 
-      {visibleSupportMetrics.length >
-        0 && (
-        <div
-          className={`support-metrics ${supportGridClass}`}
-        >
-          {visibleSupportMetrics.map(
-            (
-              metric,
-              index,
-            ) => (
-              <MetricTile
-                key={`${metric.label}-${index}`}
-                label={
-                  cleanMetricLabel(
-                    metric.label,
-                  )
-                }
-                value={
-                  formatMetricValue(
-                    metric.value,
-                  )
-                }
-                emphasis={
-                  metric.emphasis ??
-                  "green"
-                }
-              />
-            ),
-          )}
+      {/* =====================================
+          PERFORMANCE SIDE
+         ===================================== */}
+
+      <div className="performance-panel">
+        <div className="performance-heading">
+          <span>
+            Weekly Performance
+          </span>
+
+          <strong>
+            Collection Results
+          </strong>
         </div>
-      )}
+
+        <div className="primary-performance-grid">
+          <PerformanceMetric
+            label="Successful Sticks"
+            value={successfulSticks.toLocaleString(
+              "en-US",
+            )}
+            emphasis="gold"
+            primary
+          />
+
+          <PerformanceMetric
+            label="Success Rate"
+            value={
+              successRateLabel
+            }
+            emphasis={
+              successRate !== null &&
+              successRate >= 90
+                ? "green"
+                : "gold"
+            }
+            primary
+          />
+        </div>
+
+        {visibleSupportMetrics.length >
+          0 && (
+          <div className="support-contribution">
+            <div className="support-divider">
+              <span>
+                Cross-Trained Activity
+              </span>
+            </div>
+
+            <div
+              className={`support-performance-grid ${supportGridClass}`}
+            >
+              {visibleSupportMetrics.map(
+                (
+                  metric,
+                  index,
+                ) => (
+                  <PerformanceMetric
+                    key={`${metric.label}-${index}`}
+                    label={
+                      cleanMetricLabel(
+                        metric.label,
+                      )
+                    }
+                    value={
+                      formatMetricValue(
+                        metric.value,
+                      )
+                    }
+                    emphasis={
+                      metric.emphasis ??
+                      "green"
+                    }
+                  />
+                ),
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       <style>
         {`
-          .phleb-worker-card {
+          /*
+           * ====================================
+           * NORTH STAR CARD SHELL
+           * ====================================
+           */
+
+          .north-star-worker-card {
             position: relative;
 
-            display: flex;
-            flex-direction: column;
+            display: grid;
+
+            grid-template-columns:
+              minmax(
+                112px,
+                0.84fr
+              )
+              minmax(
+                0,
+                1.16fr
+              );
 
             width: 100%;
             height: 100%;
@@ -298,190 +366,422 @@ export default function PhlebotomyWorkerBeeCard({
             border:
               1px solid
               rgba(
-                218,
-                164,
-                47,
-                .52
+                176,
+                117,
+                17,
+                0.36
               );
 
-            border-radius: 16px;
+            border-radius: 18px;
 
             background:
               linear-gradient(
-                180deg,
-                #fffdf4 0%,
-                #fff8dc 100%
-              );
-
-            box-shadow:
-              0 4px 10px
-              rgba(
-                98,
-                64,
-                10,
-                .09
-              );
-
-            color: #352209;
-
-            box-sizing: border-box;
-          }
-
-          .management-card {
-            background:
-              linear-gradient(
-                180deg,
-                #fffced 0%,
-                #faedbd 100%
-              );
-
-            border-color:
-              rgba(
-                178,
-                126,
-                31,
-                .65
-              );
-          }
-
-          .active-streak-card {
-            box-shadow:
-              0 4px 10px
-              rgba(
-                98,
-                64,
-                10,
-                .09
-              ),
-              0 0 11px
-              rgba(
-                238,
-                160,
-                32,
-                var(
-                  --streak-glow,
-                  .2
+                145deg,
+                rgba(
+                  255,
+                  254,
+                  239,
+                  0.99
+                ),
+                rgba(
+                  255,
+                  241,
+                  181,
+                  0.98
                 )
               );
+
+            box-shadow:
+              0 8px 18px
+              rgba(
+                74,
+                47,
+                6,
+                0.16
+              ),
+              inset
+              0 1px 0
+              rgba(
+                255,
+                255,
+                255,
+                0.92
+              );
+
+            isolation: isolate;
           }
 
-          /*
-           * HONEYCOMB ACCENTS
-           */
+          .north-star-worker-card::before {
+            content: "";
 
-          .corner-honeycomb {
             position: absolute;
+
+            inset: 0;
 
             z-index: 0;
 
-            width: 72px;
-            height: 48px;
-
-            opacity: .08;
-
-            background-image:
+            background:
               linear-gradient(
-                30deg,
-                #c89722 12%,
-                transparent 12.5%,
-                transparent 87%,
-                #c89722 87.5%
-              ),
-              linear-gradient(
-                150deg,
-                #c89722 12%,
-                transparent 12.5%,
-                transparent 87%,
-                #c89722 87.5%
+                118deg,
+                rgba(
+                  255,
+                  255,
+                  255,
+                  0.48
+                ),
+                transparent 36%,
+                rgba(
+                  173,
+                  105,
+                  11,
+                  0.05
+                )
+                74%
               );
-
-            background-size:
-              20px 34px;
 
             pointer-events: none;
           }
 
-          .corner-honeycomb-top {
-            top: -4px;
-            right: 10px;
+          .north-star-management {
+            border-color:
+              rgba(
+                112,
+                78,
+                15,
+                0.5
+              );
+
+            background:
+              linear-gradient(
+                145deg,
+                #fff9dc,
+                #ebd18b
+              );
           }
 
-          .corner-honeycomb-bottom {
-            bottom: -8px;
-            left: 8px;
+          .north-star-streak {
+            box-shadow:
+              0 8px 18px
+              rgba(
+                74,
+                47,
+                6,
+                0.16
+              ),
+              0 0 14px
+              rgba(
+                236,
+                147,
+                14,
+                var(
+                  --streak-strength,
+                  0.3
+                )
+              ),
+              inset
+              0 1px 0
+              rgba(
+                255,
+                255,
+                255,
+                0.92
+              );
           }
 
           /*
-           * HEADER
+           * ====================================
+           * CARD DECORATION
+           * ====================================
            */
 
-          .worker-header {
+          .card-light-wash {
+            position: absolute;
+
+            z-index: 0;
+
+            top: -42px;
+            left: -38px;
+
+            width: 170px;
+            height: 120px;
+
+            border-radius: 50%;
+
+            background:
+              rgba(
+                255,
+                242,
+                163,
+                0.42
+              );
+
+            filter: blur(31px);
+
+            pointer-events: none;
+          }
+
+          .card-honeycomb {
+            position: absolute;
+
+            z-index: 0;
+
+            width: 84px;
+            height: 66px;
+
+            opacity: 0.06;
+
+            background-image:
+              linear-gradient(
+                30deg,
+                #85550a 12%,
+                transparent 12.5%,
+                transparent 87%,
+                #85550a 87.5%
+              ),
+              linear-gradient(
+                150deg,
+                #85550a 12%,
+                transparent 12.5%,
+                transparent 87%,
+                #85550a 87.5%
+              );
+
+            background-size:
+              24px 41px;
+
+            pointer-events: none;
+          }
+
+          .card-honeycomb-top {
+            top: -9px;
+            right: -8px;
+          }
+
+          .card-honeycomb-bottom {
+            left: -9px;
+            bottom: -15px;
+          }
+
+          /*
+           * ====================================
+           * BEE SHOWCASE PANEL
+           * ====================================
+           */
+
+          .bee-showcase-panel {
             position: relative;
 
             z-index: 2;
 
             display: flex;
 
-            align-items: center;
-            justify-content:
-              space-between;
-
-            gap: 8px;
-
-            flex: 0 0 auto;
-
-            min-height: 55px;
-
-            padding:
-              7px 10px 5px;
-          }
-
-          .worker-main {
-            display: flex;
+            flex-direction: column;
 
             align-items: center;
 
-            gap: 9px;
+            justify-content: center;
 
             min-width: 0;
+            min-height: 0;
+
+            padding:
+              6px 7px;
+
+            border-right:
+              1px solid
+              rgba(
+                158,
+                101,
+                11,
+                0.19
+              );
+
+            background:
+              linear-gradient(
+                180deg,
+                rgba(
+                  255,
+                  249,
+                  214,
+                  0.7
+                ),
+                rgba(
+                  247,
+                  219,
+                  126,
+                  0.35
+                )
+              );
+
+            text-align: center;
           }
 
-          .bee-area {
+          .bee-showcase {
+            position: relative;
+
             display: grid;
 
-            flex: 0 0 auto;
+            flex: 1 1 0;
 
-            width: 54px;
-            height: 44px;
+            width: 100%;
+
+            min-height: 68px;
 
             place-items: center;
           }
 
-          .bee-area
-          .bee-illustration {
-            transform:
-              scale(.48);
+          .bee-showcase-halo {
+            position: absolute;
 
-            transform-origin:
-              center;
+            width: 96px;
+            height: 62px;
+
+            border-radius: 50%;
+
+            background:
+              radial-gradient(
+                circle,
+                rgba(
+                  255,
+                  231,
+                  117,
+                  0.54
+                ),
+                rgba(
+                  232,
+                  168,
+                  38,
+                  0.16
+                )
+                56%,
+                transparent
+                77%
+              );
+
+            filter: blur(4px);
+
+            pointer-events: none;
           }
 
-          .worker-identity {
+          .bee-showcase-active
+          .bee-showcase-halo {
+            background:
+              radial-gradient(
+                circle,
+                rgba(
+                  255,
+                  239,
+                  133,
+                  0.76
+                ),
+                rgba(
+                  233,
+                  143,
+                  18,
+                  0.31
+                )
+                56%,
+                transparent
+                79%
+              );
+          }
+
+          .bee-showcase-platform {
+            position: absolute;
+
+            bottom: 8px;
+
+            width: 76px;
+            height: 12px;
+
+            border-radius: 50%;
+
+            background:
+              radial-gradient(
+                ellipse,
+                rgba(
+                  111,
+                  70,
+                  8,
+                  0.16
+                ),
+                transparent 70%
+              );
+
+            filter: blur(2px);
+          }
+
+          .streak-flare {
+            position: absolute;
+
+            z-index: 10;
+
+            top: 3px;
+            right: 6px;
+
+            display: grid;
+
+            width: 24px;
+            height: 24px;
+
+            place-items: center;
+
+            border:
+              1px solid
+              rgba(
+                211,
+                132,
+                12,
+                0.32
+              );
+
+            border-radius: 50%;
+
+            background:
+              linear-gradient(
+                145deg,
+                #fff4bf,
+                #ffd770
+              );
+
+            box-shadow:
+              0 0 9px
+              rgba(
+                229,
+                138,
+                10,
+                0.28
+              );
+
+            font-size: 0.74rem;
+          }
+
+          /*
+           * ====================================
+           * LEFT IDENTITY
+           * ====================================
+           */
+
+          .showcase-identity {
+            flex: 0 0 auto;
+
+            width: 100%;
+
             min-width: 0;
           }
 
-          .worker-identity strong {
+          .showcase-identity strong {
             display: block;
 
             overflow: hidden;
 
-            color: #342006;
+            color: #3b2205;
 
             font-size:
               clamp(
-                .92rem,
-                1.05vw,
-                1.08rem
+                0.8rem,
+                0.92vw,
+                1rem
               );
 
             font-weight: 1000;
@@ -494,107 +794,173 @@ export default function PhlebotomyWorkerBeeCard({
             white-space: nowrap;
           }
 
-          .worker-identity span {
-            display: block;
+          .showcase-identity span {
+            display: inline-flex;
 
-            margin-top: 5px;
+            max-width: 100%;
 
-            color: #44713b;
+            margin-top: 4px;
 
-            font-size: .42rem;
+            padding:
+              3px 8px;
+
+            overflow: hidden;
+
+            border:
+              1px solid
+              rgba(
+                74,
+                111,
+                40,
+                0.24
+              );
+
+            border-radius: 999px;
+
+            background:
+              linear-gradient(
+                145deg,
+                #f1f7dd,
+                #dfefbd
+              );
+
+            color: #416126;
+
+            font-size: 0.42rem;
+
             font-weight: 1000;
-
-            letter-spacing:
-              .02em;
 
             line-height: 1;
 
+            text-overflow: ellipsis;
+
             text-transform:
               uppercase;
+
+            white-space: nowrap;
           }
 
-          /*
-           * STREAK BADGE
-           */
-
-          .streak-badge {
+          .showcase-streak {
             display: flex;
 
             align-items: center;
 
-            gap: 6px;
+            justify-content: center;
+
+            gap: 3px;
 
             flex: 0 0 auto;
 
-            min-width: 64px;
+            margin-top: 5px;
 
             padding:
-              5px 7px;
+              2px 7px;
 
-            border-radius: 11px;
+            border-radius: 999px;
 
-            color: #59492d;
+            color: #735f3a;
           }
 
-          .streak-badge-active {
+          .showcase-streak-active {
             border:
               1px solid
               rgba(
-                225,
-                158,
-                38,
-                .35
+                201,
+                122,
+                9,
+                0.24
               );
 
             background:
               linear-gradient(
                 145deg,
-                #fff4c5,
-                #ffe5a0
+                #fff2bc,
+                #ffd674
               );
+
+            color: #744107;
           }
 
-          .streak-icon {
-            font-size: .85rem;
+          .showcase-streak span {
+            font-size: 0.55rem;
           }
 
-          .streak-badge div {
+          .showcase-streak strong {
+            font-size: 0.58rem;
+            font-weight: 1000;
+          }
+
+          .showcase-streak small {
+            font-size: 0.25rem;
+            font-weight: 1000;
+          }
+
+          /*
+           * ====================================
+           * PERFORMANCE PANEL
+           * ====================================
+           */
+
+          .performance-panel {
+            position: relative;
+
+            z-index: 2;
+
             display: flex;
 
             flex-direction: column;
 
-            align-items: flex-start;
+            min-width: 0;
+            min-height: 0;
+
+            padding:
+              8px 10px;
           }
 
-          .streak-badge strong {
-            color: #3f2707;
+          .performance-heading {
+            flex: 0 0 auto;
+          }
 
-            font-size: .92rem;
+          .performance-heading span {
+            display: block;
+
+            margin-bottom: 2px;
+
+            color: #9d6b14;
+
+            font-size: 0.4rem;
+
             font-weight: 1000;
 
-            line-height: .9;
+            letter-spacing: 0.11em;
+
+            text-transform: uppercase;
           }
 
-          .streak-badge small {
-            margin-top: 2px;
+          .performance-heading strong {
+            display: block;
 
-            color: #694a18;
+            color: #3b2205;
 
-            font-size: .28rem;
+            font-size:
+              clamp(
+                0.87rem,
+                1vw,
+                1.04rem
+              );
+
             font-weight: 1000;
 
             line-height: 1;
           }
 
           /*
-           * PRIMARY KPI AREA
+           * ====================================
+           * PRIMARY PERFORMANCE
+           * ====================================
            */
 
-          .primary-metrics {
-            position: relative;
-
-            z-index: 2;
-
+          .primary-performance-grid {
             display: grid;
 
             grid-template-columns:
@@ -608,42 +974,86 @@ export default function PhlebotomyWorkerBeeCard({
 
             flex: 1 1 0;
 
-            gap: 5px;
+            gap: 6px;
 
             min-width: 0;
             min-height: 0;
 
-            padding:
-              0 10px 7px;
+            margin-top: 7px;
           }
 
           /*
-           * SUPPORT METRICS
+           * ====================================
+           * CROSS TRAINED CONTRIBUTION
+           * ====================================
            */
 
-          .support-metrics {
-            position: relative;
-
-            z-index: 2;
-
-            display: grid;
+          .support-contribution {
+            display: flex;
 
             flex: 0 0 auto;
 
-            gap: 5px;
+            flex-direction: column;
 
             min-width: 0;
 
-            padding:
-              0 10px 8px;
+            margin-top: 6px;
           }
 
-          .support-grid-one {
-            grid-template-columns:
-              1fr;
+          .support-divider {
+            display: flex;
+
+            align-items: center;
+
+            gap: 6px;
+
+            margin-bottom: 4px;
           }
 
-          .support-grid-two {
+          .support-divider::before,
+          .support-divider::after {
+            content: "";
+
+            flex: 1;
+
+            height: 1px;
+
+            background:
+              rgba(
+                153,
+                98,
+                11,
+                0.17
+              );
+          }
+
+          .support-divider span {
+            flex: 0 0 auto;
+
+            color: #80652e;
+
+            font-size: 0.29rem;
+
+            font-weight: 1000;
+
+            letter-spacing: 0.05em;
+
+            text-transform: uppercase;
+          }
+
+          .support-performance-grid {
+            display: grid;
+
+            gap: 4px;
+
+            min-width: 0;
+          }
+
+          .support-one {
+            grid-template-columns: 1fr;
+          }
+
+          .support-two {
             grid-template-columns:
               repeat(
                 2,
@@ -654,7 +1064,8 @@ export default function PhlebotomyWorkerBeeCard({
               );
           }
 
-          .support-grid-three {
+          .support-three,
+          .support-many {
             grid-template-columns:
               repeat(
                 3,
@@ -666,30 +1077,37 @@ export default function PhlebotomyWorkerBeeCard({
           }
 
           /*
-           * METRIC TILE
+           * ====================================
+           * PERFORMANCE METRIC
+           * ====================================
            */
 
-          .metric-tile {
+          .performance-metric {
+            position: relative;
+
             display: flex;
 
             flex-direction: column;
 
             align-items: center;
+
             justify-content: center;
 
             min-width: 0;
             min-height: 0;
 
             padding:
-              5px 6px;
+              4px 5px;
+
+            overflow: hidden;
 
             border:
               1px solid
               rgba(
-                221,
-                166,
-                52,
-                .46
+                169,
+                107,
+                8,
+                0.23
               );
 
             border-radius: 10px;
@@ -700,14 +1118,14 @@ export default function PhlebotomyWorkerBeeCard({
                 rgba(
                   255,
                   255,
-                  252,
-                  .96
+                  255,
+                  0.91
                 ),
                 rgba(
                   255,
-                  247,
-                  215,
-                  .94
+                  237,
+                  170,
+                  0.7
                 )
               );
 
@@ -718,82 +1136,184 @@ export default function PhlebotomyWorkerBeeCard({
                 255,
                 255,
                 255,
-                .8
+                0.86
               );
 
             text-align: center;
           }
 
-          .metric-primary {
+          .performance-metric::before {
+            content: "";
+
+            position: absolute;
+
+            top: 0;
+            left: 15%;
+
+            width: 70%;
+            height: 2px;
+
+            border-radius: 999px;
+
             background:
               linear-gradient(
-                180deg,
-                #fffef8,
-                #fff4cd
+                90deg,
+                transparent,
+                rgba(
+                  220,
+                  145,
+                  18,
+                  0.68
+                ),
+                transparent
               );
           }
 
-          .metric-tile span {
+          .performance-metric-primary {
+            min-height: 48px;
+
+            background:
+              linear-gradient(
+                180deg,
+                rgba(
+                  255,
+                  255,
+                  255,
+                  0.96
+                ),
+                rgba(
+                  255,
+                  226,
+                  129,
+                  0.76
+                )
+              );
+          }
+
+          .performance-metric span {
             display: block;
 
             max-width: 100%;
 
             overflow: hidden;
 
-            color: #665944;
+            color: #876c36;
 
-            font-size: .4rem;
-            font-weight: 900;
+            font-size: 0.34rem;
 
-            line-height: 1.1;
+            font-weight: 1000;
 
-            text-overflow:
-              ellipsis;
+            letter-spacing: 0.04em;
 
-            text-transform:
-              uppercase;
+            line-height: 1.12;
+
+            text-overflow: ellipsis;
+
+            text-transform: uppercase;
 
             white-space: nowrap;
           }
 
-          .metric-tile strong {
+          .performance-metric strong {
             display: block;
 
-            margin-top: 5px;
+            max-width: 100%;
 
-            color: #5b3707;
+            margin-top: 4px;
 
-            font-size: .92rem;
+            overflow: hidden;
+
+            color: #885608;
+
+            font-size:
+              clamp(
+                0.69rem,
+                0.82vw,
+                0.9rem
+              );
+
             font-weight: 1000;
 
             line-height: 1;
+
+            text-overflow: ellipsis;
+
+            white-space: nowrap;
           }
 
-          .metric-primary strong {
-            font-size: 1.08rem;
+          .performance-metric-primary
+          strong {
+            font-size:
+              clamp(
+                0.84rem,
+                1vw,
+                1.04rem
+              );
           }
 
-          .metric-green span {
-            color: #4b703f;
+          .performance-metric-green
+          strong {
+            color: #477628;
           }
 
-          .metric-green strong {
-            color: #3f6938;
-          }
-
-          .metric-red strong {
-            color: #9d4438;
+          .performance-metric-red
+          strong {
+            color: #a4483e;
           }
 
           /*
-           * BEE ILLUSTRATION
+           * ====================================
+           * ORIGINAL NORTH STAR BEE
+           * ====================================
            */
 
           .bee-illustration {
             position: relative;
 
-            width: 92px;
-            height: 72px;
+            z-index: 2;
+
+            width: 86px;
+            height: 66px;
+
+            filter:
+              drop-shadow(
+                0 5px 5px
+                rgba(
+                  75,
+                  49,
+                  4,
+                  0.18
+                )
+              );
+
+            animation:
+              workerBeeFloat
+              4.2s
+              ease-in-out
+              infinite;
+          }
+
+          @keyframes workerBeeFloat {
+            0%,
+            100% {
+              transform:
+                translateY(
+                  2px
+                )
+                rotate(
+                  -1deg
+                );
+            }
+
+            50% {
+              transform:
+                translateY(
+                  -5px
+                )
+                rotate(
+                  1deg
+                );
+            }
           }
 
           .bee-body {
@@ -801,17 +1321,21 @@ export default function PhlebotomyWorkerBeeCard({
 
             z-index: 3;
 
-            top: 30px;
-            left: 26px;
+            top: 27px;
+            left: 22px;
 
             width: 49px;
             height: 29px;
+
+            overflow: hidden;
 
             border:
               2px solid
               #493308;
 
-            border-radius: 52%;
+            border-radius:
+              52% 58%
+              55% 48%;
 
             background:
               repeating-linear-gradient(
@@ -821,6 +1345,24 @@ export default function PhlebotomyWorkerBeeCard({
                 #3b2a0c
                 10px 17px
               );
+
+            box-shadow:
+              inset
+              3px 4px 7px
+              rgba(
+                255,
+                255,
+                255,
+                0.24
+              ),
+              inset
+              -3px -3px 7px
+              rgba(
+                45,
+                27,
+                4,
+                0.18
+              );
           }
 
           .bee-head {
@@ -828,8 +1370,8 @@ export default function PhlebotomyWorkerBeeCard({
 
             z-index: 5;
 
-            top: 27px;
-            left: 13px;
+            top: 24px;
+            left: 9px;
 
             width: 31px;
             height: 31px;
@@ -841,7 +1383,46 @@ export default function PhlebotomyWorkerBeeCard({
             border-radius: 48%;
 
             background:
-              #e8ac26;
+              radial-gradient(
+                circle at
+                34% 27%,
+                #ffe994,
+                #e8ac26
+                72%
+              );
+
+            box-shadow:
+              inset
+              3px 3px 5px
+              rgba(
+                255,
+                255,
+                255,
+                0.26
+              );
+          }
+
+          .bee-head::after {
+            content: "";
+
+            position: absolute;
+
+            bottom: 5px;
+            left: 9px;
+
+            width: 10px;
+            height: 4px;
+
+            border-bottom:
+              2px solid
+              rgba(
+                74,
+                44,
+                6,
+                0.72
+              );
+
+            border-radius: 50%;
           }
 
           .bee-eye {
@@ -855,7 +1436,23 @@ export default function PhlebotomyWorkerBeeCard({
             border-radius: 50%;
 
             background:
-              #211707;
+              radial-gradient(
+                circle at
+                35% 30%,
+                #ffffff
+                0 16%,
+                #211707
+                18% 100%
+              );
+
+            box-shadow:
+              0 0 2px
+              rgba(
+                0,
+                0,
+                0,
+                0.35
+              );
           }
 
           .bee-eye-left {
@@ -871,31 +1468,61 @@ export default function PhlebotomyWorkerBeeCard({
 
             z-index: 2;
 
-            top: 9px;
+            top: 7px;
 
             width: 33px;
             height: 29px;
 
-            border-radius: 60%;
+            border:
+              1px solid
+              rgba(
+                107,
+                144,
+                151,
+                0.44
+              );
+
+            border-radius:
+              65% 54%
+              52% 60%;
 
             background:
+              linear-gradient(
+                145deg,
+                rgba(
+                  245,
+                  255,
+                  255,
+                  0.84
+                ),
+                rgba(
+                  182,
+                  229,
+                  238,
+                  0.48
+                )
+              );
+
+            box-shadow:
+              inset
+              3px 3px 6px
               rgba(
-                230,
-                249,
-                252,
-                .86
+                255,
+                255,
+                255,
+                0.44
               );
           }
 
           .bee-wing-left {
-            left: 32px;
+            left: 29px;
 
             transform:
               rotate(-18deg);
           }
 
           .bee-wing-right {
-            left: 51px;
+            left: 48px;
 
             transform:
               rotate(20deg);
@@ -906,24 +1533,40 @@ export default function PhlebotomyWorkerBeeCard({
 
             z-index: 6;
 
-            top: 17px;
+            top: 14px;
 
             width: 17px;
+            height: 13px;
 
             border-top:
               2px solid
               #4a3209;
           }
 
+          .bee-antenna::after {
+            content: "";
+
+            position: absolute;
+
+            top: -3px;
+
+            width: 4px;
+            height: 4px;
+
+            border-radius: 50%;
+
+            background: #4a3209;
+          }
+
           .bee-antenna-left {
-            left: 16px;
+            left: 12px;
 
             transform:
               rotate(-34deg);
           }
 
           .bee-antenna-right {
-            left: 31px;
+            left: 27px;
 
             transform:
               rotate(28deg);
@@ -934,64 +1577,84 @@ export default function PhlebotomyWorkerBeeCard({
 
             z-index: 8;
 
-            top: 44px;
-            right: -2px;
+            top: 41px;
+            right: -3px;
 
-            width: 31px;
-            height: 4px;
+            width: 29px;
+            height: 3px;
 
             background:
-              #a6bbc3;
+              linear-gradient(
+                90deg,
+                #8fa4ad,
+                #d7e4e8
+              );
 
             transform:
               rotate(-18deg);
+
+            box-shadow:
+              0 1px 1px
+              rgba(
+                67,
+                77,
+                80,
+                0.16
+              );
           }
 
           /*
+           * ====================================
            * MANAGEMENT BEES
+           * ====================================
            */
 
           .management-bee-group {
+            position: relative;
+
+            z-index: 2;
+
             display: flex;
 
             align-items: flex-end;
 
-            justify-content:
-              center;
+            justify-content: center;
 
-            width: 58px;
+            width: 100%;
 
-            transform:
-              scale(.78);
+            animation:
+              workerBeeFloat
+              4.6s
+              ease-in-out
+              infinite;
           }
 
           .management-mini-bee {
             position: relative;
 
-            width: 28px;
-            height: 34px;
+            width: 40px;
+            height: 40px;
 
             margin:
-              0 -3px;
+              0 -4px;
           }
 
           .management-mini-bee:nth-child(
             2
           ) {
             transform:
-              translateY(
-                -5px
-              );
+              translateY(-8px)
+              scale(1.08);
           }
 
           .mini-bee-body {
             position: absolute;
 
-            top: 15px;
-            left: 6px;
+            top: 17px;
+            left: 8px;
 
-            width: 21px;
-            height: 14px;
+            width: 27px;
+            height: 17px;
 
             border:
               2px solid
@@ -1003,44 +1666,80 @@ export default function PhlebotomyWorkerBeeCard({
               repeating-linear-gradient(
                 90deg,
                 #ffd044
-                0 5px,
+                0 6px,
                 #3f2c0b
-                5px 8px
+                6px 10px
+              );
+
+            box-shadow:
+              0 3px 4px
+              rgba(
+                70,
+                45,
+                4,
+                0.16
               );
           }
 
           .mini-bee-head {
             position: absolute;
 
-            top: 14px;
-            left: 0;
+            z-index: 3;
 
-            width: 15px;
-            height: 15px;
+            top: 16px;
+            left: 2px;
+
+            width: 18px;
+            height: 18px;
+
+            border:
+              2px solid
+              #553b0b;
 
             border-radius: 50%;
 
             background:
-              #e7ae2f;
+              radial-gradient(
+                circle at
+                35% 25%,
+                #ffe89a,
+                #e7ae2f
+              );
           }
 
           .mini-bee-wing {
             position: absolute;
 
-            top: 5px;
-            left: 12px;
+            top: 6px;
+            left: 15px;
 
-            width: 17px;
-            height: 14px;
+            width: 20px;
+            height: 16px;
+
+            border:
+              1px solid
+              rgba(
+                88,
+                125,
+                138,
+                0.4
+              );
 
             border-radius: 50%;
 
             background:
-              #e5f7fa;
+              rgba(
+                229,
+                249,
+                252,
+                0.75
+              );
           }
 
           /*
+           * ====================================
            * SHORT DESKTOP
+           * ====================================
            */
 
           @media (
@@ -1048,56 +1747,109 @@ export default function PhlebotomyWorkerBeeCard({
           ) and (
             min-width: 1101px
           ) {
-            .worker-header {
-              min-height: 48px;
+            .north-star-worker-card {
+              grid-template-columns:
+                minmax(
+                  102px,
+                  0.8fr
+                )
+                minmax(
+                  0,
+                  1.2fr
+                );
+            }
 
+            .bee-showcase-panel {
               padding:
-                5px 8px 4px;
+                4px 5px;
             }
 
-            .bee-area {
-              width: 48px;
-              height: 38px;
+            .bee-showcase {
+              min-height: 57px;
             }
 
-            .bee-area
             .bee-illustration {
               transform:
-                scale(.43);
+                scale(0.9);
             }
 
-            .worker-identity strong {
-              font-size: .88rem;
+            .showcase-identity strong {
+              font-size: 0.76rem;
             }
 
-            .streak-badge {
-              min-width: 56px;
-
+            .performance-panel {
               padding:
-                4px 6px;
+                5px 7px;
             }
 
-            .primary-metrics {
+            .performance-heading span {
+              font-size: 0.34rem;
+            }
+
+            .performance-heading strong {
+              font-size: 0.84rem;
+            }
+
+            .primary-performance-grid {
+              gap: 4px;
+
+              margin-top: 5px;
+            }
+
+            .support-contribution {
+              margin-top: 4px;
+            }
+
+            .performance-metric {
               padding:
-                0 8px 5px;
+                2px 3px;
             }
 
-            .support-metrics {
-              padding:
-                0 8px 6px;
+            .performance-metric-primary {
+              min-height: 40px;
             }
 
-            .metric-tile {
-              padding:
-                3px 4px;
+            .performance-metric-primary
+            strong {
+              font-size: 0.82rem;
+            }
+          }
+
+          @media (
+            max-width: 700px
+          ) {
+            .north-star-worker-card {
+              grid-template-columns:
+                minmax(
+                  108px,
+                  0.84fr
+                )
+                minmax(
+                  0,
+                  1.16fr
+                );
             }
 
-            .metric-primary strong {
-              font-size: .92rem;
+            .support-three,
+            .support-many {
+              grid-template-columns:
+                repeat(
+                  2,
+                  minmax(
+                    0,
+                    1fr
+                  )
+                );
             }
+          }
 
-            .metric-tile strong {
-              font-size: .78rem;
+          @media (
+            prefers-reduced-motion:
+              reduce
+          ) {
+            .bee-illustration,
+            .management-bee-group {
+              animation: none;
             }
           }
         `}
@@ -1106,12 +1858,7 @@ export default function PhlebotomyWorkerBeeCard({
   );
 }
 
-function MetricTile({
-  label,
-  value,
-  emphasis = "gold",
-  primary = false,
-}: {
+type PerformanceMetricProps = {
   label: string;
   value: string;
 
@@ -1121,12 +1868,19 @@ function MetricTile({
     | "red";
 
   primary?: boolean;
-}) {
+};
+
+function PerformanceMetric({
+  label,
+  value,
+  emphasis = "gold",
+  primary = false,
+}: PerformanceMetricProps) {
   return (
     <div
-      className={`metric-tile metric-${emphasis} ${
+      className={`performance-metric performance-metric-${emphasis} ${
         primary
-          ? "metric-primary"
+          ? "performance-metric-primary"
           : ""
       }`}
     >
@@ -1152,15 +1906,18 @@ function BeeIllustration({
       aria-hidden="true"
     >
       <div className="bee-wing bee-wing-left" />
+
       <div className="bee-wing bee-wing-right" />
 
       <div className="bee-antenna bee-antenna-left" />
+
       <div className="bee-antenna bee-antenna-right" />
 
       <div className="bee-body" />
 
       <div className="bee-head">
         <div className="bee-eye bee-eye-left" />
+
         <div className="bee-eye bee-eye-right" />
       </div>
 
@@ -1190,7 +1947,9 @@ function ManagementBees() {
             key={index}
           >
             <div className="mini-bee-wing" />
+
             <div className="mini-bee-body" />
+
             <div className="mini-bee-head" />
           </div>
         ),
