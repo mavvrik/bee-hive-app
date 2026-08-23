@@ -12,23 +12,23 @@ datasource db {
 // ======================================================
 
 model Collector {
-  id                     Int                      @id @default(autoincrement())
-  name                   String
-  role                   String
-  groupType              String
-  position               Int
-  active                 Boolean                  @default(true)
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
+  id        Int      @id @default(autoincrement())
+  name      String
+  role      String
+  groupType String
+  position  Int
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  bio                    String?
-  funFact                String?
-  isEmployeeOfMonth      Boolean                  @default(false)
-  photoUrl               String?
-  preferredName          String?
-  profileTitle           String?
-  recognitionMessage     String?
-  showOnMeetTheBees      Boolean                  @default(true)
+  bio                String?
+  funFact            String?
+  isEmployeeOfMonth  Boolean @default(false)
+  photoUrl           String?
+  preferredName      String?
+  profileTitle       String?
+  recognitionMessage String?
+  showOnMeetTheBees  Boolean @default(true)
 
   hourlyEntries          HourlyOperationalEntry[]
   leadForagerReigns      LeadForagerReign[]
@@ -36,11 +36,11 @@ model Collector {
   emfEntries             QualityEmfEntry[]
   stickEntries           WorkerStickEntry[]
 
-  roleAssignments        WorkerRoleAssignment[]
-  performanceEntries     WorkerPerformanceEntry[]
-  attendanceEntries      AttendanceEntry[]
-  recognitionScores      MonthlyRecognitionScore[]
-  employeeOfMonthScores  EmployeeOfMonthScore[]
+  roleAssignments       WorkerRoleAssignment[]
+  performanceEntries    WorkerPerformanceEntry[]
+  attendanceEntries     AttendanceEntry[]
+  recognitionScores     MonthlyRecognitionScore[]
+  employeeOfMonthScores EmployeeOfMonthScore[]
 
   @@index([active])
   @@index([position])
@@ -59,7 +59,7 @@ model WorkerRoleAssignment {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  collector   Collector     @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+  collector Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
 
   @@unique([collectorId, role])
   @@index([collectorId])
@@ -71,15 +71,15 @@ model WorkerRoleAssignment {
 // ======================================================
 
 model WorkerStickEntry {
-  id               Int       @id @default(autoincrement())
+  id               Int      @id @default(autoincrement())
   collectorId      Int
   entryDate        DateTime
-  totalSticks      Int       @default(0)
-  successfulSticks Int       @default(0)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  totalSticks      Int      @default(0)
+  successfulSticks Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  collector        Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+  collector Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
 
   @@unique([collectorId, entryDate])
   @@index([entryDate])
@@ -103,7 +103,7 @@ model WorkerPerformanceEntry {
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
 
-  collector       Collector             @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+  collector Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
 
   @@unique([collectorId, entryDate, role, metric])
   @@index([collectorId])
@@ -123,8 +123,8 @@ model RolePerformanceTarget {
   targetPerDay       Float
   accuracyApplicable Boolean               @default(false)
   active             Boolean               @default(true)
-  createdAt          DateTime               @default(now())
-  updatedAt          DateTime               @updatedAt
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
 
   @@unique([role, metric])
   @@index([role])
@@ -136,15 +136,15 @@ model RolePerformanceTarget {
 // ======================================================
 
 model QualityEmfEntry {
-  id          Int       @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   collectorId Int
   entryDate   DateTime
-  emfCount    Int       @default(1)
+  emfCount    Int      @default(1)
   note        String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  collector   Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+  collector Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
 
   @@index([collectorId])
   @@index([entryDate])
@@ -164,7 +164,7 @@ model AttendanceEntry {
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
 
-  collector   Collector           @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+  collector Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
 
   @@index([collectorId])
   @@index([entryDate])
@@ -177,16 +177,16 @@ model AttendanceEntry {
 // ======================================================
 
 model MonthlyRecognitionScore {
-  id          Int       @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   collectorId Int
   year        Int
   month       Int
-  score       Float     @default(0)
+  score       Float    @default(0)
   note        String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  collector   Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+  collector Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
 
   @@unique([collectorId, year, month])
   @@index([year, month])
@@ -198,23 +198,23 @@ model MonthlyRecognitionScore {
 // ======================================================
 
 model EmployeeOfMonthSettings {
-  id                       Int      @id @default(1)
+  id Int @id @default(1)
 
-  productivityWeight       Float    @default(35)
-  accuracyWeight           Float    @default(25)
-  qualityWeight            Float    @default(25)
-  attendanceWeight         Float    @default(10)
-  recognitionWeight        Float    @default(5)
+  productivityWeight Float @default(35)
+  accuracyWeight     Float @default(25)
+  qualityWeight      Float @default(25)
+  attendanceWeight   Float @default(10)
+  recognitionWeight  Float @default(5)
 
-  emfPenaltyPoints         Float    @default(15)
-  emfDisqualifyThreshold   Int?
+  emfPenaltyPoints       Float @default(15)
+  emfDisqualifyThreshold Int?
 
-  latePenalty              Float    @default(1)
-  absentPenalty            Float    @default(3)
-  lateFromLunchPenalty     Float    @default(1)
-  leftEarlyPenalty         Float    @default(1.5)
+  latePenalty          Float @default(1)
+  absentPenalty        Float @default(3)
+  lateFromLunchPenalty Float @default(1)
+  leftEarlyPenalty     Float @default(1.5)
 
-  updatedAt                DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 }
 
 // ======================================================
@@ -222,26 +222,26 @@ model EmployeeOfMonthSettings {
 // ======================================================
 
 model EmployeeOfMonthScore {
-  id                  Int       @id @default(autoincrement())
-  collectorId         Int
-  year                Int
-  month               Int
+  id          Int @id @default(autoincrement())
+  collectorId Int
+  year        Int
+  month       Int
 
-  productivityScore   Float     @default(0)
-  accuracyScore       Float     @default(0)
-  qualityScore        Float     @default(100)
-  attendanceScore     Float     @default(100)
-  recognitionScore    Float     @default(0)
+  productivityScore Float @default(0)
+  accuracyScore     Float @default(0)
+  qualityScore      Float @default(100)
+  attendanceScore   Float @default(100)
+  recognitionScore  Float @default(0)
 
-  weightedScore       Float     @default(0)
+  weightedScore Float @default(0)
 
-  eligible            Boolean   @default(true)
-  ineligibleReason    String?
+  eligible         Boolean @default(true)
+  ineligibleReason String?
 
-  calculatedAt        DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  calculatedAt DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  collector           Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+  collector Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
 
   @@unique([collectorId, year, month])
   @@index([year, month])
@@ -254,27 +254,27 @@ model EmployeeOfMonthScore {
 // ======================================================
 
 model LeadForagerReign {
-  id                        Int        @id @default(1)
+  id                        Int       @id @default(1)
   collectorId               Int?
-  benchmarkSuccessfulSticks Int        @default(0)
+  benchmarkSuccessfulSticks Int       @default(0)
   crownedAt                 DateTime?
-  updatedAt                 DateTime   @updatedAt
+  updatedAt                 DateTime  @updatedAt
 
-  collector                 Collector? @relation(fields: [collectorId], references: [id])
+  collector Collector? @relation(fields: [collectorId], references: [id])
 
   @@index([collectorId])
 }
 
 model MonthlyLeadForager {
-  id               Int       @id @default(autoincrement())
+  id               Int      @id @default(autoincrement())
   year             Int
   month            Int
   collectorId      Int
   successfulSticks Int
-  recordedAt       DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  recordedAt       DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  collector        Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+  collector Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
 
   @@unique([year, month])
   @@index([collectorId])
@@ -287,7 +287,7 @@ model MonthlyLeadForager {
 
 model DailyCenterProduction {
   id        Int      @id @default(autoincrement())
-  entryDate DateTime @unique
+  entryDate DateTime @unique @db.Date
   liters    Float
   donors    Int      @default(0)
   createdAt DateTime @default(now())
@@ -301,17 +301,17 @@ model DailyCenterProduction {
 // ======================================================
 
 model HourlyOperationalEntry {
-  id                 Int       @id @default(autoincrement())
+  id                 Int      @id @default(autoincrement())
   collectorId        Int
   entryDate          DateTime
   operationalHour    Int
-  successfulSticks   Int       @default(0)
-  unsuccessfulSticks Int       @default(0)
-  lostVolumeMl       Float     @default(0)
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  successfulSticks   Int      @default(0)
+  unsuccessfulSticks Int      @default(0)
+  lostVolumeMl       Float    @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  collector          Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+  collector Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
 
   @@unique([collectorId, entryDate, operationalHour])
   @@index([entryDate])
@@ -371,9 +371,9 @@ model DashboardMetric {
   publicSource  MetricSource @default(CSL)
 
   // Public Executive Intelligence visibility
-  isVisible     Boolean      @default(true)
+  isVisible Boolean @default(true)
 
-  displayOrder  Int          @default(0)
+  displayOrder Int @default(0)
 
   // ------------------------------------------
   // EXECUTIVE COMPARATIVE INTELLIGENCE
@@ -404,15 +404,15 @@ model DashboardMetric {
 }
 
 model MetricReading {
-  id         Int             @id @default(autoincrement())
+  id         Int          @id @default(autoincrement())
   metricId   Int
   source     MetricSource
   value      Float
-  recordedAt DateTime        @default(now())
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
+  recordedAt DateTime     @default(now())
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
 
-  metric     DashboardMetric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+  metric DashboardMetric @relation(fields: [metricId], references: [id], onDelete: Cascade)
 
   @@index([metricId, source, recordedAt])
   @@index([recordedAt])
@@ -435,11 +435,14 @@ enum WorkforceRole {
 
 enum PerformanceMetricType {
   STICKS
+  RESTICKS
   DISCONNECTS
   SETUPS
   PHYSICALS
   INTERVIEWS
   PROCESSED
+  SEPARATIONS
+  SOLUTIONS_SPIKED
   OTHER
 }
 

@@ -169,6 +169,59 @@ function supportMetricKey(
   return `${collectorId}:${role}:${metric}`;
 }
 
+/*
+ * ==========================================
+ * MANAGEMENT DISPLAY ARCHITECTURE
+ * ==========================================
+ *
+ * The existing Management collector is the
+ * single public/display shell.
+ *
+ * Craig, Kelly, Michael, and any future
+ * individual Management workers remain real
+ * Collector records for imports, analytics,
+ * recognition, attendance, EMFs, etc.
+ *
+ * Those individual records do NOT render as
+ * separate Meadow bees.
+ */
+
+function isManagementDisplayShell(
+  collector: {
+    name: string;
+    role: string;
+    groupType: string;
+  },
+) {
+  const normalizedName =
+    collector.name
+      .trim()
+      .toLowerCase();
+
+  return (
+    collector.role === "Management" &&
+    normalizedName === "management"
+  );
+}
+
+function isIndividualManagementWorker(
+  collector: {
+    name: string;
+    role: string;
+    groupType: string;
+  },
+) {
+  const normalizedName =
+    collector.name
+      .trim()
+      .toLowerCase();
+
+  return (
+    collector.role === "Management" &&
+    normalizedName !== "management"
+  );
+}
+
 export default async function Home() {
   const today =
     new Date();
@@ -187,20 +240,29 @@ export default async function Home() {
       today,
     );
 
-  const startOfCurrentWeek =
-    startOfOperationalWeek(
-      today,
-    );
-
-  const startOfNextWeek =
-    new Date(
-      startOfCurrentWeek,
-    );
-
-  startOfNextWeek.setDate(
-    startOfNextWeek.getDate() +
-      7,
+  const localWeekStart =
+  startOfOperationalWeek(
+    today,
   );
+
+const startOfCurrentWeek =
+  new Date(
+    Date.UTC(
+      localWeekStart.getFullYear(),
+      localWeekStart.getMonth(),
+      localWeekStart.getDate(),
+    ),
+  );
+
+const startOfNextWeek =
+  new Date(
+    startOfCurrentWeek,
+  );
+
+startOfNextWeek.setUTCDate(
+  startOfNextWeek.getUTCDate() +
+    7,
+);
 
   const startOfCurrentMonth =
     new Date(
@@ -575,25 +637,82 @@ export default async function Home() {
 
   /*
    * ==========================================
-   * TWO-MEADOW SPLIT
+   * MANAGEMENT MEMBERS
    * ==========================================
+   *
+   * These workers remain in the database
+   * individually but are hidden as separate
+   * public Meadow cards.
    */
 
-  const phlebotomyCollectors =
+  const managementMembers =
     collectors.filter(
       (
         collector,
       ) =>
+        isIndividualManagementWorker(
+          collector,
+        ),
+    );
+
+  const managementMemberIds =
+    new Set(
+      managementMembers.map(
+        (
+          collector,
+        ) =>
+          collector.id,
+      ),
+    );
+
+  /*
+   * ==========================================
+   * PUBLIC MEADOW COLLECTORS
+   * ==========================================
+   */
+
+  const meadowCollectors =
+    collectors.filter(
+      (
+        collector,
+      ) =>
+        !managementMemberIds.has(
+          collector.id,
+        ),
+    );
+
+  /*
+   * ==========================================
+   * TWO-MEADOW SPLIT
+   * ==========================================
+   *
+   * Management shell stays on Meadow 1.
+   *
+   * Individual management workers are excluded
+   * from both Meadows.
+   */
+
+  const phlebotomyCollectors =
+    meadowCollectors.filter(
+      (
+        collector,
+      ) =>
+        isManagementDisplayShell(
+          collector,
+        ) ||
         hasPhlebotomyEligibility(
           collector,
         ),
     );
 
   const supportCollectors =
-    collectors.filter(
+    meadowCollectors.filter(
       (
         collector,
       ) =>
+        !isManagementDisplayShell(
+          collector,
+        ) &&
         !hasPhlebotomyEligibility(
           collector,
         ),
@@ -704,6 +823,92 @@ export default async function Home() {
 
   /*
    * ==========================================
+   * MANAGEMENT PHLEBOTOMY AGGREGATION
+   * ==========================================
+   *
+   * Normal workers return their own totals.
+   *
+   * The Management shell returns:
+   *
+   * Management shell record
+   * + Craig
+   * + Kelly
+   * + Michael
+   * + any future individual Management workers.
+   */
+
+  function getWeeklyPhlebotomyPerformance(
+    collector: {
+      id: number;
+      name: string;
+      role: string;
+      groupType: string;
+    },
+  ) {
+    if (
+      !isManagementDisplayShell(
+        collector,
+      )
+    ) {
+      return (
+        weeklyWorkerPerformance.get(
+          collector.id,
+        ) ?? {
+          totalSticks:
+            0,
+
+          successfulSticks:
+            0,
+        }
+      );
+    }
+
+    const aggregate = {
+      totalSticks:
+        0,
+
+      successfulSticks:
+        0,
+    };
+
+    const sourceIds = [
+      collector.id,
+
+      ...managementMembers.map(
+        (
+          member,
+        ) =>
+          member.id,
+      ),
+    ];
+
+    for (
+      const sourceId of
+        sourceIds
+    ) {
+      const performance =
+        weeklyWorkerPerformance.get(
+          sourceId,
+        );
+
+      if (
+        !performance
+      ) {
+        continue;
+      }
+
+      aggregate.totalSticks +=
+        performance.totalSticks;
+
+      aggregate.successfulSticks +=
+        performance.successfulSticks;
+    }
+
+    return aggregate;
+  }
+
+  /*
+   * ==========================================
    * SUPPORT WEEKLY TOTALS
    * ==========================================
    */
@@ -740,15 +945,25 @@ export default async function Home() {
 
   /*
    * ==========================================
-   * SUPPORT MEADOW METRICS
+   * SUPPORT METRIC BUILDER
    * ==========================================
+   *
+   * Normal Worker Bee:
+   * reads only that worker.
+   *
+   * Management display shell:
+   * reads shell + all individual management
+   * workers and combines their totals.
+   *
+   * EMFs and Attendance are NOT included.
    */
 
   function getSupportMetrics(
     collector: {
       id: number;
-
+      name: string;
       role: string;
+      groupType: string;
 
       roleAssignments: {
         role: string;
@@ -759,13 +974,83 @@ export default async function Home() {
       SupportMetric[] =
       [];
 
-    const eligibleRoles =
-      getEligibleRoleSet(
+    const isManagementShell =
+      isManagementDisplayShell(
         collector,
       );
 
+    const sourceCollectors =
+      isManagementShell
+        ? [
+            collector,
+            ...managementMembers,
+          ]
+        : [
+            collector,
+          ];
+
+    const sourceIds =
+      sourceCollectors.map(
+        (
+          sourceCollector,
+        ) =>
+          sourceCollector.id,
+      );
+
     /*
+     * Management's visible card should expose
+     * any operational roles performed by any
+     * individual member.
+     */
+
+    const eligibleRoles =
+      new Set<string>();
+
+    for (
+      const sourceCollector of
+        sourceCollectors
+    ) {
+      for (
+        const role of
+          getEligibleRoleSet(
+            sourceCollector,
+          )
+      ) {
+        eligibleRoles.add(
+          role,
+        );
+      }
+    }
+
+    function getTotal(
+      role: string,
+      metric: string,
+    ) {
+      let total =
+        0;
+
+      for (
+        const collectorId of
+          sourceIds
+      ) {
+        total +=
+          weeklySupportPerformance.get(
+            supportMetricKey(
+              collectorId,
+              role,
+              metric,
+            ),
+          ) ??
+          0;
+      }
+
+      return total;
+    }
+
+    /*
+     * ========================================
      * MSA
+     * ========================================
      */
 
     if (
@@ -778,14 +1063,10 @@ export default async function Home() {
           "Weekly Physicals",
 
         value:
-          weeklySupportPerformance.get(
-            supportMetricKey(
-              collector.id,
-              "MSA",
-              "PHYSICALS",
-            ),
-          ) ??
-          0,
+          getTotal(
+            "MSA",
+            "PHYSICALS",
+          ),
 
         emphasis:
           "gold",
@@ -793,7 +1074,9 @@ export default async function Home() {
     }
 
     /*
+     * ========================================
      * RECEPTION TECH
+     * ========================================
      */
 
     if (
@@ -806,14 +1089,10 @@ export default async function Home() {
           "Weekly Interviews",
 
         value:
-          weeklySupportPerformance.get(
-            supportMetricKey(
-              collector.id,
-              "RECEPTION_TECH",
-              "INTERVIEWS",
-            ),
-          ) ??
-          0,
+          getTotal(
+            "RECEPTION_TECH",
+            "INTERVIEWS",
+          ),
 
         emphasis:
           "gold",
@@ -821,7 +1100,9 @@ export default async function Home() {
     }
 
     /*
+     * ========================================
      * DST
+     * ========================================
      */
 
     if (
@@ -834,14 +1115,10 @@ export default async function Home() {
           "Weekly Setups",
 
         value:
-          weeklySupportPerformance.get(
-            supportMetricKey(
-              collector.id,
-              "DST",
-              "SETUPS",
-            ),
-          ) ??
-          0,
+          getTotal(
+            "DST",
+            "SETUPS",
+          ),
 
         emphasis:
           "gold",
@@ -852,14 +1129,10 @@ export default async function Home() {
           "Weekly Disconnects",
 
         value:
-          weeklySupportPerformance.get(
-            supportMetricKey(
-              collector.id,
-              "DST",
-              "DISCONNECTS",
-            ),
-          ) ??
-          0,
+          getTotal(
+            "DST",
+            "DISCONNECTS",
+          ),
 
         emphasis:
           "gold",
@@ -867,7 +1140,9 @@ export default async function Home() {
     }
 
     /*
+     * ========================================
      * PROCESSOR
+     * ========================================
      */
 
     if (
@@ -880,14 +1155,24 @@ export default async function Home() {
           "Bottles Processed",
 
         value:
-          weeklySupportPerformance.get(
-            supportMetricKey(
-              collector.id,
-              "PROCESSOR",
-              "PROCESSED",
-            ),
-          ) ??
-          0,
+          getTotal(
+            "PROCESSOR",
+            "PROCESSED",
+          ),
+
+        emphasis:
+          "gold",
+      });
+
+      metrics.push({
+        label:
+          "Weekly Separations",
+
+        value:
+          getTotal(
+            "PROCESSOR",
+            "SEPARATIONS",
+          ),
 
         emphasis:
           "gold",
@@ -895,7 +1180,35 @@ export default async function Home() {
     }
 
     /*
+     * ========================================
+     * PHLEBOTOMY — RESTICKS
+     * ========================================
+     */
+
+    if (
+      eligibleRoles.has(
+        "PHLEBOTOMIST",
+      )
+    ) {
+      metrics.push({
+        label:
+          "Weekly Resticks",
+
+        value:
+          getTotal(
+            "PHLEBOTOMIST",
+            "RESTICKS",
+          ),
+
+        emphasis:
+          "gold",
+      });
+    }
+
+    /*
+     * ========================================
      * MANAGEMENT
+     * ========================================
      */
 
     if (
@@ -916,7 +1229,9 @@ export default async function Home() {
     }
 
     /*
+     * ========================================
      * GROUP LEAD
+     * ========================================
      */
 
     if (
@@ -937,7 +1252,9 @@ export default async function Home() {
     }
 
     /*
-     * OTHER
+     * ========================================
+     * FALLBACK
+     * ========================================
      */
 
     if (
@@ -1057,107 +1374,83 @@ export default async function Home() {
 
   /*
    * ==========================================
-   * EXECUTIVE COMPARATIVE KPI ENGINE
-   * ==========================================
-   *
-   * This replaces the old "latest KPI reading"
-   * pipeline.
-   *
-   * Active comparative metrics are resolved
-   * dynamically.
-   *
-   * Gross Procedures:
-   * WorkerStickEntry.totalSticks
-   *
-   * Gross Liters:
-   * DailyCenterProduction.liters
-   *
-   * Manual/custom metrics:
-   * MetricReading
-   *
-   * Comparison:
-   * same weekday from immediately prior week.
+   * OFFICIAL CSL KPI SNAPSHOT
    * ==========================================
    */
 
-  /*
- * ==========================================
- * OFFICIAL CSL KPI SNAPSHOT
- * ==========================================
- *
- * These are the current CSL-reported metrics
- * configured through Dashboard & KPIs.
- *
- * This feed is separate from the weekly
- * comparison engine.
- * ==========================================
- */
+  const cslDashboardMetrics =
+    await prisma.dashboardMetric.findMany({
+      where: {
+        isVisible:
+          true,
 
-const cslDashboardMetrics =
-  await prisma.dashboardMetric.findMany({
-    where: {
-      isVisible:
-        true,
-
-      publicSource:
-        "CSL",
-    },
-
-    orderBy: [
-      {
-        displayOrder:
-          "asc",
+        publicSource:
+          "CSL",
       },
 
-      {
+      orderBy: [
+        {
+          displayOrder:
+            "asc",
+        },
+
+        {
+          displayName:
+            "asc",
+        },
+      ],
+
+      include: {
+        readings: {
+          where: {
+            source:
+              "CSL",
+          },
+
+          orderBy: {
+            recordedAt:
+              "desc",
+          },
+
+          take:
+            1,
+        },
+      },
+    });
+
+  const cslSnapshotMetrics =
+    cslDashboardMetrics.map(
+      (
+        metric,
+      ) => ({
+        id:
+          metric.id,
+
         displayName:
-          "asc",
-      },
-    ],
+          metric.displayName,
 
-    include: {
-      readings: {
-        where: {
-          source:
-            "CSL",
-        },
+        description:
+          metric.description,
 
-        orderBy: {
-          recordedAt:
-            "desc",
-        },
+        unit:
+          metric.unit,
 
-        take:
-          1,
-      },
-    },
-  });
+        decimalPlaces:
+          metric.decimalPlaces,
 
-const cslSnapshotMetrics =
-  cslDashboardMetrics.map(
-    (metric) => ({
-      id:
-        metric.id,
+        value:
+          metric.readings[0]
+            ?.value ??
+          null,
+      }),
+    );
 
-      displayName:
-        metric.displayName,
+  /*
+   * ==========================================
+   * EXECUTIVE COMPARATIVE KPI ENGINE
+   * ==========================================
+   */
 
-      description:
-        metric.description,
-
-      unit:
-        metric.unit,
-
-      decimalPlaces:
-        metric.decimalPlaces,
-
-      value:
-        metric.readings[0]
-          ?.value ??
-        null,
-    }),
-  );
-  
   const executiveMetricComparisons =
     await getExecutiveMetricComparisons(
       today,
@@ -1499,8 +1792,8 @@ const cslSnapshotMetrics =
                   collector,
                 ) => {
                   const performance =
-                    weeklyWorkerPerformance.get(
-                      collector.id,
+                    getWeeklyPhlebotomyPerformance(
+                      collector,
                     );
 
                   const streak =
@@ -1547,8 +1840,20 @@ const cslSnapshotMetrics =
                         ?.latestVerifiedDate ??
                       null,
 
+                    /*
+                     * Cross-trained support
+                     * metrics are now passed
+                     * into Meadow 1 too.
+                     *
+                     * WorkerBeeCard still needs
+                     * the next visual update to
+                     * actually render them while
+                     * in phlebotomy mode.
+                     */
                     supportMetrics:
-                      [],
+                      getSupportMetrics(
+                        collector,
+                      ),
                   };
                 },
               )
@@ -1617,7 +1922,7 @@ const cslSnapshotMetrics =
             }
 
             cslMetrics={
-            cslSnapshotMetrics
+              cslSnapshotMetrics
             }
 
             metrics={

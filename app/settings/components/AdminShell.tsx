@@ -41,6 +41,13 @@ const navigationItems: AdminNavItem[] = [
     href: "/settings/workers",
     icon: "🐝",
   },
+
+{
+  title: "Task Import",
+  href: "/settings/workers/import",
+  icon: "📥",
+},
+
   {
     title: "Budget Management",
     href: "/budget",

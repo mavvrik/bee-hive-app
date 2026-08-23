@@ -39,16 +39,98 @@ type WorkerBeeCardProps = {
 function getStreakIntensity(
   streak: number,
 ) {
-  if (
-    streak <= 0
-  ) {
+  if (streak <= 0) {
     return 0;
   }
 
   return Math.min(
     1,
-    .16 +
-      streak * .1,
+    .16 + streak * .1,
+  );
+}
+
+function formatMetricValue(
+  value:
+    | number
+    | string,
+) {
+  return typeof value ===
+    "number"
+    ? value.toLocaleString(
+        "en-US",
+      )
+    : value;
+}
+
+function compactMetricLabel(
+  label: string,
+) {
+  const replacements:
+    Record<
+      string,
+      string
+    > = {
+      "Weekly Setups":
+        "Setups",
+
+      "Weekly Disconnects":
+        "Disconnects",
+
+      "Weekly Interviews":
+        "Interviews",
+
+      "Weekly Physicals":
+        "Physicals",
+
+      "Weekly Separations":
+        "Separations",
+
+      "Weekly Resticks":
+        "Resticks",
+
+      "Solutions Spiked":
+        "Solutions",
+
+      "Weekly Solutions Spiked":
+        "Solutions",
+
+      "Bottles Processed":
+        "Processed",
+    };
+
+  return (
+    replacements[label] ??
+    label.replace(
+      /^Weekly\s+/i,
+      "",
+    )
+  );
+}
+
+function shouldShowMetric(
+  metric:
+    SupportMetric,
+) {
+  if (
+    typeof metric.value ===
+    "number"
+  ) {
+    return metric.value > 0;
+  }
+
+  const normalized =
+    metric.value
+      .trim()
+      .toLowerCase();
+
+  return (
+    normalized !== "" &&
+    normalized !== "0" &&
+    normalized !== "—" &&
+    normalized !==
+      "team support" &&
+    normalized !==
+      "worker bee"
   );
 }
 
@@ -135,6 +217,27 @@ export default function WorkerBeeCard({
           )
       : null;
 
+  const visibleSupportMetrics =
+    supportMetrics
+      .filter(
+        shouldShowMetric,
+      )
+      .filter(
+        (metric) =>
+          metric.label !==
+            "Management" &&
+          metric.label !==
+            "Group Lead" &&
+          metric.label !==
+            "Role Contribution",
+      );
+
+  const hasCrossTrainedMetrics =
+    mode ===
+      "phlebotomy" &&
+    visibleSupportMetrics.length >
+      0;
+
   return (
     <article
       data-streaker={
@@ -146,191 +249,205 @@ export default function WorkerBeeCard({
         isManagement
           ? "management-card"
           : ""
+      } ${
+        hasCrossTrainedMetrics
+          ? "cross-trained-card"
+          : ""
       }`}
       aria-label={`${name}, ${roleLabel}`}
     >
       <div className="card-shine" />
 
-      <div className="worker-left-panel">
-        <div className="worker-bee-stage">
-          <div className="bee-stage-glow" />
+      <div className="worker-main-row">
+        <div className="worker-left-panel">
+          <div className="worker-bee-stage">
+            <div className="bee-stage-glow" />
 
-          {isManagement ? (
-            <ManagementBees />
-          ) : hasActiveStreak ? (
-            <div
-              className="bee-streak-orbit"
-              style={
-                streakStyle
-              }
-              title={
-                verifiedDateLabel
-                  ? `${varianceFreeStreak}-day variance-free streak, verified through ${verifiedDateLabel}`
-                  : `${varianceFreeStreak}-day variance-free streak`
-              }
-            >
+            {isManagement ? (
+              <ManagementBees />
+            ) : hasActiveStreak ? (
+              <div
+                className="bee-streak-orbit"
+                style={
+                  streakStyle
+                }
+                title={
+                  verifiedDateLabel
+                    ? `${varianceFreeStreak}-day variance-free streak, verified through ${verifiedDateLabel}`
+                    : `${varianceFreeStreak}-day variance-free streak`
+                }
+              >
+                <BeeIllustration
+                  primaryRole={
+                    primaryRole
+                  }
+                />
+
+                <span className="streak-count-badge">
+                  {
+                    varianceFreeStreak
+                  }
+                </span>
+              </div>
+            ) : (
               <BeeIllustration
                 primaryRole={
                   primaryRole
                 }
               />
+            )}
+          </div>
 
-              <span className="streak-count-badge">
-                {
-                  varianceFreeStreak
-                }
-              </span>
-            </div>
-          ) : (
-            <BeeIllustration
-              primaryRole={
-                primaryRole
-              }
-            />
-          )}
+          <div className="worker-identity">
+            <strong>
+              {name}
+            </strong>
+
+            <span className="worker-role-pill">
+              {roleLabel}
+            </span>
+
+            {mode ===
+              "phlebotomy" && (
+              <div
+                className={`identity-streak ${
+                  hasActiveStreak
+                    ? "identity-streak-active"
+                    : ""
+                }`}
+              >
+                <span>
+                  {hasActiveStreak
+                    ? "🔥"
+                    : "○"}
+                </span>
+
+                <strong>
+                  {varianceFreeStreak}{" "}
+                  Day
+                  {varianceFreeStreak ===
+                  1
+                    ? ""
+                    : "s"}
+                </strong>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* ===================================
-            PROTECTED IDENTITY AREA
-           =================================== */}
+        <div className="worker-right-panel">
+          <div className="worker-heading">
+            <span className="worker-eyebrow">
+              Worker Bee
+            </span>
 
-        <div className="worker-identity">
-          <strong>
-            {name}
-          </strong>
-
-          <span className="worker-role-pill">
-            {roleLabel}
-          </span>
+            <strong className="worker-title">
+              {mode ===
+              "phlebotomy"
+                ? "Weekly Performance"
+                : "Weekly Contribution"}
+            </strong>
+          </div>
 
           {mode ===
-            "phlebotomy" && (
-            <div
-              className={`identity-streak ${
-                hasActiveStreak
-                  ? "identity-streak-active"
-                  : ""
-              }`}
-            >
-              <span>
-                {hasActiveStreak
-                  ? "🔥"
-                  : "○"}
-              </span>
+          "phlebotomy" ? (
+            <div className="phlebotomy-core-grid">
+              <WorkerValue
+                label="Successful Sticks"
+                value={
+                  successfulSticks.toLocaleString(
+                    "en-US",
+                  )
+                }
+                emphasis="gold"
+              />
 
-              <strong>
-                {varianceFreeStreak}{" "}
-                Day
-                {varianceFreeStreak ===
-                1
-                  ? ""
-                  : "s"}
-              </strong>
+              <WorkerValue
+                label="Success Rate"
+                value={
+                  successRate === null
+                    ? "—"
+                    : `${successRate.toFixed(
+                        1,
+                      )}%`
+                }
+                emphasis={
+                  successRate !==
+                    null &&
+                  successRate >=
+                    90
+                    ? "green"
+                    : "gold"
+                }
+              />
+            </div>
+          ) : (
+            <div className="support-value-grid">
+              {visibleSupportMetrics.map(
+                (
+                  metric,
+                  index,
+                ) => (
+                  <WorkerValue
+                    key={`${metric.label}-${index}`}
+                    label={
+                      compactMetricLabel(
+                        metric.label,
+                      )
+                    }
+                    value={
+                      formatMetricValue(
+                        metric.value,
+                      )
+                    }
+                    emphasis={
+                      metric.emphasis ??
+                      "gold"
+                    }
+                  />
+                ),
+              )}
             </div>
           )}
         </div>
       </div>
 
-      <div className="worker-right-panel">
-        <div className="worker-heading">
-          <span className="worker-eyebrow">
-            Worker Bee
+      {mode ===
+        "phlebotomy" &&
+        visibleSupportMetrics.length >
+          0 && (
+        <div className="activity-ribbon">
+          <span className="activity-ribbon-label">
+            Cross-Trained
           </span>
 
-          <strong className="worker-title">
-            {mode ===
-            "phlebotomy"
-              ? "Weekly Performance"
-              : "Weekly Contribution"}
-          </strong>
-
-          <small className="worker-description">
-            {mode ===
-            "phlebotomy"
-              ? "Current weekly stick performance."
-              : "Current weekly role-based performance."}
-          </small>
-        </div>
-
-        {mode ===
-        "phlebotomy" ? (
-          <div className="worker-value-grid">
-            <WorkerValue
-              label="Successful Sticks"
-              value={
-                successfulSticks.toLocaleString(
-                  "en-US",
-                )
-              }
-              emphasis="gold"
-            />
-
-            <WorkerValue
-              label="Success Rate"
-              value={
-                successRate === null
-                  ? "—"
-                  : `${successRate.toFixed(
-                      1,
-                    )}%`
-              }
-              emphasis={
-                successRate !==
-                  null &&
-                successRate >=
-                  90
-                  ? "green"
-                  : "gold"
-              }
-            />
-          </div>
-        ) : (
-          <div
-            className={`support-value-grid ${
-              supportMetrics.length >=
-              3
-                ? "three-values"
-                : ""
-            }`}
-          >
-            {supportMetrics.map(
+          <div className="activity-ribbon-values">
+            {visibleSupportMetrics.map(
               (
                 metric,
                 index,
               ) => (
-                <WorkerValue
+                <div
                   key={`${metric.label}-${index}`}
-                  label={
-                    metric.label
-                  }
-                  value={
-                    typeof metric.value ===
-                    "number"
-                      ? metric.value.toLocaleString(
-                          "en-US",
-                        )
-                      : metric.value
-                  }
-                  emphasis={
-                    metric.emphasis ??
-                    "gold"
-                  }
-                />
+                  className="activity-ribbon-item"
+                >
+                  <span>
+                    {compactMetricLabel(
+                      metric.label,
+                    )}
+                  </span>
+
+                  <strong>
+                    {formatMetricValue(
+                      metric.value,
+                    )}
+                  </strong>
+                </div>
               ),
             )}
           </div>
-        )}
-
-        <div className="worker-message">
-          <div className="message-bee">
-            🐝
-          </div>
-
-          <p>
-            One team. One Hive.
-          </p>
         </div>
-      </div>
+      )}
 
       <style>
         {`
@@ -339,15 +456,9 @@ export default function WorkerBeeCard({
 
             display: grid;
 
-            grid-template-columns:
-              minmax(
-                112px,
-                .9fr
-              )
-              minmax(
-                0,
-                1.1fr
-              );
+            grid-template-rows:
+              minmax(0, 1fr)
+              auto;
 
             width: 100%;
             height: 100%;
@@ -385,6 +496,26 @@ export default function WorkerBeeCard({
               );
           }
 
+          .cross-trained-card {
+            border-color:
+              rgba(
+                163,
+                108,
+                10,
+                .68
+              );
+          }
+
+          .management-card {
+            border-color:
+              rgba(
+                115,
+                81,
+                16,
+                .62
+              );
+          }
+
           .card-shine {
             position: absolute;
             z-index: 1;
@@ -409,26 +540,39 @@ export default function WorkerBeeCard({
               blur(22px);
           }
 
-          .management-card {
-            border-color:
-              rgba(
-                115,
-                81,
-                16,
-                .62
+          /*
+           * ==================================
+           * MAIN ROW
+           * ==================================
+           */
+
+          .worker-main-row {
+            position: relative;
+            z-index: 2;
+
+            display: grid;
+
+            grid-template-columns:
+              minmax(
+                108px,
+                .82fr
+              )
+              minmax(
+                0,
+                1.18fr
               );
+
+            min-width: 0;
+            min-height: 0;
           }
 
           /*
            * ==================================
-           * LEFT SIDE
+           * LEFT PANEL
            * ==================================
            */
 
           .worker-left-panel {
-            position: relative;
-            z-index: 2;
-
             display: grid;
 
             grid-template-rows:
@@ -444,7 +588,7 @@ export default function WorkerBeeCard({
             min-height: 0;
 
             padding:
-              5px 6px 6px;
+              4px 5px 4px;
 
             border-right:
               1px solid
@@ -475,8 +619,6 @@ export default function WorkerBeeCard({
 
             align-items: center;
             justify-content: center;
-
-            width: 100%;
 
             min-height: 0;
           }
@@ -651,27 +793,13 @@ export default function WorkerBeeCard({
             }
           }
 
-          /*
-           * ==================================
-           * IDENTITY
-           *
-           * This zone never collapses.
-           * ==================================
-           */
-
           .worker-identity {
-            position: relative;
-            z-index: 6;
-
             display: flex;
+
             flex-direction: column;
             align-items: center;
 
             width: 100%;
-
-            flex: 0 0 auto;
-
-            padding-top: 2px;
 
             text-align: center;
           }
@@ -719,11 +847,6 @@ export default function WorkerBeeCard({
 
             text-transform: uppercase;
           }
-
-          /*
-           * Visible streak text stays underneath
-           * the name regardless of card height.
-           */
 
           .identity-streak {
             display: flex;
@@ -784,28 +907,17 @@ export default function WorkerBeeCard({
               );
 
             color: #7a4104;
-
-            box-shadow:
-              0 0 8px
-              rgba(
-                241,
-                155,
-                21,
-                .22
-              );
           }
 
           /*
            * ==================================
-           * RIGHT SIDE
+           * RIGHT PANEL
            * ==================================
            */
 
           .worker-right-panel {
-            position: relative;
-            z-index: 2;
-
             display: flex;
+
             flex-direction: column;
             justify-content: center;
 
@@ -813,7 +925,7 @@ export default function WorkerBeeCard({
             min-height: 0;
 
             padding:
-              7px 9px;
+              5px 7px;
           }
 
           .worker-eyebrow {
@@ -821,7 +933,7 @@ export default function WorkerBeeCard({
 
             color: #a16d12;
 
-            font-size: .4rem;
+            font-size: .38rem;
 
             font-weight: 1000;
 
@@ -835,22 +947,27 @@ export default function WorkerBeeCard({
 
             color: #3b2205;
 
-            font-size: .9rem;
+            font-size: .8rem;
             font-weight: 1000;
           }
 
-          .worker-description {
-            display: block;
+          .phlebotomy-core-grid {
+            display: grid;
 
-            margin-top: 2px;
+            grid-template-columns:
+              repeat(
+                2,
+                minmax(
+                  0,
+                  1fr
+                )
+              );
 
-            color: #816532;
+            gap: 5px;
 
-            font-size: .42rem;
-            font-weight: 700;
+            margin-top: 5px;
           }
 
-          .worker-value-grid,
           .support-value-grid {
             display: grid;
 
@@ -863,21 +980,16 @@ export default function WorkerBeeCard({
                 )
               );
 
-            gap: 6px;
+            gap: 5px;
 
-            margin-top: 6px;
+            margin-top: 5px;
           }
 
-          .support-value-grid.three-values {
-            grid-template-columns:
-              repeat(
-                3,
-                minmax(
-                  0,
-                  1fr
-                )
-              );
-          }
+          /*
+           * ==================================
+           * VALUE BOX
+           * ==================================
+           */
 
           .worker-value {
             display: flex;
@@ -886,9 +998,12 @@ export default function WorkerBeeCard({
             align-items: center;
             justify-content: center;
 
-            min-height: 46px;
+            min-width: 0;
 
-            padding: 5px 4px;
+            min-height: 43px;
+
+            padding:
+              5px 4px;
 
             border:
               1px solid
@@ -914,17 +1029,18 @@ export default function WorkerBeeCard({
           .worker-value span {
             color: #8b6f37;
 
-            font-size: .36rem;
+            font-size: .33rem;
             font-weight: 1000;
 
-            line-height: 1.1;
+            line-height: 1.05;
+
             text-transform: uppercase;
           }
 
           .worker-value strong {
             margin-top: 3px;
 
-            font-size: .84rem;
+            font-size: .8rem;
             font-weight: 1000;
           }
 
@@ -940,36 +1056,146 @@ export default function WorkerBeeCard({
             color: #a23b32;
           }
 
-          .worker-message {
-            display: flex;
+          /*
+           * ==================================
+           * CROSS-TRAINED RIBBON
+           * ==================================
+           */
+
+          .activity-ribbon {
+            position: relative;
+            z-index: 4;
+
+            display: grid;
+
+            grid-template-columns:
+              auto
+              minmax(
+                0,
+                1fr
+              );
+
             align-items: center;
 
-            gap: 5px;
+            gap: 6px;
 
-            margin-top: 5px;
-            padding-top: 4px;
+            min-width: 0;
+
+            padding:
+              4px 7px 5px;
 
             border-top:
               1px solid
               rgba(
-                184,
-                123,
-                18,
-                .18
+                152,
+                96,
+                9,
+                .28
+              );
+
+            background:
+              linear-gradient(
+                90deg,
+                rgba(
+                  239,
+                  196,
+                  70,
+                  .24
+                ),
+                rgba(
+                  255,
+                  250,
+                  213,
+                  .72
+                )
               );
           }
 
-          .message-bee {
-            font-size: .6rem;
+          .activity-ribbon-label {
+            align-self: stretch;
+
+            display: flex;
+
+            align-items: center;
+
+            padding-right: 6px;
+
+            border-right:
+              1px solid
+              rgba(
+                154,
+                100,
+                11,
+                .23
+              );
+
+            color: #73500d;
+
+            font-size: .28rem;
+            font-weight: 1000;
+
+            letter-spacing: .08em;
+
+            text-transform: uppercase;
+
+            white-space: nowrap;
           }
 
-          .worker-message p {
-            margin: 0;
+          .activity-ribbon-values {
+            display: flex;
 
-            color: #735728;
+            flex-wrap: wrap;
+
+            align-items: center;
+
+            gap:
+              2px 8px;
+
+            min-width: 0;
+          }
+
+          .activity-ribbon-item {
+            display: inline-flex;
+
+            align-items: baseline;
+
+            gap: 3px;
+
+            min-width: 0;
+
+            white-space: nowrap;
+          }
+
+          .activity-ribbon-item:not(
+            :last-child
+          )::after {
+            content: "•";
+
+            margin-left: 5px;
+
+            color:
+              rgba(
+                115,
+                77,
+                8,
+                .48
+              );
 
             font-size: .4rem;
+          }
+
+          .activity-ribbon-item span {
+            color: #785d27;
+
+            font-size: .29rem;
             font-weight: 900;
+          }
+
+          .activity-ribbon-item strong {
+            color: #6b4306;
+
+            font-size: .55rem;
+            font-weight: 1000;
           }
 
           /*
@@ -1135,10 +1361,6 @@ export default function WorkerBeeCard({
               rotate(28deg);
           }
 
-          /*
-           * PRIMARY ROLE ACCESSORIES
-           */
-
           .bee-needle {
             position: absolute;
             z-index: 8;
@@ -1286,11 +1508,14 @@ export default function WorkerBeeCard({
           }
 
           /*
+           * ==================================
            * MANAGEMENT
+           * ==================================
            */
 
           .management-bee-group {
             display: flex;
+
             align-items: flex-end;
             justify-content: center;
 
@@ -1368,12 +1593,8 @@ export default function WorkerBeeCard({
 
           /*
            * ==================================
-           * SHORT DESKTOP / NON-FULLSCREEN
+           * SHORT DESKTOP
            * ==================================
-           *
-           * Artwork and decorative text shrink.
-           *
-           * Worker name and streak stay visible.
            */
 
           @media (
@@ -1383,41 +1604,37 @@ export default function WorkerBeeCard({
           ) {
             .worker-left-panel {
               padding:
-                3px 5px 4px;
+                2px 4px 3px;
             }
 
             .worker-right-panel {
               padding:
-                5px 7px;
+                3px 5px;
             }
 
             .bee-illustration {
               transform:
-                scale(.82);
+                scale(.78);
 
               animation: none;
             }
 
             .bee-streak-orbit {
-              width: 88px;
-              height: 65px;
+              width: 84px;
+              height: 62px;
 
               transform:
-                scale(.82);
+                scale(.78);
             }
 
             .bee-streak-orbit::before {
-              width: 75px;
-              height: 58px;
+              width: 72px;
+              height: 55px;
             }
 
             .management-bee-group {
               transform:
-                scale(.84);
-            }
-
-            .worker-description {
-              display: none;
+                scale(.82);
             }
 
             .worker-eyebrow {
@@ -1425,45 +1642,53 @@ export default function WorkerBeeCard({
             }
 
             .worker-title {
-              font-size: .76rem;
+              font-size: .69rem;
             }
 
-            .worker-value-grid,
-            .support-value-grid {
-              margin-top: 4px;
-              gap: 4px;
+            .phlebotomy-core-grid {
+              gap: 3px;
+
+              margin-top: 3px;
             }
 
             .worker-value {
-              min-height: 35px;
+              min-height: 31px;
 
               padding:
-                3px;
-            }
-
-            .worker-value strong {
-              margin-top: 2px;
-
-              font-size: .72rem;
+                2px;
             }
 
             .worker-value span {
-              font-size: .31rem;
+              font-size: .27rem;
             }
 
-            .worker-message {
-              display: none;
+            .worker-value strong {
+              margin-top: 1px;
+
+              font-size: .65rem;
+            }
+
+            .activity-ribbon {
+              gap: 4px;
+
+              padding:
+                3px 5px;
+            }
+
+            .activity-ribbon-label {
+              font-size: .23rem;
+            }
+
+            .activity-ribbon-item span {
+              font-size: .24rem;
+            }
+
+            .activity-ribbon-item strong {
+              font-size: .49rem;
             }
 
             .worker-identity > strong {
-              font-size: .78rem;
-            }
-
-            .worker-role-pill {
-              margin-top: 2px;
-
-              padding:
-                1px 6px;
+              font-size: .76rem;
             }
 
             .identity-streak {
@@ -1476,13 +1701,6 @@ export default function WorkerBeeCard({
             }
           }
 
-          /*
-           * Very short browser windows.
-           *
-           * Bee art compresses further,
-           * but identity remains.
-           */
-
           @media (
             max-height: 720px
           ) and (
@@ -1490,20 +1708,20 @@ export default function WorkerBeeCard({
           ) {
             .bee-illustration {
               transform:
-                scale(.7);
+                scale(.68);
             }
 
             .bee-streak-orbit {
-              width: 75px;
-              height: 54px;
+              width: 73px;
+              height: 52px;
 
               transform:
-                scale(.7);
+                scale(.68);
             }
 
             .bee-streak-orbit::before {
-              width: 66px;
-              height: 50px;
+              width: 64px;
+              height: 48px;
             }
 
             .worker-heading {
@@ -1511,27 +1729,63 @@ export default function WorkerBeeCard({
             }
 
             .worker-value {
-              min-height: 30px;
+              min-height: 27px;
             }
 
-            .worker-value strong {
-              font-size: .67rem;
+            .activity-ribbon {
+              padding:
+                2px 4px;
             }
 
-            .worker-identity > strong {
-              font-size: .75rem;
+            .activity-ribbon-label {
+              display: none;
+            }
+
+            .activity-ribbon {
+              grid-template-columns:
+                1fr;
             }
           }
 
           @media (
             max-width: 700px
           ) {
-            .support-value-grid.three-values {
+            .worker-main-row {
               grid-template-columns:
-                repeat(
-                  2,
-                  minmax(0,1fr)
+                1fr;
+            }
+
+            .worker-left-panel {
+              border-right: 0;
+
+              border-bottom:
+                1px solid
+                rgba(
+                  188,
+                  126,
+                  17,
+                  .22
                 );
+            }
+
+            .activity-ribbon {
+              grid-template-columns:
+                1fr;
+            }
+
+            .activity-ribbon-label {
+              border-right: 0;
+
+              border-bottom:
+                1px solid
+                rgba(
+                  154,
+                  100,
+                  11,
+                  .18
+                );
+
+              padding-bottom: 3px;
             }
           }
         `}

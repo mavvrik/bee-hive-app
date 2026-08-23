@@ -26,29 +26,85 @@ import DailyProductionEntryForm from "./DailyProductionEntryForm";
 export const dynamic =
   "force-dynamic";
 
-function formatDateInput(
-  date: Date,
+const CENTER_TIME_ZONE =
+  "America/New_York";
+
+function getPreviousOperationalDateInput(
+  now: Date,
 ) {
+  const parts =
+    new Intl.DateTimeFormat(
+      "en-US",
+      {
+        timeZone:
+          CENTER_TIME_ZONE,
+
+        year:
+          "numeric",
+
+        month:
+          "2-digit",
+
+        day:
+          "2-digit",
+      },
+    ).formatToParts(
+      now,
+    );
+
   const year =
-    date.getFullYear();
+    Number(
+      parts.find(
+        (
+          part,
+        ) =>
+          part.type ===
+          "year",
+      )?.value,
+    );
 
   const month =
-    String(
-      date.getMonth() + 1,
-    ).padStart(
-      2,
-      "0",
+    Number(
+      parts.find(
+        (
+          part,
+        ) =>
+          part.type ===
+          "month",
+      )?.value,
     );
 
   const day =
-    String(
-      date.getDate(),
-    ).padStart(
-      2,
-      "0",
+    Number(
+      parts.find(
+        (
+          part,
+        ) =>
+          part.type ===
+          "day",
+      )?.value,
     );
 
-  return `${year}-${month}-${day}`;
+  const previousDate =
+    new Date(
+      Date.UTC(
+        year,
+        month - 1,
+        day,
+      ),
+    );
+
+  previousDate.setUTCDate(
+    previousDate.getUTCDate() -
+      1,
+  );
+
+  return previousDate
+    .toISOString()
+    .slice(
+      0,
+      10,
+    );
 }
 
 function formatLiters(
@@ -155,6 +211,7 @@ function formatOperationalDate(
     },
   );
 }
+
 export default async function DailyCenterProductionPage() {
   await requireAdmin();
 
@@ -165,12 +222,6 @@ export default async function DailyCenterProductionPage() {
     startOfDay(
       now,
     );
-
-  /*
-   * ==========================================
-   * SETTINGS / BUDGET
-   * ==========================================
-   */
 
   const settings =
     await prisma.hiveSettings.findUnique({
@@ -226,12 +277,6 @@ export default async function DailyCenterProductionPage() {
       weeksInPeriod,
     );
 
-  /*
-   * ==========================================
-   * DATE BOUNDARIES
-   * ==========================================
-   */
-
   const weekStart =
     startOfOperationalWeek(
       today,
@@ -269,12 +314,6 @@ export default async function DailyCenterProductionPage() {
       0,
       0,
     );
-
-  /*
-   * ==========================================
-   * PRODUCTION DATA
-   * ==========================================
-   */
 
   const [
     weekEntries,
@@ -330,14 +369,6 @@ export default async function DailyCenterProductionPage() {
           14,
       }),
 
-      /*
-       * Full historical list used by the
-       * client entry form.
-       *
-       * Selecting an existing date loads
-       * that date's authoritative values.
-       */
-
       prisma.dailyCenterProduction.findMany({
         orderBy: {
           entryDate:
@@ -356,12 +387,6 @@ export default async function DailyCenterProductionPage() {
         },
       }),
     ]);
-
-  /*
-   * ==========================================
-   * SHARED ROLLING TARGET ENGINE
-   * ==========================================
-   */
 
   const targetPlan =
     getDailyTargets({
@@ -387,12 +412,6 @@ export default async function DailyCenterProductionPage() {
           }),
         ),
     });
-
-  /*
-   * ==========================================
-   * MONTHLY PROGRESS
-   * ==========================================
-   */
 
   const monthlyActualLiters =
     monthProduction
@@ -435,10 +454,6 @@ export default async function DailyCenterProductionPage() {
           ← Return to Hive Administration
         </Link>
       </div>
-
-      {/* =====================================
-          ROLLING TARGET SUMMARY
-         ===================================== */}
 
       <section
         style={
@@ -536,10 +551,6 @@ export default async function DailyCenterProductionPage() {
           </small>
         </article>
       </section>
-
-      {/* =====================================
-          WEEKLY ROLLING PLAN
-         ===================================== */}
 
       <section
         style={
@@ -734,10 +745,6 @@ export default async function DailyCenterProductionPage() {
         </div>
       </section>
 
-      {/* =====================================
-          PRODUCTION ENTRY
-         ===================================== */}
-
       <section
         style={
           styles.entryCard
@@ -781,8 +788,8 @@ export default async function DailyCenterProductionPage() {
           }
 
           defaultDate={
-            formatDateInput(
-              today,
+            getPreviousOperationalDateInput(
+              now,
             )
           }
 
@@ -817,10 +824,6 @@ export default async function DailyCenterProductionPage() {
           }
         />
       </section>
-
-      {/* =====================================
-          MONTHLY / LATEST SUMMARY
-         ===================================== */}
 
       <section
         style={
@@ -895,17 +898,13 @@ export default async function DailyCenterProductionPage() {
 
           <small>
             {latestEntry
-  ? formatOperationalDate(
-      latestEntry.entryDate,
-    )
-  : "No production entered"}
+              ? formatOperationalDate(
+                  latestEntry.entryDate,
+                )
+              : "No production entered"}
           </small>
         </article>
       </section>
-
-      {/* =====================================
-          RECENT HISTORY
-         ===================================== */}
 
       <section
         style={
@@ -984,9 +983,9 @@ export default async function DailyCenterProductionPage() {
                 >
                   <strong>
                     {formatOperationalDate(
-  entry.entryDate,
-  true,
-)}
+                      entry.entryDate,
+                      true,
+                    )}
                   </strong>
 
                   <span>
