@@ -34,9 +34,9 @@ export default function HiveHeader({
         display: "flex",
         justifyContent: "space-between",
         alignItems: "flex-start",
-        gap: "24px",
+        gap: "12px",
         flexWrap: "wrap",
-        marginBottom: "32px",
+        marginBottom: "8px",
       }}
     >
       <div>

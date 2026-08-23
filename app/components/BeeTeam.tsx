@@ -1,5 +1,6 @@
 import BeezyStreakTour from "./BeezyStreakTour";
-import WorkerBeeCard from "./WorkerBeeCard";
+import PhlebotomyWorkerBeeCard from "./PhlebotomyWorkerBeeCard";
+import SupportWorkerBeeCard from "./SupportWorkerBeeCard";
 
 type SupportMetric = {
   label: string;
@@ -34,8 +35,7 @@ type CollectorForBeeTeam = {
 };
 
 type BeeTeamProps = {
-  collectors:
-    CollectorForBeeTeam[];
+  collectors: CollectorForBeeTeam[];
 
   mode:
     | "phlebotomy"
@@ -53,8 +53,7 @@ export default function BeeTeam({
     );
 
   const isPhlebotomy =
-    mode ===
-    "phlebotomy";
+    mode === "phlebotomy";
 
   const activeStreakers =
     isPhlebotomy
@@ -76,6 +75,58 @@ export default function BeeTeam({
       ),
     ).size;
 
+  /*
+   * ==========================================
+   * MEADOW 1 GRID
+   * ==========================================
+   *
+   * Up to 8 bees:
+   * 4 columns x 2 rows
+   *
+   * 9+ bees:
+   * 3 columns x 3 rows
+   */
+
+  const useThreeRowGrid =
+    isPhlebotomy &&
+    activeBees.length > 8;
+
+  /*
+   * ==========================================
+   * MEADOW 2 GRID
+   * ==========================================
+   *
+   * Support Meadow gets its own independent
+   * grid allocation based on worker count.
+   */
+
+  let supportGridClass = "";
+
+  if (!isPhlebotomy) {
+    if (activeBees.length <= 8) {
+      supportGridClass =
+        "support-grid-4x2";
+    } else if (
+      activeBees.length <= 12
+    ) {
+      supportGridClass =
+        "support-grid-4x3";
+    } else if (
+      activeBees.length <= 15
+    ) {
+      supportGridClass =
+        "support-grid-5x3";
+    } else if (
+      activeBees.length <= 20
+    ) {
+      supportGridClass =
+        "support-grid-5x4";
+    } else {
+      supportGridClass =
+        "support-grid-5x5";
+    }
+  }
+
   return (
     <section
       className={`bee-team-section ${
@@ -86,7 +137,6 @@ export default function BeeTeam({
     >
       {/* =====================================
           PHLEBOTOMY BACKGROUND
-          UNCHANGED
          ===================================== */}
 
       {isPhlebotomy && (
@@ -102,7 +152,7 @@ export default function BeeTeam({
       )}
 
       {/* =====================================
-          SUPPORT MEADOW — LAYERED WORLD
+          SUPPORT MEADOW WORLD
          ===================================== */}
 
       {!isPhlebotomy && (
@@ -110,23 +160,17 @@ export default function BeeTeam({
           className="support-world"
           aria-hidden="true"
         >
-          {/* SKY */}
-
           <div className="support-sky" />
 
           <div className="support-sun" />
 
           <div className="support-sun-glow" />
 
-          {/* DISTANT LAND */}
-
           <div className="distant-hill distant-hill-one" />
 
           <div className="distant-hill distant-hill-two" />
 
           <div className="distant-hill distant-hill-three" />
-
-          {/* GIANT HIVE STRUCTURE */}
 
           <div className="hive-architecture hive-architecture-left">
             {Array.from({
@@ -160,13 +204,9 @@ export default function BeeTeam({
             )}
           </div>
 
-          {/* HONEY GLOW */}
-
           <div className="honey-light honey-light-one" />
 
           <div className="honey-light honey-light-two" />
-
-          {/* FLIGHT TRAILS */}
 
           <div className="flight-trail flight-trail-one" />
 
@@ -180,8 +220,6 @@ export default function BeeTeam({
             🐝
           </div>
 
-          {/* POLLEN */}
-
           <div className="pollen pollen-1" />
           <div className="pollen pollen-2" />
           <div className="pollen pollen-3" />
@@ -190,8 +228,6 @@ export default function BeeTeam({
           <div className="pollen pollen-6" />
           <div className="pollen pollen-7" />
           <div className="pollen pollen-8" />
-
-          {/* MID FIELD */}
 
           <div className="middle-field" />
 
@@ -210,8 +246,6 @@ export default function BeeTeam({
             <span className="flower flower-purple small" />
           </div>
 
-          {/* FOREGROUND */}
-
           <div className="foreground-grass" />
 
           <div className="foreground-flower foreground-flower-one" />
@@ -229,7 +263,7 @@ export default function BeeTeam({
       )}
 
       {/* =====================================
-          HEADER
+          PHLEBOTOMY HEADER
          ===================================== */}
 
       {isPhlebotomy ? (
@@ -307,7 +341,7 @@ export default function BeeTeam({
       )}
 
       {/* =====================================
-          WORKER CARDS
+          WORKER GRID
          ===================================== */}
 
       <div className="bee-performance-stage">
@@ -319,60 +353,103 @@ export default function BeeTeam({
           </>
         )}
 
-        <div className="bee-performance-grid">
+        <div
+          className={`bee-performance-grid ${
+            useThreeRowGrid
+              ? "three-row-grid"
+              : ""
+          } ${supportGridClass}`}
+        >
           {activeBees.map(
-            (bee) => (
-              <WorkerBeeCard
-                key={bee.id}
-                mode={mode}
-                name={
-                  bee.preferredName ||
-                  bee.name
-                }
-                primaryRole={
-                  bee.role
-                }
-                roleLabel={
-                  bee.profileTitle ||
-                  bee.role
-                }
-                successfulSticks={
-                  bee.weeklySuccessfulSticks ??
-                  0
-                }
-                successRate={
-                  bee.weeklySuccessRate ??
-                  null
-                }
-                varianceFreeStreak={
-                  bee.varianceFreeStreak ??
-                  0
-                }
-                streakVerifiedThrough={
-                  bee.streakVerifiedThrough ??
-                  null
-                }
-                supportMetrics={
-                  bee.supportMetrics ??
-                  []
-                }
-                isManagement={
-                  bee.role ===
-                    "Management" ||
-                  bee.name ===
-                    "Management Team"
-                }
-                isPhlebotomist={
-                  isPhlebotomy
-                }
-              />
-            ),
+            (bee) => {
+              const displayName =
+                bee.preferredName ||
+                bee.name;
+
+              const roleLabel =
+                bee.profileTitle ||
+                bee.role;
+
+              const isManagement =
+                bee.role ===
+                  "Management" ||
+                bee.name ===
+                  "Management Team";
+
+              if (isPhlebotomy) {
+                return (
+                  <PhlebotomyWorkerBeeCard
+                    key={bee.id}
+                    name={
+                      displayName
+                    }
+                    primaryRole={
+                      bee.role
+                    }
+                    roleLabel={
+                      roleLabel
+                    }
+                    successfulSticks={
+                      bee.weeklySuccessfulSticks ??
+                      0
+                    }
+                    successRate={
+                      bee.weeklySuccessRate ??
+                      null
+                    }
+                    varianceFreeStreak={
+                      bee.varianceFreeStreak ??
+                      0
+                    }
+                    streakVerifiedThrough={
+                      bee.streakVerifiedThrough ??
+                      null
+                    }
+                    supportMetrics={
+                      bee.supportMetrics ??
+                      []
+                    }
+                    isManagement={
+                      isManagement
+                    }
+                  />
+                );
+              }
+
+              return (
+                <SupportWorkerBeeCard
+                  key={bee.id}
+                  name={
+                    displayName
+                  }
+                  primaryRole={
+                    bee.role
+                  }
+                  roleLabel={
+                    roleLabel
+                  }
+                  supportMetrics={
+                    bee.supportMetrics ??
+                    []
+                  }
+                  isManagement={
+                    isManagement
+                  }
+                />
+              );
+            },
           )}
         </div>
       </div>
 
       <style>
         {`
+          /*
+           * ==================================
+           * BASE MEADOW
+           * ==================================
+           */
+
           .bee-team-section {
             position: relative;
 
@@ -386,10 +463,10 @@ export default function BeeTeam({
             min-width: 0;
             min-height: 0;
 
-            margin-top: 8px;
+            margin-top: 6px;
 
             padding:
-              8px 13px 10px;
+              7px 11px 8px;
 
             overflow: hidden;
 
@@ -415,6 +492,19 @@ export default function BeeTeam({
 
             box-sizing:
               border-box;
+          }
+
+          /*
+           * Both Meadows fill whatever
+           * dashboard height is available.
+           */
+
+          .phlebotomy-meadow,
+          .support-meadow {
+            height: auto;
+            flex: 1 1 0;
+
+            min-height: 0;
           }
 
           /*
@@ -472,9 +562,11 @@ export default function BeeTeam({
 
             border-radius: 50%;
 
-            filter: blur(34px);
+            filter:
+              blur(34px);
 
-            pointer-events: none;
+            pointer-events:
+              none;
           }
 
           .honey-glow-left {
@@ -511,14 +603,12 @@ export default function BeeTeam({
 
           /*
            * ==================================
-           * SUPPORT MEADOW WORLD
+           * SUPPORT MEADOW
            * ==================================
            */
 
           .support-meadow {
             isolation: isolate;
-
-            padding-top: 10px;
 
             background:
               linear-gradient(
@@ -558,10 +648,6 @@ export default function BeeTeam({
 
             pointer-events: none;
           }
-
-          /*
-           * SKY
-           */
 
           .support-sky {
             position: absolute;
@@ -630,11 +716,14 @@ export default function BeeTeam({
                 .42
               );
 
-            filter: blur(48px);
+            filter:
+              blur(48px);
           }
 
           /*
+           * ==================================
            * HILLS
+           * ==================================
            */
 
           .distant-hill {
@@ -710,7 +799,9 @@ export default function BeeTeam({
           }
 
           /*
+           * ==================================
            * HIVE ARCHITECTURE
+           * ==================================
            */
 
           .hive-architecture {
@@ -799,7 +890,8 @@ export default function BeeTeam({
               );
 
             box-shadow:
-              inset 0 0 0
+              inset
+              0 0 0
               5px
               rgba(
                 115,
@@ -844,7 +936,9 @@ export default function BeeTeam({
           }
 
           /*
+           * ==================================
            * HONEY LIGHT
+           * ==================================
            */
 
           .honey-light {
@@ -890,7 +984,9 @@ export default function BeeTeam({
           }
 
           /*
+           * ==================================
            * MID FIELD
+           * ==================================
            */
 
           .middle-field {
@@ -927,7 +1023,9 @@ export default function BeeTeam({
           }
 
           /*
+           * ==================================
            * FLIGHT TRAILS
+           * ==================================
            */
 
           .flight-trail {
@@ -974,17 +1072,6 @@ export default function BeeTeam({
             z-index: 9;
 
             font-size: .9rem;
-
-            filter:
-              drop-shadow(
-                0 2px 3px
-                rgba(
-                  0,
-                  0,
-                  0,
-                  .18
-                )
-              );
           }
 
           .tiny-flight-bee-one {
@@ -1001,7 +1088,9 @@ export default function BeeTeam({
           }
 
           /*
+           * ==================================
            * POLLEN
+           * ==================================
            */
 
           .pollen {
@@ -1014,8 +1103,7 @@ export default function BeeTeam({
 
             border-radius: 50%;
 
-            background:
-              #ffe877;
+            background: #ffe877;
 
             box-shadow:
               0 0 9px
@@ -1042,56 +1130,49 @@ export default function BeeTeam({
             top: 22%;
             left: 30%;
 
-            animation-delay:
-              .9s;
+            animation-delay: .9s;
           }
 
           .pollen-3 {
             top: 18%;
             right: 23%;
 
-            animation-delay:
-              1.7s;
+            animation-delay: 1.7s;
           }
 
           .pollen-4 {
             top: 39%;
             right: 11%;
 
-            animation-delay:
-              .4s;
+            animation-delay: .4s;
           }
 
           .pollen-5 {
             top: 47%;
             left: 12%;
 
-            animation-delay:
-              2.1s;
+            animation-delay: 2.1s;
           }
 
           .pollen-6 {
             top: 35%;
             left: 52%;
 
-            animation-delay:
-              1.2s;
+            animation-delay: 1.2s;
           }
 
           .pollen-7 {
             top: 58%;
             right: 31%;
 
-            animation-delay:
-              2.7s;
+            animation-delay: 2.7s;
           }
 
           .pollen-8 {
             top: 52%;
             left: 37%;
 
-            animation-delay:
-              3.3s;
+            animation-delay: 3.3s;
           }
 
           @keyframes pollenFloat {
@@ -1112,7 +1193,9 @@ export default function BeeTeam({
           }
 
           /*
+           * ==================================
            * FLOWERS
+           * ==================================
            */
 
           .flower-cluster {
@@ -1122,7 +1205,8 @@ export default function BeeTeam({
 
             display: flex;
 
-            align-items: flex-end;
+            align-items:
+              flex-end;
 
             gap: 9px;
           }
@@ -1159,11 +1243,7 @@ export default function BeeTeam({
             width: 3px;
             height: 44px;
 
-            background:
-              #3d702e;
-
-            transform-origin:
-              top center;
+            background: #3d702e;
           }
 
           .flower-gold {
@@ -1204,7 +1284,9 @@ export default function BeeTeam({
           }
 
           /*
+           * ==================================
            * FOREGROUND
+           * ==================================
            */
 
           .foreground-grass {
@@ -1296,8 +1378,7 @@ export default function BeeTeam({
             width: 42px;
             height: 37px;
 
-            background:
-              #d18b18;
+            background: #d18b18;
 
             clip-path:
               polygon(
@@ -1311,7 +1392,9 @@ export default function BeeTeam({
           }
 
           /*
-           * SUPPORT FLOATING HUD
+           * ==================================
+           * SUPPORT HUD
+           * ==================================
            */
 
           .support-floating-summary {
@@ -1320,15 +1403,17 @@ export default function BeeTeam({
             z-index: 30;
 
             display: flex;
-            justify-content: flex-end;
+
+            justify-content:
+              flex-end;
 
             gap: 7px;
 
             flex: 0 0 auto;
 
-            min-height: 38px;
+            min-height: 34px;
 
-            margin-bottom: 5px;
+            margin-bottom: 4px;
           }
 
           .support-summary-chip {
@@ -1341,7 +1426,7 @@ export default function BeeTeam({
             min-width: 112px;
 
             padding:
-              6px 10px;
+              5px 9px;
 
             border:
               1px solid
@@ -1379,20 +1464,14 @@ export default function BeeTeam({
                 16,
                 .25
               );
-
-            backdrop-filter:
-              blur(6px);
           }
 
           .support-summary-chip span {
-            color:
-              #f4dda0;
+            color: #f4dda0;
 
-            font-size:
-              .42rem;
+            font-size: .42rem;
 
-            font-weight:
-              1000;
+            font-weight: 1000;
 
             letter-spacing:
               .07em;
@@ -1402,14 +1481,11 @@ export default function BeeTeam({
           }
 
           .support-summary-chip strong {
-            margin-left:
-              auto;
+            margin-left: auto;
 
-            color:
-              #ffe272;
+            color: #ffe272;
 
-            font-size:
-              .9rem;
+            font-size: .9rem;
           }
 
           /*
@@ -1427,22 +1503,22 @@ export default function BeeTeam({
             flex: 0 0 auto;
 
             align-items: center;
+
             justify-content:
               space-between;
 
             gap: 14px;
 
             min-width: 0;
-            min-height: 46px;
+            min-height: 42px;
 
-            margin-bottom: 6px;
+            margin-bottom: 5px;
           }
 
           .bee-team-title-area {
             display: flex;
 
-            align-items:
-              center;
+            align-items: center;
 
             min-width: 0;
           }
@@ -1455,18 +1531,11 @@ export default function BeeTeam({
             margin:
               0 0 1px;
 
-            color:
-              #8e5b09;
+            color: #8e5b09;
 
-            font-size:
-              clamp(
-                .48rem,
-                .58vw,
-                .62rem
-              );
+            font-size: .52rem;
 
-            font-weight:
-              1000;
+            font-weight: 1000;
 
             letter-spacing:
               .16em;
@@ -1478,48 +1547,35 @@ export default function BeeTeam({
           .bee-team-header h2 {
             margin: 0;
 
-            color:
-              #4a2803;
+            color: #4a2803;
 
             font-size:
               clamp(
-                1.25rem,
-                1.65vw,
-                1.8rem
+                1.18rem,
+                1.55vw,
+                1.7rem
               );
 
-            font-weight:
-              1000;
+            font-weight: 1000;
 
-            line-height:
-              .96;
+            line-height: .96;
           }
 
           .bee-team-subtitle {
             margin:
-              3px 0 0;
+              2px 0 0;
 
-            color:
-              #795018;
+            color: #795018;
 
-            font-size:
-              clamp(
-                .45rem,
-                .53vw,
-                .58rem
-              );
+            font-size: .5rem;
 
-            font-weight:
-              800;
+            font-weight: 800;
           }
 
           .team-summary-area {
             display: flex;
 
-            flex: 0 0 auto;
-
-            align-items:
-              stretch;
+            align-items: stretch;
 
             gap: 6px;
           }
@@ -1527,19 +1583,16 @@ export default function BeeTeam({
           .team-summary {
             display: flex;
 
-            flex-direction:
-              column;
+            flex-direction: column;
 
-            justify-content:
-              center;
+            justify-content: center;
 
-            width: 158px;
+            width: 150px;
 
-            min-height:
-              42px;
+            min-height: 38px;
 
             padding:
-              5px 10px;
+              4px 9px;
 
             border:
               1px solid
@@ -1550,8 +1603,7 @@ export default function BeeTeam({
                 .46
               );
 
-            border-radius:
-              11px;
+            border-radius: 11px;
 
             background:
               linear-gradient(
@@ -1560,60 +1612,43 @@ export default function BeeTeam({
                 #ffe488
               );
 
-            text-align:
-              right;
+            text-align: right;
           }
 
           .team-summary span,
           .streak-summary div span {
-            color:
-              #8a5d12;
+            color: #8a5d12;
 
-            font-size:
-              .42rem;
+            font-size: .4rem;
 
-            font-weight:
-              1000;
-
-            letter-spacing:
-              .08em;
+            font-weight: 1000;
 
             text-transform:
               uppercase;
           }
 
           .team-summary strong {
-            color:
-              #432606;
+            color: #432606;
 
-            font-size:
-              .84rem;
+            font-size: .82rem;
           }
 
           .team-summary small {
-            margin-top:
-              1px;
+            color: #73511e;
 
-            color:
-              #73511e;
+            font-size: .42rem;
 
-            font-size:
-              .44rem;
-
-            font-weight:
-              700;
+            font-weight: 700;
           }
 
           .streak-summary {
             display: flex;
 
-            align-items:
-              center;
+            align-items: center;
 
             gap: 6px;
 
-            min-width:
-              98px;
+            min-width: 94px;
 
             padding:
               4px 8px;
@@ -1627,8 +1662,7 @@ export default function BeeTeam({
                 .45
               );
 
-            border-radius:
-              11px;
+            border-radius: 11px;
 
             background:
               linear-gradient(
@@ -1639,42 +1673,19 @@ export default function BeeTeam({
           }
 
           .streak-summary-icon {
-            display: grid;
-
-            width: 25px;
-            height: 25px;
-
-            place-items:
-              center;
-
-            border-radius:
-              50%;
-
-            background:
-              rgba(
-                255,
-                255,
-                255,
-                .58
-              );
-
-            font-size:
-              .82rem;
+            font-size: .82rem;
           }
 
           .streak-summary div {
             display: flex;
 
-            flex-direction:
-              column;
+            flex-direction: column;
           }
 
           .streak-summary strong {
-            color:
-              #512c04;
+            color: #512c04;
 
-            font-size:
-              .88rem;
+            font-size: .86rem;
           }
 
           /*
@@ -1689,12 +1700,13 @@ export default function BeeTeam({
             z-index: 25;
 
             display: flex;
+
             flex: 1 1 0;
 
             min-width: 0;
             min-height: 0;
 
-            padding: 4px;
+            padding: 3px;
 
             overflow: hidden;
 
@@ -1749,16 +1761,6 @@ export default function BeeTeam({
                 )
               );
 
-            box-shadow:
-              inset
-              0 0 24px
-              rgba(
-                255,
-                223,
-                121,
-                .08
-              );
-
             backdrop-filter:
               blur(1px);
           }
@@ -1768,11 +1770,9 @@ export default function BeeTeam({
 
             border-radius: 50%;
 
-            filter:
-              blur(24px);
+            filter: blur(24px);
 
-            pointer-events:
-              none;
+            pointer-events: none;
           }
 
           .stage-highlight-one {
@@ -1807,12 +1807,19 @@ export default function BeeTeam({
               );
           }
 
+          /*
+           * ==================================
+           * DEFAULT GRID
+           * ==================================
+           */
+
           .bee-performance-grid {
             position: relative;
 
             z-index: 3;
 
             display: grid;
+
             flex: 1 1 0;
 
             grid-template-columns:
@@ -1843,31 +1850,153 @@ export default function BeeTeam({
             overflow: hidden;
           }
 
+          /*
+           * ==================================
+           * MEADOW 1 — 3 x 3
+           * ==================================
+           */
+
+          .phlebotomy-meadow
+          .bee-performance-grid.three-row-grid {
+            grid-template-columns:
+              repeat(
+                3,
+                minmax(
+                  0,
+                  1fr
+                )
+              );
+
+            grid-template-rows:
+              repeat(
+                3,
+                minmax(
+                  0,
+                  1fr
+                )
+              );
+          }
+
+          /*
+           * ==================================
+           * MEADOW 2 — DYNAMIC SUPPORT GRID
+           * ==================================
+           */
+
+          .support-meadow
+          .bee-performance-grid.support-grid-4x2 {
+            grid-template-columns:
+              repeat(
+                4,
+                minmax(
+                  0,
+                  1fr
+                )
+              );
+
+            grid-template-rows:
+              repeat(
+                2,
+                minmax(
+                  0,
+                  1fr
+                )
+              );
+          }
+
+          .support-meadow
+          .bee-performance-grid.support-grid-4x3 {
+            grid-template-columns:
+              repeat(
+                4,
+                minmax(
+                  0,
+                  1fr
+                )
+              );
+
+            grid-template-rows:
+              repeat(
+                3,
+                minmax(
+                  0,
+                  1fr
+                )
+              );
+          }
+
+          .support-meadow
+          .bee-performance-grid.support-grid-5x3 {
+            grid-template-columns:
+              repeat(
+                5,
+                minmax(
+                  0,
+                  1fr
+                )
+              );
+
+            grid-template-rows:
+              repeat(
+                3,
+                minmax(
+                  0,
+                  1fr
+                )
+              );
+          }
+
+          .support-meadow
+          .bee-performance-grid.support-grid-5x4 {
+            grid-template-columns:
+              repeat(
+                5,
+                minmax(
+                  0,
+                  1fr
+                )
+              );
+
+            grid-template-rows:
+              repeat(
+                4,
+                minmax(
+                  0,
+                  1fr
+                )
+              );
+          }
+
+          .support-meadow
+          .bee-performance-grid.support-grid-5x5 {
+            grid-template-columns:
+              repeat(
+                5,
+                minmax(
+                  0,
+                  1fr
+                )
+              );
+
+            grid-template-rows:
+              repeat(
+                5,
+                minmax(
+                  0,
+                  1fr
+                )
+              );
+          }
+
           .bee-performance-grid > * {
             min-width: 0;
             min-height: 0;
           }
 
           /*
-           * Slight transparency/depth specifically
-           * for support cards.
-           */
-
-          .support-meadow
-          .bee-performance-grid
-          > * {
-            box-shadow:
-              0 10px 18px
-              rgba(
-                32,
-                54,
-                20,
-                .22
-              );
-          }
-
-          /*
+           * ==================================
            * SHORT DESKTOP
+           * ==================================
            */
 
           @media (
@@ -1876,17 +2005,16 @@ export default function BeeTeam({
             min-width: 1101px
           ) {
             .bee-team-section {
-              margin-top: 5px;
+              margin-top: 4px;
 
               padding:
-                5px 10px 7px;
+                5px 8px 6px;
             }
 
             .bee-team-header {
-              min-height: 38px;
+              min-height: 36px;
 
-              margin-bottom:
-                4px;
+              margin-bottom: 3px;
             }
 
             .bee-team-subtitle {
@@ -1894,10 +2022,10 @@ export default function BeeTeam({
             }
 
             .team-summary {
-              min-height: 34px;
+              min-height: 32px;
 
               padding:
-                3px 8px;
+                3px 7px;
             }
 
             .team-summary small {
@@ -1905,70 +2033,37 @@ export default function BeeTeam({
             }
 
             .streak-summary {
-              min-height: 34px;
+              min-height: 32px;
 
               padding:
-                3px 7px;
+                3px 6px;
             }
 
             .support-floating-summary {
-              min-height: 31px;
+              min-height: 29px;
 
-              margin-bottom:
-                3px;
+              margin-bottom: 3px;
             }
 
             .support-summary-chip {
               padding:
-                4px 8px;
+                4px 7px;
             }
 
             .bee-performance-stage {
-              padding: 3px;
+              padding: 2px;
             }
 
             .bee-performance-grid {
-              gap: 5px;
+              gap: 4px;
             }
           }
 
-          @media (
-            max-height: 720px
-          ) and (
-            min-width: 1101px
-          ) {
-            .bee-team-header {
-              min-height: 31px;
-            }
-
-            .bee-team-eyebrow {
-              display: none;
-            }
-
-            .bee-team-header h2 {
-              font-size:
-                1.12rem;
-            }
-
-            .team-summary,
-            .streak-summary {
-              min-height:
-                30px;
-            }
-
-            .support-floating-summary {
-              min-height:
-                27px;
-            }
-
-            .support-summary-chip {
-              min-width:
-                95px;
-
-              padding:
-                3px 7px;
-            }
-          }
+          /*
+           * ==================================
+           * RESPONSIVE
+           * ==================================
+           */
 
           @media (
             max-width: 1100px
@@ -1978,20 +2073,29 @@ export default function BeeTeam({
 
               height: auto;
 
-              min-height:
-                560px;
+              min-height: 560px;
 
-              overflow:
-                visible;
+              overflow: visible;
             }
 
             .bee-performance-stage,
             .bee-performance-grid {
-              overflow:
-                visible;
+              overflow: visible;
             }
 
-            .bee-performance-grid {
+            .bee-performance-grid,
+            .phlebotomy-meadow
+            .bee-performance-grid.three-row-grid,
+            .support-meadow
+            .bee-performance-grid.support-grid-4x2,
+            .support-meadow
+            .bee-performance-grid.support-grid-4x3,
+            .support-meadow
+            .bee-performance-grid.support-grid-5x3,
+            .support-meadow
+            .bee-performance-grid.support-grid-5x4,
+            .support-meadow
+            .bee-performance-grid.support-grid-5x5 {
               grid-template-columns:
                 repeat(
                   2,
@@ -2010,16 +2114,15 @@ export default function BeeTeam({
             max-width: 700px
           ) {
             .bee-team-section {
-              min-height:
-                900px;
+              min-height: 900px;
             }
 
             .bee-team-header {
-              align-items:
-                stretch;
-
               flex-direction:
                 column;
+
+              align-items:
+                stretch;
             }
 
             .team-summary-area {
@@ -2031,8 +2134,7 @@ export default function BeeTeam({
 
               width: auto;
 
-              text-align:
-                left;
+              text-align: left;
             }
 
             .support-floating-summary {
@@ -2044,9 +2146,24 @@ export default function BeeTeam({
               flex: 1;
             }
 
-            .bee-performance-grid {
+            .bee-performance-grid,
+            .phlebotomy-meadow
+            .bee-performance-grid.three-row-grid,
+            .support-meadow
+            .bee-performance-grid.support-grid-4x2,
+            .support-meadow
+            .bee-performance-grid.support-grid-4x3,
+            .support-meadow
+            .bee-performance-grid.support-grid-5x3,
+            .support-meadow
+            .bee-performance-grid.support-grid-5x4,
+            .support-meadow
+            .bee-performance-grid.support-grid-5x5 {
               grid-template-columns:
                 1fr;
+
+              grid-template-rows:
+                auto;
             }
           }
 
@@ -2055,8 +2172,7 @@ export default function BeeTeam({
               reduce
           ) {
             .pollen {
-              animation:
-                none;
+              animation: none;
             }
           }
         `}

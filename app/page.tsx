@@ -2,8 +2,6 @@ import {
   calculateVarianceStreaks,
 } from "@/app/lib/varianceStreakEngine";
 
-import ProjectionExecutiveCard from "./components/ProjectionExecutiveCard";
-
 import { prisma } from "@/lib/prisma";
 
 import HiveHeader from "@/app/components/HiveHeader";
@@ -1669,29 +1667,29 @@ startOfNextWeek.setUTCDate(
           />
 
           <section
-            style={{
-              display:
-                "grid",
+  style={{
+    display:
+      "grid",
 
-              gridTemplateColumns:
-                "0.9fr 1.2fr 1.3fr",
+    gridTemplateColumns:
+      "0.9fr 1.2fr",
 
-              gap:
-                "18px",
+    gap:
+      "14px",
 
-              marginTop:
-                "12px",
+    marginTop:
+      "8px",
 
-              height:
-                "31vh",
+    height:
+      "22vh",
 
-              flex:
-                "0 0 31vh",
+    flex:
+      "0 0 22vh",
 
-              minHeight:
-                "270px",
-            }}
-          >
+    minHeight:
+      "190px",
+  }}
+>
             <HoneyPotExecutive
               monthlyGoal={
                 intelligence
@@ -1733,54 +1731,6 @@ startOfNextWeek.setUTCDate(
               }
             />
 
-            <ProjectionExecutiveCard
-              currentLiters={
-                intelligence
-                  .projection
-                  .currentLiters
-              }
-
-              projectedFinish={
-                intelligence
-                  .projection
-                  .projectedFinish
-              }
-
-              dailyGoal={
-                dailyTargetPlan
-                  .todaysTargetLiters
-              }
-
-              confidence={
-                intelligence
-                  .projection
-                  .confidence
-              }
-
-              projectedVariance={
-                intelligence
-                  .projection
-                  .projectedVariance
-              }
-
-              additionalDonorsNeeded={
-                intelligence
-                  .projection
-                  .additionalDonorsNeeded
-              }
-
-              currentHourlyPace={
-                intelligence
-                  .projection
-                  .currentHourlyPace
-              }
-
-              hoursRemaining={
-                intelligence
-                  .projection
-                  .hoursRemaining
-              }
-            />
           </section>
 
           <BeeTeam
