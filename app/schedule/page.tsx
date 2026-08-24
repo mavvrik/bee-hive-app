@@ -321,6 +321,85 @@ function timeToMinutes(
   );
 }
 
+function getScheduleRoleGroup(
+  primaryJob: string | null,
+) {
+  const job =
+    (primaryJob ?? "")
+      .trim()
+      .toLowerCase();
+
+  if (
+    job.includes("phleb") ||
+    job.includes("pheresis")
+  ) {
+    return "Phlebotomy";
+  }
+
+  if (
+    job.includes("reception")
+  ) {
+    return "Reception";
+  }
+
+  if (
+    job.includes("medical staff") ||
+    job === "msa" ||
+    job.includes(" msa")
+  ) {
+    return "MSA";
+  }
+
+  if (
+    job.includes("donor support") ||
+    job === "dst" ||
+    job.includes(" dst")
+  ) {
+    return "DST";
+  }
+
+  if (
+    job.includes("processing") ||
+    job.includes("processor")
+  ) {
+    return "Processing";
+  }
+
+  if (
+    job.includes("quality")
+  ) {
+    return "Quality";
+  }
+
+  if (
+    job.includes("manager") ||
+    job.includes("supervisor")
+  ) {
+    return "Management";
+  }
+
+  if (
+    job.includes("group lead") ||
+    job.includes("group leader")
+  ) {
+    return "Group Lead";
+  }
+
+  return "Other";
+}
+
+const scheduleRoleOrder = [
+  "Phlebotomy",
+  "Reception",
+  "MSA",
+  "DST",
+  "Processing",
+  "Quality",
+  "Management",
+  "Group Lead",
+  "Other",
+];
+
 export default async function SchedulePage({
   searchParams,
 }: {
@@ -480,10 +559,39 @@ export default async function SchedulePage({
               },
             );
 
+        const roleGroups =
+          scheduleRoleOrder
+            .map(
+              (
+                roleGroup,
+              ) => ({
+                roleGroup,
+
+                shifts:
+                  dayShifts.filter(
+                    (
+                      shift,
+                    ) =>
+                      getScheduleRoleGroup(
+                        shift.primaryJob,
+                      ) ===
+                      roleGroup,
+                  ),
+              }),
+            )
+            .filter(
+              (
+                group,
+              ) =>
+                group.shifts.length >
+                0,
+            );
+
         return {
           date,
           shifts:
             dayShifts,
+          roleGroups,
         };
       },
     );
@@ -780,73 +888,102 @@ export default async function SchedulePage({
                         styles.shiftList
                       }
                     >
-                      {day.shifts.map(
+                      {day.roleGroups.map(
                         (
-                          shift,
-                        ) => {
-                          const displayName =
-                            shift.collector
-                              ?.preferredName ||
-                            shift.collector
-                              ?.name ||
-                            shift.employeeName;
-
-                          return (
+                          group,
+                        ) => (
+                          <div
+                            key={
+                              group.roleGroup
+                            }
+                          >
                             <div
-                              key={
-                                shift.id
-                              }
                               style={
-                                styles.shiftRow
+                                styles.roleGroupHeader
                               }
                             >
-                              <div
-                                style={
-                                  styles.workerBlock
-                                }
-                              >
-                                <strong
-                                  style={
-                                    styles.workerName
-                                  }
-                                >
-                                  {displayName}
-                                </strong>
+                              <strong>
+                                {group.roleGroup}
+                              </strong>
 
-                                <span
-                                  style={
-                                    styles.jobLabel
-                                  }
-                                >
-                                  {shift.primaryJob ||
-                                    "Scheduled Worker"}
-                                </span>
-                              </div>
-
-                              <div
-                                style={
-                                  styles.timeBlock
-                                }
-                              >
-                                <strong>
-                                  {
-                                    shift.startTime
-                                  }
-                                </strong>
-
-                                <span>
-                                  to
-                                </span>
-
-                                <strong>
-                                  {
-                                    shift.endTime
-                                  }
-                                </strong>
-                              </div>
+                              <span>
+                                {group.shifts.length}{" "}
+                                {group.shifts.length === 1
+                                  ? "worker"
+                                  : "workers"}
+                              </span>
                             </div>
-                          );
-                        },
+
+                            {group.shifts.map(
+                              (
+                                shift,
+                              ) => {
+                                const displayName =
+                                  shift.collector
+                                    ?.preferredName ||
+                                  shift.collector
+                                    ?.name ||
+                                  shift.employeeName;
+
+                                return (
+                                  <div
+                                    key={
+                                      shift.id
+                                    }
+                                    style={
+                                      styles.shiftRow
+                                    }
+                                  >
+                                    <div
+                                      style={
+                                        styles.workerBlock
+                                      }
+                                    >
+                                      <strong
+                                        style={
+                                          styles.workerName
+                                        }
+                                      >
+                                        {displayName}
+                                      </strong>
+
+                                      <span
+                                        style={
+                                          styles.jobLabel
+                                        }
+                                      >
+                                        {shift.primaryJob ||
+                                          "Scheduled Worker"}
+                                      </span>
+                                    </div>
+
+                                    <div
+                                      style={
+                                        styles.timeBlock
+                                      }
+                                    >
+                                      <strong>
+                                        {
+                                          shift.startTime
+                                        }
+                                      </strong>
+
+                                      <span>
+                                        to
+                                      </span>
+
+                                      <strong>
+                                        {
+                                          shift.endTime
+                                        }
+                                      </strong>
+                                    </div>
+                                  </div>
+                                );
+                              },
+                            )}
+                          </div>
+                        ),
                       )}
                     </div>
                   )}
@@ -1195,6 +1332,44 @@ const styles = {
 
     color:
       "#805b08",
+  },
+
+  roleGroupHeader: {
+    display:
+      "flex",
+
+    justifyContent:
+      "space-between",
+
+    alignItems:
+      "center",
+
+    padding:
+      "8px 15px",
+
+    borderTop:
+      "1px solid #e3cf85",
+
+    borderBottom:
+      "1px solid #eee2b8",
+
+    background:
+      "#fff9e5",
+
+    color:
+      "#805b08",
+
+    fontSize:
+      10,
+
+    fontWeight:
+      900,
+
+    letterSpacing:
+      "0.06em",
+
+    textTransform:
+      "uppercase" as const,
   },
 
   shiftList: {
