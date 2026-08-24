@@ -21,6 +21,15 @@ const adminSections = [
   },
 
   {
+  title: "Weekly Staff Schedule",
+  description:
+    "View the center's weekly staffing schedule, including who is working each day, scheduled hours, and primary job assignments.",
+  href: "/schedule",
+  icon: "📅",
+  status: "Active",
+},
+
+  {
     title: "Hive Analytics",
     description:
       "View Hive-calculated metrics and compare them with official CSL values.",

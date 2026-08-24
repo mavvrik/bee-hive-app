@@ -21,30 +21,46 @@ const navigationItems: AdminNavItem[] = [
     href: "/settings",
     icon: "🏠",
   },
+
   {
-  title: "Dashboard & KPIs",
-  href: "/settings/hive",
-  icon: "📊",
-},
-{
-  title: "Comparison Metrics",
-  href: "/settings/metrics/comparisons",
-  icon: "↕️",
-},
-{
-  title: "Hive Analytics",
-  href: "/settings/analytics",
-  icon: "📈",
-},
+    title: "Dashboard & KPIs",
+    href: "/settings/hive",
+    icon: "📊",
+  },
+
+  {
+    title: "Comparison Metrics",
+    href: "/settings/metrics/comparisons",
+    icon: "↕️",
+  },
+
+  {
+    title: "Hive Analytics",
+    href: "/settings/analytics",
+    icon: "📈",
+  },
+
   {
     title: "Worker Bees",
     href: "/settings/workers",
     icon: "🐝",
   },
 
+  {
+    title: "Task Import",
+    href: "/settings/workers/import",
+    icon: "📥",
+  },
+
+  {
+  title: "Staff Schedule",
+  href: "/schedule",
+  icon: "📅",
+},
+
 {
-  title: "Task Import",
-  href: "/settings/workers/import",
+  title: "Schedule Import",
+  href: "/settings/weekly-schedule",
   icon: "📥",
 },
 
@@ -53,11 +69,13 @@ const navigationItems: AdminNavItem[] = [
     href: "/budget",
     icon: "💰",
   },
+
   {
     title: "Center Settings",
     href: "/settings/center",
     icon: "🏢",
   },
+
   {
     title: "Security",
     href: "/settings/security",
