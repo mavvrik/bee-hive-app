@@ -472,51 +472,55 @@ async function getDerivedValue(
       date,
     );
 
-  /*
-   * Gross Procedures =
-   * sum of WorkerStickEntry.totalSticks
-   */
+ /*
+ * Gross Procedures =
+ * official Daily Center Production donors/procedures
+ *
+ * WorkerStickEntry is individual phlebotomy
+ * performance and must not determine the
+ * center's official Gross Procedures.
+ */
+
+if (
+  dataSourceKey ===
+  "GROSS_PROCEDURES"
+) {
+  const result =
+    await prisma.dailyCenterProduction.aggregate({
+      where: {
+        entryDate: {
+          gte:
+            start,
+
+          lt:
+            end,
+        },
+      },
+
+      _count: {
+        id:
+          true,
+      },
+
+      _sum: {
+        donors:
+          true,
+      },
+    });
 
   if (
-    dataSourceKey ===
-    "GROSS_PROCEDURES"
+    result._count.id ===
+    0
   ) {
-    const result =
-      await prisma.workerStickEntry.aggregate({
-        where: {
-          entryDate: {
-            gte:
-              start,
-
-            lt:
-              end,
-          },
-        },
-
-        _count: {
-          id:
-            true,
-        },
-
-        _sum: {
-          totalSticks:
-            true,
-        },
-      });
-
-    if (
-      result._count.id ===
-      0
-    ) {
-      return null;
-    }
-
-    return (
-      result._sum
-        .totalSticks ??
-      0
-    );
+    return null;
   }
+
+  return (
+    result._sum
+      .donors ??
+    0
+  );
+}
 
   /*
    * Gross Liters =
