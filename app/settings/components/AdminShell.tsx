@@ -41,16 +41,20 @@ const navigationItems: AdminNavItem[] = [
   },
 
   {
-    title: "Worker Bees",
-    href: "/settings/workers",
-    icon: "🐝",
-  },
-
-  {
-    title: "Task Import",
-    href: "/settings/workers/import",
-    icon: "📥",
-  },
+  title: "Worker Bees",
+  href: "/settings/workers",
+  icon: "🐝",
+},
+{
+  title: "Employee of the Month",
+  href: "/settings/workers/employee-of-month",
+  icon: "🏆",
+},
+{
+  title: "Task Import",
+  href: "/settings/workers/import",
+  icon: "📥",
+},
 
   {
   title: "Staff Schedule",
