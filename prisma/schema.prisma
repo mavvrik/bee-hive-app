@@ -337,6 +337,56 @@ model DailyCenterProduction {
 }
 
 // ======================================================
+// OPERATIONAL DISRUPTIONS
+// ======================================================
+
+model OperationalDisruption {
+  id Int @id @default(autoincrement())
+
+  // Operational date affected by the disruption.
+  disruptionDate DateTime @db.Date
+
+  // Exact start/end times can be recorded when known.
+  // Stored as local center-time strings such as "06:00" or "12:00".
+  startTime String?
+  endTime   String?
+
+  // Productive operating time lost.
+  hoursLost Float @default(0)
+
+  type        OperationalDisruptionType
+  impactLevel OperationalImpactLevel @default(FULL)
+
+  // Examples:
+  // Entire Center, Reception, Donor Floor, Processing.
+  affectedArea String @default("Entire Center")
+
+  title       String
+  description String?
+
+  // Management-entered estimates are optional.
+  // These fields never modify actual center production.
+  estimatedProceduresLost Int?
+  estimatedLitersLost     Float?
+
+  // Resolved status preserves whether the disruption was still
+  // active when originally entered.
+  resolved   Boolean   @default(true)
+  resolvedAt DateTime?
+
+  // Archive instead of deleting historical operational context.
+  archived Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([disruptionDate])
+  @@index([type])
+  @@index([archived])
+  @@index([disruptionDate, archived])
+}
+
+// ======================================================
 // HOURLY OPERATIONS
 // ======================================================
 
@@ -497,4 +547,22 @@ enum MetricSource {
   CSL
   HIVE
   MANUAL
+}
+
+enum OperationalDisruptionType {
+  SYSTEM_OUTAGE
+  NETWORK_OUTAGE
+  EQUIPMENT_FAILURE
+  POWER_OUTAGE
+  WEATHER
+  STAFFING
+  DELAYED_OPENING
+  EARLY_CLOSURE
+  FACILITY
+  OTHER
+}
+
+enum OperationalImpactLevel {
+  FULL
+  PARTIAL
 }
