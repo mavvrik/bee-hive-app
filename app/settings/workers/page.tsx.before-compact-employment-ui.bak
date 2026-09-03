@@ -2,7 +2,6 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import AdminShell from "../components/AdminShell";
 import WorkerPhotoUpload from "./WorkerPhotoUpload";
-import CompactEmploymentProfile from "./CompactEmploymentProfile";
 import {
   createCollector,
   deactivateCollector,
@@ -26,10 +25,9 @@ const workforceRoles = [
 export default async function WorkerRosterPage() {
   const collectors =
     await prisma.collector.findMany({
-  include: {
-    roleAssignments: true,
-    employmentProfile: true,
-  },
+      include: {
+        roleAssignments: true,
+      },
 
       orderBy: [
         {
@@ -678,41 +676,6 @@ export default async function WorkerRosterPage() {
                         </div>
                       </div>
 
-                      <CompactEmploymentProfile
-  collectorId={collector.id}
-  workerName={
-    collector.preferredName ||
-    collector.name
-  }
-  profile={
-    collector.employmentProfile
-      ? {
-          employmentType:
-            collector.employmentProfile
-              .employmentType,
-          schedulePattern:
-            collector.employmentProfile
-              .schedulePattern,
-          minPaidWeeklyHours:
-            collector.employmentProfile
-              .minPaidWeeklyHours,
-          maxPaidWeeklyHours:
-            collector.employmentProfile
-              .maxPaidWeeklyHours,
-          targetPaidWeeklyHours:
-            collector.employmentProfile
-              .targetPaidWeeklyHours,
-          scheduledShiftHours:
-            collector.employmentProfile
-              .scheduledShiftHours,
-          unpaidLunchMinutes:
-            collector.employmentProfile
-              .unpaidLunchMinutes,
-        }
-      : null
-  }
-/>
-                      
                       <div className="profile-section-label profile-gap">
                         Meet the Bees Profile
                       </div>

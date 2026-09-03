@@ -52,6 +52,12 @@ const navigationItems: AdminNavItem[] = [
   icon: "🧠",
 },
 
+{
+  title: "Intelligent Scheduling",
+  href: "/settings/scheduling",
+  icon: "🧠",
+},
+
   {
     title: "Worker Bees",
     href: "/settings/workers",
