@@ -1,0 +1,22 @@
+S3A navigation patch
+
+In app/settings/scheduling/page.tsx, find the command-grid section.
+
+Add this Link as another command card BEFORE the disabled "Generate Intelligent Schedule" card:
+
+<Link
+  href="/settings/scheduling/requirements"
+  className="command-card"
+>
+  <span className="command-icon">📊</span>
+  <div>
+    <strong>Staffing Requirements</strong>
+    <p>
+      Translate Arrival Patterns and locked operating rules into
+      30-minute department requirements.
+    </p>
+  </div>
+  <span className="arrow">→</span>
+</Link>
+
+No Prisma changes are required.

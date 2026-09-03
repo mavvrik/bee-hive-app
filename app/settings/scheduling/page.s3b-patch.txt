@@ -1,0 +1,20 @@
+S3B navigation patch
+
+In app/settings/scheduling/page.tsx, add this command card AFTER the Staffing Requirements card:
+
+<Link
+  href="/settings/scheduling/workforce"
+  className="command-card"
+>
+  <span className="command-icon">👥</span>
+  <div>
+    <strong>Workforce Constraints</strong>
+    <p>
+      Audit qualified worker pools and Time Off against
+      the validated staffing requirements.
+    </p>
+  </div>
+  <span className="arrow">→</span>
+</Link>
+
+No Prisma changes are required.

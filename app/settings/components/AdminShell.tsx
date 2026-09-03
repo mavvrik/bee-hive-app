@@ -47,6 +47,12 @@ const navigationItems: AdminNavItem[] = [
   },
 
   {
+  title: "Intelligence Data",
+  href: "/settings/intelligence-data",
+  icon: "🧠",
+},
+
+  {
     title: "Worker Bees",
     href: "/settings/workers",
     icon: "🐝",

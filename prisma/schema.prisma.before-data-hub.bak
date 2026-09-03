@@ -355,7 +355,7 @@ model OperationalDisruption {
   hoursLost Float @default(0)
 
   type        OperationalDisruptionType
-  impactLevel OperationalImpactLevel    @default(FULL)
+  impactLevel OperationalImpactLevel @default(FULL)
 
   // Examples:
   // Entire Center, Reception, Donor Floor, Processing.
@@ -509,115 +509,6 @@ model MetricReading {
 }
 
 // ======================================================
-// INTELLIGENCE DATA HUB
-// ======================================================
-
-model IntelligenceDataSource {
-  id Int @id @default(autoincrement())
-
-  key         String  @unique
-  name        String
-  description String?
-
-  category    IntelligenceDataCategory
-  granularity String
-  fileFormat  String                   @default("XLSX")
-
-  intelligenceEligible Boolean @default(true)
-  active               Boolean @default(true)
-  sourceDefinition     Json?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  imports IntelligenceDataImport[]
-
-  @@index([category])
-  @@index([active])
-  @@index([intelligenceEligible])
-}
-
-model IntelligenceDataImport {
-  id Int @id @default(autoincrement())
-
-  dataSourceId Int
-
-  fileName String
-  fileUrl  String?
-  fileHash String?
-
-  periodStart  DateTime? @db.Date
-  periodEnd    DateTime? @db.Date
-  centerNumber String?
-
-  status IntelligenceImportStatus @default(PENDING)
-
-  sourceRowCount   Int   @default(0)
-  importedRowCount Int   @default(0)
-  rejectedRowCount Int   @default(0)
-  warningCount     Int   @default(0)
-  warnings         Json?
-
-  importedAt DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-
-  dataSource          IntelligenceDataSource     @relation(fields: [dataSourceId], references: [id], onDelete: Cascade)
-  coverage            IntelligenceDataCoverage[]
-  operationalPatterns OperationalPatternEntry[]
-
-  @@index([dataSourceId])
-  @@index([status])
-  @@index([periodStart, periodEnd])
-  @@index([centerNumber])
-  @@index([fileHash])
-}
-
-model IntelligenceDataCoverage {
-  id Int @id @default(autoincrement())
-
-  dataImportId Int
-
-  coverageStart DateTime @db.Date
-  coverageEnd   DateTime @db.Date
-  centerNumber  String?
-  granularity   String
-
-  createdAt DateTime @default(now())
-
-  dataImport IntelligenceDataImport @relation(fields: [dataImportId], references: [id], onDelete: Cascade)
-
-  @@unique([dataImportId, coverageStart, coverageEnd])
-  @@index([coverageStart, coverageEnd])
-  @@index([centerNumber])
-  @@index([dataImportId])
-}
-
-model OperationalPatternEntry {
-  id Int @id @default(autoincrement())
-
-  dataImportId Int
-  centerNumber String?
-
-  dayOfWeek       Int
-  time            String
-  minuteOfDay     Int
-  intervalMinutes Int    @default(30)
-
-  visits Int @default(0)
-  units  Int @default(0)
-
-  createdAt DateTime @default(now())
-
-  dataImport IntelligenceDataImport @relation(fields: [dataImportId], references: [id], onDelete: Cascade)
-
-  @@unique([dataImportId, dayOfWeek, minuteOfDay])
-  @@index([dayOfWeek, minuteOfDay])
-  @@index([centerNumber, dayOfWeek, minuteOfDay])
-  @@index([dataImportId])
-}
-
-// ======================================================
 // ENUMS
 // ======================================================
 
@@ -674,72 +565,4 @@ enum OperationalDisruptionType {
 enum OperationalImpactLevel {
   FULL
   PARTIAL
-}
-
-enum IntelligenceDataCategory {
-  DONOR_DEMAND
-  PRODUCTION
-  WORKFORCE
-  QUALITY
-  OPERATIONS
-  SCHEDULE
-  OTHER
-}
-
-enum IntelligenceImportStatus {
-  PENDING
-  PROCESSING
-  SUCCESS
-  PARTIAL
-  FAILED
-}
-
-model TimeOffImport {
-  id                  Int       @id @default(autoincrement())
-  fileName            String
-  fileHash            String    @unique
-  reportPeriodStart   DateTime? @db.Date
-  reportPeriodEnd     DateTime? @db.Date
-  actualCoverageStart DateTime? @db.Date
-  actualCoverageEnd   DateTime? @db.Date
-  sourceRowCount      Int       @default(0)
-  importedRowCount    Int       @default(0)
-  warningCount        Int       @default(0)
-  warnings            Json?
-  executedAtText      String?
-  printedFor          String?
-  status              String    @default("PENDING")
-  importedAt          DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-
-  requests TimeOffRequest[]
-
-  @@index([reportPeriodStart, reportPeriodEnd])
-  @@index([actualCoverageStart, actualCoverageEnd])
-  @@index([status])
-}
-
-model TimeOffRequest {
-  id                    Int      @id @default(autoincrement())
-  timeOffImportId       Int
-  collectorId           Int
-  employeeExternalId    String?
-  sourceEmployeeName    String
-  collectorNameSnapshot String
-  matchMethod           String
-  subtype               String?
-  duration              Float?
-  startDate             DateTime @db.Date
-  endDate               DateTime @db.Date
-  comments              String?
-  createdAt             DateTime @default(now())
-
-  timeOffImport TimeOffImport @relation(fields: [timeOffImportId], references: [id], onDelete: Cascade)
-
-  @@index([collectorId])
-  @@index([startDate, endDate])
-  @@index([collectorId, startDate, endDate])
-  @@index([employeeExternalId])
-  @@index([timeOffImportId])
 }

@@ -1,0 +1,25 @@
+Worker page integration
+
+In app/settings/workers/[id]/page.tsx:
+
+1. Import:
+import EmploymentProfileForm from "./employment/EmploymentProfileForm";
+
+2. Ensure the worker query includes:
+employmentProfile: true,
+
+3. Add this section wherever worker administration cards are rendered:
+
+<section>
+  <h2>Employment & Schedule Profile</h2>
+  <p>
+    Used by Scheduling Intelligence for weekly paid-hour constraints.
+  </p>
+
+  <EmploymentProfileForm
+    collectorId={worker.id}
+    profile={worker.employmentProfile}
+  />
+</section>
+
+Do not change role eligibility logic.

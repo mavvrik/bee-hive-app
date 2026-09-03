@@ -355,7 +355,7 @@ model OperationalDisruption {
   hoursLost Float @default(0)
 
   type        OperationalDisruptionType
-  impactLevel OperationalImpactLevel    @default(FULL)
+  impactLevel OperationalImpactLevel @default(FULL)
 
   // Examples:
   // Entire Center, Reception, Donor Floor, Processing.
@@ -515,13 +515,13 @@ model MetricReading {
 model IntelligenceDataSource {
   id Int @id @default(autoincrement())
 
-  key         String  @unique
+  key         String @unique
   name        String
   description String?
 
   category    IntelligenceDataCategory
   granularity String
-  fileFormat  String                   @default("XLSX")
+  fileFormat  String @default("XLSX")
 
   intelligenceEligible Boolean @default(true)
   active               Boolean @default(true)
@@ -552,17 +552,17 @@ model IntelligenceDataImport {
 
   status IntelligenceImportStatus @default(PENDING)
 
-  sourceRowCount   Int   @default(0)
-  importedRowCount Int   @default(0)
-  rejectedRowCount Int   @default(0)
-  warningCount     Int   @default(0)
+  sourceRowCount   Int @default(0)
+  importedRowCount Int @default(0)
+  rejectedRowCount Int @default(0)
+  warningCount     Int @default(0)
   warnings         Json?
 
   importedAt DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  dataSource          IntelligenceDataSource     @relation(fields: [dataSourceId], references: [id], onDelete: Cascade)
+  dataSource          IntelligenceDataSource      @relation(fields: [dataSourceId], references: [id], onDelete: Cascade)
   coverage            IntelligenceDataCoverage[]
   operationalPatterns OperationalPatternEntry[]
 
@@ -599,10 +599,10 @@ model OperationalPatternEntry {
   dataImportId Int
   centerNumber String?
 
-  dayOfWeek       Int
-  time            String
-  minuteOfDay     Int
-  intervalMinutes Int    @default(30)
+  dayOfWeek     Int
+  time          String
+  minuteOfDay   Int
+  intervalMinutes Int @default(30)
 
   visits Int @default(0)
   units  Int @default(0)
@@ -616,7 +616,6 @@ model OperationalPatternEntry {
   @@index([centerNumber, dayOfWeek, minuteOfDay])
   @@index([dataImportId])
 }
-
 // ======================================================
 // ENUMS
 // ======================================================
@@ -675,7 +674,6 @@ enum OperationalImpactLevel {
   FULL
   PARTIAL
 }
-
 enum IntelligenceDataCategory {
   DONOR_DEMAND
   PRODUCTION
@@ -692,54 +690,4 @@ enum IntelligenceImportStatus {
   SUCCESS
   PARTIAL
   FAILED
-}
-
-model TimeOffImport {
-  id                  Int       @id @default(autoincrement())
-  fileName            String
-  fileHash            String    @unique
-  reportPeriodStart   DateTime? @db.Date
-  reportPeriodEnd     DateTime? @db.Date
-  actualCoverageStart DateTime? @db.Date
-  actualCoverageEnd   DateTime? @db.Date
-  sourceRowCount      Int       @default(0)
-  importedRowCount    Int       @default(0)
-  warningCount        Int       @default(0)
-  warnings            Json?
-  executedAtText      String?
-  printedFor          String?
-  status              String    @default("PENDING")
-  importedAt          DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-
-  requests TimeOffRequest[]
-
-  @@index([reportPeriodStart, reportPeriodEnd])
-  @@index([actualCoverageStart, actualCoverageEnd])
-  @@index([status])
-}
-
-model TimeOffRequest {
-  id                    Int      @id @default(autoincrement())
-  timeOffImportId       Int
-  collectorId           Int
-  employeeExternalId    String?
-  sourceEmployeeName    String
-  collectorNameSnapshot String
-  matchMethod           String
-  subtype               String?
-  duration              Float?
-  startDate             DateTime @db.Date
-  endDate               DateTime @db.Date
-  comments              String?
-  createdAt             DateTime @default(now())
-
-  timeOffImport TimeOffImport @relation(fields: [timeOffImportId], references: [id], onDelete: Cascade)
-
-  @@index([collectorId])
-  @@index([startDate, endDate])
-  @@index([collectorId, startDate, endDate])
-  @@index([employeeExternalId])
-  @@index([timeOffImportId])
 }

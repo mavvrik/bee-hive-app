@@ -1,0 +1,17 @@
+Scheduling Command Center patch
+
+Add this card after Workforce Constraints:
+
+<Link
+  href="/settings/scheduling/employment-profiles"
+  className="command-card"
+>
+  <span className="command-icon">🕒</span>
+  <div>
+    <strong>Employment Profiles</strong>
+    <p>
+      Define FTE/PTE, weekly hour limits and standard versus 4×10 shift patterns.
+    </p>
+  </div>
+  <span className="arrow">→</span>
+</Link>
