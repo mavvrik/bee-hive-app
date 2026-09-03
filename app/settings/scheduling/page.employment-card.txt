@@ -1,0 +1,21 @@
+{/* S3B Employment Profiles */}
+<Link
+  href="/settings/scheduling/employment-profiles"
+  className="command-card"
+>
+  <span className="command-icon" aria-hidden="true">
+    🕒
+  </span>
+
+  <div>
+    <strong>Employment Profiles</strong>
+    <p>
+      Set FTE/PTE status, weekly paid-hour limits, and standard 8-hour
+      versus 4×10 schedule patterns.
+    </p>
+  </div>
+
+  <span className="arrow" aria-hidden="true">
+    →
+  </span>
+</Link>

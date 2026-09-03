@@ -1,0 +1,18 @@
+In app/settings/workers/[id]/page.tsx
+
+ADD THIS IMPORT:
+
+import EmploymentProfileForm from "./employment/EmploymentProfileForm";
+
+
+THEN FIND THE prisma.collector.findUnique / findFirst include block.
+
+Make sure it contains BOTH of these:
+
+include: {
+  roleAssignments: true,
+  employmentProfile: true,
+  // keep every other existing include already here
+},
+
+Do NOT replace your whole include with only those two fields.

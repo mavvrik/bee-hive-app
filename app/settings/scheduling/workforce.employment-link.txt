@@ -1,0 +1,16 @@
+<Link
+  href="/settings/scheduling/employment-profiles"
+  style={{
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "9px 12px",
+    borderRadius: 10,
+    background: "#3f2d09",
+    color: "#fff",
+    fontWeight: 850,
+    textDecoration: "none",
+  }}
+>
+  Employment Profiles →
+</Link>

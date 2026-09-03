@@ -37,6 +37,7 @@ model Collector {
   stickEntries           WorkerStickEntry[]
 
   roleAssignments       WorkerRoleAssignment[]
+  employmentProfile     EmploymentProfile?
   performanceEntries    WorkerPerformanceEntry[]
   attendanceEntries     AttendanceEntry[]
   recognitionScores     MonthlyRecognitionScore[]
@@ -742,4 +743,40 @@ model TimeOffRequest {
   @@index([collectorId, startDate, endDate])
   @@index([employeeExternalId])
   @@index([timeOffImportId])
+}
+
+enum EmploymentType {
+  FTE
+  PTE
+}
+
+enum SchedulePatternType {
+  STANDARD_8
+  FOUR_TENS
+}
+
+model EmploymentProfile {
+  id Int @id @default(autoincrement())
+
+  collectorId Int       @unique
+  collector   Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+
+  employmentType  EmploymentType
+  schedulePattern SchedulePatternType @default(STANDARD_8)
+
+  minPaidWeeklyHours    Float
+  maxPaidWeeklyHours    Float
+  targetPaidWeeklyHours Float
+
+  scheduledShiftHours Float @default(8)
+  unpaidLunchMinutes  Int   @default(30)
+
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([employmentType])
+  @@index([schedulePattern])
+  @@index([active])
 }

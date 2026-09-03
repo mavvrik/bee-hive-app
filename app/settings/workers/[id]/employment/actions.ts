@@ -1,4 +1,4 @@
-use server";
+"use server";
 
 import { revalidatePath } from "next/cache";
 
@@ -24,8 +24,13 @@ export async function saveEmploymentProfile(formData: FormData) {
     throw new Error("Invalid worker.");
   }
 
-  const employmentType = String(formData.get("employmentType"));
-  const schedulePattern = String(formData.get("schedulePattern"));
+  const employmentType = String(
+  formData.get("employmentType"),
+) as "FTE" | "PTE";
+
+const schedulePattern = String(
+  formData.get("schedulePattern"),
+) as "STANDARD_8" | "FOUR_TENS";
 
   if (!["FTE", "PTE"].includes(employmentType)) {
     throw new Error("Invalid employment type.");
