@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "centerOperatingHours": {
+    "weekday": {
+      "doorOpenMinute": 360,
+      "doorCloseMinute": 1140
+    },
+    "weekend": {
+      "doorOpenMinute": 420,
+      "doorCloseMinute": 900
+    }
+  },
+  "roleOpenOffsetsMinutes": {
+    "Leadership": 60,
+    "Reception": 60,
+    "Donor Floor": 30,
+    "MSA": 10,
+    "Processing": 10
+  },
+  "reception": {
+    "maxPostCloseMinutes": 30
+  },
+  "donorFlow": {
+    "returningCheckinToStickTargetMinutes": 25,
+    "plannedDonationMinutes": 40,
+    "arrivalIntervalMinutes": 30
+  },
+  "processing": {
+    "postFinalDisconnectMinutes": 10
+  },
+  "lunch": {
+    "defaultUnpaidMinutes": 30,
+    "openerEligibleAfterMinutes": 240,
+    "closerEligibleAfterMinutes": 120
+  }
+}

@@ -1,0 +1,27 @@
+In app/settings/scheduling/generate/page.tsx
+
+If you already installed the previous LSW comparison mode, the only required
+code replacement is:
+
+app/lib/scheduling/lswStaffingRequirementsEngine.ts
+
+No page logic change is required.
+
+OPTIONAL TEXT CLEANUP:
+
+Find the LSW mode description that currently says:
+
+"Reception and Donor Floor demand are being calculated from the verified formulas
+in the supplied LSW Scheduling Tool workbook..."
+
+Replace it with:
+
+"Reception and Donor Floor demand are calculated from the verified LSW workbook
+formulas. HIVE then adds the mandatory MSA operating rule: at least one qualified
+MSA must be available whenever the center is operational."
+
+Also replace any text that says pure LSW leaves MSA at zero.
+
+The mode is now:
+
+LSW + HIVE MSA
