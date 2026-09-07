@@ -1,34 +1,23 @@
 "use client";
 
 export default function PowerHourAlertTestButton() {
-  function testVoice() {
-    if (
-      typeof window === "undefined" ||
-      !("speechSynthesis" in window)
-    ) {
-      return;
-    }
-
-    window.speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(
-      "Grab your P.P.E. — POWER HOUR!",
+  function testFullAlert() {
+    window.dispatchEvent(
+      new Event(
+        "hive:power-hour-test",
+      ),
     );
-
-    utterance.rate = 1;
-    utterance.pitch = 1;
-    utterance.volume = 1;
-
-    window.speechSynthesis.speak(utterance);
   }
 
   return (
     <button
       type="button"
-      onClick={testVoice}
+      onClick={
+        testFullAlert
+      }
       className="test-button"
     >
-      🔊 Test Power Hour Voice
+      ⚡ Test Full Power Hour Alert
     </button>
   );
 }

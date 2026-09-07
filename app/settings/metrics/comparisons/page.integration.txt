@@ -1,0 +1,31 @@
+COMPARISON METRICS — DAILY SNAPSHOT INTEGRATION
+
+Target:
+app/settings/metrics/comparisons/page.tsx
+
+1. Add this import with the other imports:
+
+import DailyComparisonSnapshotEditor from "./DailyComparisonSnapshotEditor";
+
+2. Find the opening AdminShell for this page. It already contains:
+
+activePath="/settings/metrics/comparisons"
+
+Immediately AFTER the AdminShell opening tag closes with >, add:
+
+<DailyComparisonSnapshotEditor />
+
+Example:
+
+<AdminShell
+  ...
+  activePath="/settings/metrics/comparisons"
+>
+  <DailyComparisonSnapshotEditor />
+
+  {/* keep ALL existing Comparison Metrics content below */}
+  ...
+
+IMPORTANT:
+- Do not place DailyComparisonSnapshotEditor inside another <form>.
+- Do not delete the existing metric configuration controls.

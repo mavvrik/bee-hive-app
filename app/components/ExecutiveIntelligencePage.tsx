@@ -103,39 +103,42 @@ function formatMetricValue(
   decimalPlaces: number,
   unit: string | null,
 ) {
-  if (
-    value === null
-  ) {
+  if (value === null) {
     return "—";
   }
+
+  const safeDecimalPlaces =
+    Number.isFinite(decimalPlaces)
+      ? Math.max(
+          0,
+          Math.min(
+            20,
+            Math.trunc(decimalPlaces),
+          ),
+        )
+      : 1;
 
   const formatted =
     value.toLocaleString(
       "en-US",
       {
         minimumFractionDigits:
-          decimalPlaces,
+          safeDecimalPlaces,
 
         maximumFractionDigits:
-          decimalPlaces,
+          safeDecimalPlaces,
       },
     );
 
-  if (
-    unit === "%"
-  ) {
+  if (unit === "%") {
     return `${formatted}%`;
   }
 
-  if (
-    unit === "L"
-  ) {
+  if (unit === "L") {
     return `${formatted} L`;
   }
 
-  if (
-    unit === "min"
-  ) {
+  if (unit === "min") {
     return `${formatted}m`;
   }
 

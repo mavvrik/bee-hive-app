@@ -1,3 +1,5 @@
+import ComparisonMetricImporter from "./ComparisonMetricImporter";
+import DailyComparisonSnapshotEditor from "./DailyComparisonSnapshotEditor";
 import {
   prisma,
 } from "@/lib/prisma";
@@ -10,7 +12,6 @@ import {
 
 import {
   createComparisonMetric,
-  saveDailyComparisonReading,
   toggleComparisonMetric,
   updateComparisonMetric,
 } from "./actions";
@@ -18,32 +19,6 @@ import {
 export const dynamic =
   "force-dynamic";
 
-function todayInput() {
-  const today =
-    new Date();
-
-  const year =
-    today.getFullYear();
-
-  const month =
-    String(
-      today.getMonth() +
-        1,
-    ).padStart(
-      2,
-      "0",
-    );
-
-  const day =
-    String(
-      today.getDate(),
-    ).padStart(
-      2,
-      "0",
-    );
-
-  return `${year}-${month}-${day}`;
-}
 
 export default async function ComparisonMetricsPage() {
   await ensureBuiltInExecutiveMetrics();
@@ -74,6 +49,10 @@ export default async function ComparisonMetricsPage() {
       pageDescription="Manage daily KPIs used for same-weekday week-over-week Executive Intelligence."
       activePath="/settings/metrics/comparisons"
     >
+
+<DailyComparisonSnapshotEditor />
+
+<ComparisonMetricImporter />
       <section className="hero">
         <div>
           <p className="eyebrow">
@@ -310,54 +289,7 @@ export default async function ComparisonMetricsPage() {
                   Save Settings
                 </button>
               </form>
-
-              {!metric.dataSourceKey && (
-                <form
-                  action={
-                    saveDailyComparisonReading
-                  }
-                  className="entry-row"
-                >
-                  <input
-                    type="hidden"
-                    name="metricId"
-                    value={
-                      metric.id
-                    }
-                  />
-
-                  <label>
-                    <span>
-                      Daily Date
-                    </span>
-
-                    <input
-                      type="date"
-                      name="entryDate"
-                      defaultValue={
-                        todayInput()
-                      }
-                    />
-                  </label>
-
-                  <label>
-                    <span>
-                      Value
-                    </span>
-
-                    <input
-                      type="number"
-                      name="value"
-                      step="any"
-                      required
-                    />
-                  </label>
-
-                  <button type="submit">
-                    Save Daily Value
-                  </button>
-                </form>
-              )}
+            
             </article>
           ),
         )}
@@ -543,20 +475,7 @@ select option {
             font-weight: 900;
             text-transform: uppercase;
           }
-
-          .entry-row {
-            display: grid;
-            grid-template-columns:
-              1fr
-              1fr
-              auto;
-            gap: 8px;
-            align-items: end;
-            margin-top: 13px;
-            padding-top: 13px;
-            border-top: 1px solid #eadfb8;
-          }
-
+          
           @media (
             max-width: 1000px
           ) {
@@ -581,11 +500,10 @@ select option {
             max-width: 650px
           ) {
             .add-grid,
-            .settings-grid,
-            .entry-row {
-              grid-template-columns:
-                1fr;
-            }
+.settings-grid {
+  grid-template-columns:
+    1fr;
+}
           }
         `}
       </style>

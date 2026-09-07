@@ -1,0 +1,25 @@
+COMPARISON METRIC IMPORTER — PAGE INTEGRATION
+
+Target:
+app/settings/metrics/comparisons/page.tsx
+
+1. Add:
+
+import ComparisonMetricImporter from "./ComparisonMetricImporter";
+
+2. You already added:
+
+<DailyComparisonSnapshotEditor />
+
+Immediately AFTER that component, add:
+
+<ComparisonMetricImporter />
+
+So the top of the page becomes:
+
+<DailyComparisonSnapshotEditor />
+<ComparisonMetricImporter />
+
+Then keep all existing Comparison Metrics configuration content below.
+
+Do NOT place either component inside another <form>.
