@@ -1,0 +1,9 @@
+{
+  "enabled": true,
+  "preAlertMinutes": 5,
+  "largeAlertDurationSeconds": 60,
+  "audioEnabled": true,
+  "preAlertSpokenPhrase": "Power Hour begins in five minutes. Get ready.",
+  "startSpokenPhrase": "Grab your P.P.E. — POWER HOUR!",
+  "showActiveBanner": true
+}

@@ -1,0 +1,24 @@
+OPTIONAL TEST BUTTON WIRING
+
+In app/settings/power-hour/page.tsx:
+
+1. Add:
+
+import PowerHourAlertTestButton from "./PowerHourAlertTestButton";
+
+2. Replace the disabled button block:
+
+<button
+  type="button"
+  className="test-button"
+  onClick={undefined}
+  disabled
+>
+  🔊 Test Power Hour Alert
+</button>
+
+with:
+
+<PowerHourAlertTestButton />
+
+This gives management a working voice test immediately.

@@ -53,9 +53,15 @@ const navigationItems: AdminNavItem[] = [
 },
 
 {
+  title: "Power Hour",
+  href: "/settings/power-hour",
+  icon: "⚡",
+},
+
+{
   title: "Intelligent Scheduling",
   href: "/settings/scheduling",
-  icon: "🧠",
+  icon: "📅",
 },
 
   {

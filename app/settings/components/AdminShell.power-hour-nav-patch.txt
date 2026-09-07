@@ -1,0 +1,27 @@
+POWER HOUR LEFT NAVIGATION PATCH
+
+In:
+
+app/settings/components/AdminShell.tsx
+
+Find the existing navigation item for:
+
+Intelligence Data
+
+Immediately AFTER it, add:
+
+{
+  title: "Power Hour",
+  href: "/settings/power-hour",
+  icon: "⚡",
+},
+
+Recommended order:
+
+Intelligence Data
+Power Hour
+Intelligent Scheduling
+Worker Bees
+
+If Intelligent Scheduling is not yet present in the sidebar, keep Power Hour
+directly after Intelligence Data for now.

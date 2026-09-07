@@ -79,9 +79,18 @@ export default async function SchedulingDataInputsPage() {
       activePath="/settings/scheduling"
     >
       <div className="inputs-page">
-        <Link href="/settings/scheduling" className="back">
-          ← Scheduling Command Center
-        </Link>
+        <div className="top-actions">
+  <Link href="/settings" className="back">
+    ← Administration
+  </Link>
+
+  <Link
+    href="/settings/scheduling/generate"
+    className="generate-button"
+  >
+    ⚡ Generate Intelligent Schedule
+  </Link>
+</div>
 
         <section className="intro">
           <p className="eyebrow">Scheduling • Data Inputs</p>
@@ -240,6 +249,32 @@ export default async function SchedulingDataInputsPage() {
             font-weight: 800;
             text-decoration: none;
           }
+
+          .top-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.generate-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #3f2d09;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
+  box-shadow: 0 6px 16px rgba(63, 45, 9, 0.15);
+}
+
+.generate-button:hover {
+  background: #2f2107;
+}
 
           .intro,
           .note {

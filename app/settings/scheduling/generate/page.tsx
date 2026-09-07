@@ -229,13 +229,15 @@ export default async function GenerateSchedulePage({
     >
       <div className="page">
         <div className="top-links">
-          <Link href="/settings/scheduling/feasibility">
-            ← Weekly Feasibility
-          </Link>
+          <div className="top-links">
+  <Link href="/settings/scheduling/feasibility">
+    ← Weekly Feasibility
+  </Link>
 
-          <Link href="/settings/scheduling">
-            Scheduling Command Center
-          </Link>
+  <Link href="/settings/scheduling">
+    Scheduling Command Center
+  </Link>
+</div>
         </div>
 
         <section className="mode-panel">
@@ -355,13 +357,22 @@ export default async function GenerateSchedulePage({
             </div>
 
             <div>
-              <span>
-                Other Departments
-              </span>
-              <strong>
-                {lswFormulaReference.otherRoles}
-              </strong>
-            </div>
+  <span>
+    MSA
+  </span>
+  <strong>
+    {lswFormulaReference.msa}
+  </strong>
+</div>
+
+<div>
+  <span>
+    Not Yet Layered
+  </span>
+  <strong>
+    {lswFormulaReference.notYetLayered}
+  </strong>
+</div>
           </section>
         ) : (
           <section className="locked-rules">

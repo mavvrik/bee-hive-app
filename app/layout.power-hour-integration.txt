@@ -1,0 +1,14 @@
+In app/layout.tsx:
+
+1. Add:
+
+import PowerHourAlert from "@/app/components/PowerHourAlert";
+
+2. Inside <body>, place it before {children}:
+
+<body>
+  <PowerHourAlert />
+  {children}
+</body>
+
+This makes the alert global across HIVE.
