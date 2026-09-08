@@ -1,8 +1,18 @@
 "use server";
 
 import ExcelJS from "exceljs";
-import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
+import {
+  revalidatePath,
+} from "next/cache";
+
+import {
+  prisma,
+} from "@/lib/prisma";
+
+import {
+  matchWorkerName,
+  type WorkerNameMatchType,
+} from "@/app/lib/workers/workerNameMatcher";
 
 type SupportedRole =
   | "MANAGEMENT"
@@ -43,17 +53,25 @@ export type TaskImportRow = {
   metric: SupportedMetric | null;
 
   value: number;
-  status: TaskImportStatus;
+
+  status:
+    TaskImportStatus;
+
   message: string;
 };
 
 export type TaskImportPreview = {
   success: boolean;
   fileName: string;
-  operationalDate: string | null;
-  rows: TaskImportRow[];
+  operationalDate:
+    string | null;
+
+  rows:
+    TaskImportRow[];
+
   readyCount: number;
   warningCount: number;
+
   errors: string[];
 };
 
@@ -66,14 +84,17 @@ export type TaskImportResult = {
 
 type TaskDefinition = {
   taskLabel: string;
-  roles: SupportedRole[];
-  metric: SupportedMetric;
+  roles:
+    SupportedRole[];
+  metric:
+    SupportedMetric;
 };
 
 type WorkerForMatching = {
   id: number;
   name: string;
-  preferredName: string | null;
+  preferredName:
+    string | null;
   role: string;
   active: boolean;
 
@@ -82,21 +103,9 @@ type WorkerForMatching = {
   }[];
 };
 
-type WorkerMatch = {
-  worker: WorkerForMatching | null;
-
-  matchType:
-    | "EXACT"
-    | "DISPLAY"
-    | "FIRST_NAME"
-    | "ALIAS"
-    | "AMBIGUOUS"
-    | "NONE";
-};
-
 /*
  * ==========================================
- * CSL REPORT → HIVE TASK MAP
+ * TASK MAP
  * ==========================================
  */
 
@@ -105,49 +114,99 @@ const TASK_SECTION_MAP: Record<
   TaskDefinition
 > = {
   "softgood setups by employee": {
-    taskLabel: "Setups",
-    roles: ["DST"],
-    metric: "SETUPS",
+    taskLabel:
+      "Setups",
+
+    roles:
+      [
+        "DST",
+      ],
+
+    metric:
+      "SETUPS",
   },
 
   disconnects: {
-    taskLabel: "Disconnects",
-    roles: ["DST"],
-    metric: "DISCONNECTS",
+    taskLabel:
+      "Disconnects",
+
+    roles:
+      [
+        "DST",
+      ],
+
+    metric:
+      "DISCONNECTS",
   },
 
   "interviews by employee": {
-    taskLabel: "Interviews",
-    roles: ["RECEPTION_TECH"],
-    metric: "INTERVIEWS",
+    taskLabel:
+      "Interviews",
+
+    roles:
+      [
+        "RECEPTION_TECH",
+      ],
+
+    metric:
+      "INTERVIEWS",
   },
 
   "phlebotomies by employee": {
-    taskLabel: "Phlebotomies",
-    roles: ["PHLEBOTOMIST"],
-    metric: "STICKS",
+    taskLabel:
+      "Phlebotomies",
+
+    roles:
+      [
+        "PHLEBOTOMIST",
+      ],
+
+    metric:
+      "STICKS",
   },
 
   resticks: {
-    taskLabel: "Resticks",
-    roles: ["PHLEBOTOMIST"],
-    metric: "RESTICKS",
+    taskLabel:
+      "Resticks",
+
+    roles:
+      [
+        "PHLEBOTOMIST",
+      ],
+
+    metric:
+      "RESTICKS",
   },
 
   "physicals by employee": {
-    taskLabel: "Physicals",
-    roles: ["MSA"],
-    metric: "PHYSICALS",
+    taskLabel:
+      "Physicals",
+
+    roles:
+      [
+        "MSA",
+      ],
+
+    metric:
+      "PHYSICALS",
   },
 
   "units labeled by employee": {
-    taskLabel: "Separations",
-    roles: ["PROCESSOR"],
-    metric: "SEPARATIONS",
+    taskLabel:
+      "Separations",
+
+    roles:
+      [
+        "PROCESSOR",
+      ],
+
+    metric:
+      "SEPARATIONS",
   },
 
   "solutions spiked by employee": {
-    taskLabel: "Solutions Spiked",
+    taskLabel:
+      "Solutions Spiked",
 
     roles: [
       "MSA",
@@ -156,7 +215,8 @@ const TASK_SECTION_MAP: Record<
       "DST",
     ],
 
-    metric: "SOLUTIONS_SPIKED",
+    metric:
+      "SOLUTIONS_SPIKED",
   },
 };
 
@@ -170,42 +230,45 @@ const PRIMARY_ROLE_MAP: Record<
   string,
   string
 > = {
-  Management: "MANAGEMENT",
-  Phlebotomist: "PHLEBOTOMIST",
-  "Group Lead": "GROUP_LEAD",
-  Processor: "PROCESSOR",
-  "Reception Tech": "RECEPTION_TECH",
-  MSA: "MSA",
-  DST: "DST",
-  Other: "OTHER",
+  Management:
+    "MANAGEMENT",
+
+  Phlebotomist:
+    "PHLEBOTOMIST",
+
+  "Group Lead":
+    "GROUP_LEAD",
+
+  Processor:
+    "PROCESSOR",
+
+  "Reception Tech":
+    "RECEPTION_TECH",
+
+  MSA:
+    "MSA",
+
+  DST:
+    "DST",
+
+  Other:
+    "OTHER",
 };
 
 function primaryRoleToEnum(
   role: string,
 ) {
   return (
-    PRIMARY_ROLE_MAP[role] ??
+    PRIMARY_ROLE_MAP[
+      role
+    ] ??
     "OTHER"
   );
 }
 
 /*
  * ==========================================
- * KNOWN HIVE NICKNAME ALIASES
- * ==========================================
- */
-
-const CSL_FIRST_NAME_ALIASES: Record<
-  string,
-  string
-> = {
-  "ke yala": "key",
-  michael: "mike",
-};
-
-/*
- * ==========================================
- * NORMALIZATION
+ * TEXT NORMALIZATION
  * ==========================================
  */
 
@@ -220,59 +283,10 @@ function normalizeWhitespace(
 function normalizeSectionName(
   value: string,
 ) {
-  return normalizeWhitespace(value)
+  return normalizeWhitespace(
+    value,
+  )
     .toLowerCase()
-    .trim();
-}
-
-function reorderCommaName(
-  value: string,
-) {
-  const cleaned =
-    normalizeWhitespace(value);
-
-  if (!cleaned.includes(",")) {
-    return cleaned;
-  }
-
-  const parts =
-    cleaned
-      .split(",")
-      .map((part) =>
-        normalizeWhitespace(part),
-      )
-      .filter(Boolean);
-
-  if (parts.length < 2) {
-    return cleaned;
-  }
-
-  const lastName =
-    parts[0];
-
-  const remainder =
-    parts
-      .slice(1)
-      .join(" ");
-
-  return `${remainder} ${lastName}`;
-}
-
-function normalizeEmployeeName(
-  value: string,
-) {
-  return reorderCommaName(value)
-    .normalize("NFD")
-    .replace(
-      /[\u0300-\u036f]/g,
-      "",
-    )
-    .toLowerCase()
-    .replace(
-      /[^a-z0-9]+/g,
-      " ",
-    )
-    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -293,320 +307,13 @@ function normalizedRowId(
 
 /*
  * ==========================================
- * FIRST-NAME EXTRACTION
- * ==========================================
- */
-
-function getNormalizedFirstName(
-  value: string,
-) {
-  const normalized =
-    normalizeEmployeeName(value);
-
-  if (!normalized) {
-    return "";
-  }
-
-  return (
-    normalized
-      .split(" ")
-      .filter(Boolean)[0] ??
-    ""
-  );
-}
-
-function getCslFirstName(
-  value: string,
-) {
-  const reordered =
-    reorderCommaName(value);
-
-  const normalized =
-    normalizeEmployeeName(
-      reordered,
-    );
-
-  if (!normalized) {
-    return "";
-  }
-
-  const words =
-    normalized
-      .split(" ")
-      .filter(Boolean);
-
-  if (
-    words.length >= 2 &&
-    words[0] === "ke" &&
-    words[1] === "yala"
-  ) {
-    return "ke yala";
-  }
-
-  return words[0] ?? "";
-}
-
-/*
- * ==========================================
- * WORKER MATCHING
- * ==========================================
- */
-
-function matchWorker(
-  sourceEmployeeName: string,
-  workers: WorkerForMatching[],
-): WorkerMatch {
-  const normalizedSource =
-    normalizeEmployeeName(
-      sourceEmployeeName,
-    );
-
-  if (!normalizedSource) {
-    return {
-      worker: null,
-      matchType: "NONE",
-    };
-  }
-
-  /*
-   * 1. Exact official name
-   */
-
-  const exactMatches =
-    workers.filter(
-      (worker) =>
-        normalizeEmployeeName(
-          worker.name,
-        ) ===
-        normalizedSource,
-    );
-
-  if (exactMatches.length === 1) {
-    return {
-      worker: exactMatches[0],
-      matchType: "EXACT",
-    };
-  }
-
-  if (exactMatches.length > 1) {
-    return {
-      worker: null,
-      matchType: "AMBIGUOUS",
-    };
-  }
-
-  /*
-   * 2. Exact preferred/display name
-   */
-
-  const displayMatches =
-    workers.filter((worker) => {
-      if (!worker.preferredName) {
-        return false;
-      }
-
-      return (
-        normalizeEmployeeName(
-          worker.preferredName,
-        ) ===
-        normalizedSource
-      );
-    });
-
-  if (displayMatches.length === 1) {
-    return {
-      worker:
-        displayMatches[0],
-
-      matchType:
-        "DISPLAY",
-    };
-  }
-
-  if (displayMatches.length > 1) {
-    return {
-      worker: null,
-      matchType: "AMBIGUOUS",
-    };
-  }
-
-  /*
-   * 3. Known nickname alias
-   */
-
-  const cslFirstName =
-    getCslFirstName(
-      sourceEmployeeName,
-    );
-
-  const alias =
-    CSL_FIRST_NAME_ALIASES[
-      cslFirstName
-    ];
-
-  if (alias) {
-    const aliasMatches =
-      workers.filter((worker) => {
-        const workerName =
-          normalizeEmployeeName(
-            worker.name,
-          );
-
-        const preferredName =
-          worker.preferredName
-            ? normalizeEmployeeName(
-                worker.preferredName,
-              )
-            : "";
-
-        const workerFirstName =
-          getNormalizedFirstName(
-            worker.name,
-          );
-
-        const preferredFirstName =
-          worker.preferredName
-            ? getNormalizedFirstName(
-                worker.preferredName,
-              )
-            : "";
-
-        return (
-          workerName === alias ||
-          preferredName === alias ||
-          workerFirstName ===
-            alias ||
-          preferredFirstName ===
-            alias
-        );
-      });
-
-    const uniqueAliasMatches =
-      Array.from(
-        new Map(
-          aliasMatches.map(
-            (worker) => [
-              worker.id,
-              worker,
-            ],
-          ),
-        ).values(),
-      );
-
-    if (
-      uniqueAliasMatches.length === 1
-    ) {
-      return {
-        worker:
-          uniqueAliasMatches[0],
-
-        matchType:
-          "ALIAS",
-      };
-    }
-
-    if (
-      uniqueAliasMatches.length > 1
-    ) {
-      return {
-        worker: null,
-        matchType: "AMBIGUOUS",
-      };
-    }
-  }
-
-  /*
-   * 4. Unique first-name match
-   */
-
-  if (cslFirstName) {
-    const firstNameMatches =
-      workers.filter((worker) => {
-        const officialFirstName =
-          getNormalizedFirstName(
-            worker.name,
-          );
-
-        const preferredFirstName =
-          worker.preferredName
-            ? getNormalizedFirstName(
-                worker.preferredName,
-              )
-            : "";
-
-        const fullDisplayName =
-          normalizeEmployeeName(
-            worker.name,
-          );
-
-        const fullPreferredName =
-          worker.preferredName
-            ? normalizeEmployeeName(
-                worker.preferredName,
-              )
-            : "";
-
-        return (
-          officialFirstName ===
-            cslFirstName ||
-          preferredFirstName ===
-            cslFirstName ||
-          fullDisplayName ===
-            cslFirstName ||
-          fullPreferredName ===
-            cslFirstName
-        );
-      });
-
-    const uniqueMatches =
-      Array.from(
-        new Map(
-          firstNameMatches.map(
-            (worker) => [
-              worker.id,
-              worker,
-            ],
-          ),
-        ).values(),
-      );
-
-    if (
-      uniqueMatches.length === 1
-    ) {
-      return {
-        worker:
-          uniqueMatches[0],
-
-        matchType:
-          "FIRST_NAME",
-      };
-    }
-
-    if (
-      uniqueMatches.length > 1
-    ) {
-      return {
-        worker: null,
-        matchType: "AMBIGUOUS",
-      };
-    }
-  }
-
-  return {
-    worker: null,
-    matchType: "NONE",
-  };
-}
-
-/*
- * ==========================================
  * MATCH MESSAGE
  * ==========================================
  */
 
 function getMatchMessage(
   matchType:
-    WorkerMatch["matchType"],
+    WorkerNameMatchType,
   workerName: string,
   active: boolean,
 ) {
@@ -615,18 +322,29 @@ function getMatchMessage(
       ? ""
       : "Historical worker matched. ";
 
-  switch (matchType) {
+  switch (
+    matchType
+  ) {
     case "EXACT":
       return `${historicalPrefix}Exact worker-name match. Ready to import.`;
 
     case "DISPLAY":
       return `${historicalPrefix}Matched using the Worker Bee preferred/display name. Ready to import.`;
 
-    case "FIRST_NAME":
-      return `${historicalPrefix}Matched ${workerName} using a unique Worker Bee name. Ready to import.`;
+    case "KNOWN_ALIAS":
+      return `${historicalPrefix}Matched ${workerName} using a confirmed CSL/HIVE name alias. Ready to import.`;
 
-    case "ALIAS":
-      return `${historicalPrefix}Matched ${workerName} using a known HIVE nickname. Ready to import.`;
+    case "NORMALIZED_FULL":
+      return `${historicalPrefix}Matched ${workerName} after normalizing punctuation/name formatting. Ready to import.`;
+
+    case "INITIAL_LAST":
+      return `${historicalPrefix}Matched ${workerName} using first initial + surname. Ready to import.`;
+
+    case "LAST_INITIAL":
+      return `${historicalPrefix}Matched ${workerName} using surname + first initial. Ready to import.`;
+
+    case "FIRST_NAME":
+      return `${historicalPrefix}Matched ${workerName} using a unique Worker Bee first name. Ready to import.`;
 
     default:
       return `${historicalPrefix}Ready to import.`;
@@ -650,20 +368,26 @@ function cellToString(
   }
 
   if (
-    typeof value === "string"
+    typeof value ===
+    "string"
   ) {
     return value.trim();
   }
 
   if (
-    typeof value === "number" ||
-    typeof value === "boolean"
+    typeof value ===
+      "number" ||
+    typeof value ===
+      "boolean"
   ) {
-    return String(value);
+    return String(
+      value,
+    );
   }
 
   if (
-    typeof value === "object"
+    typeof value ===
+    "object"
   ) {
     const candidate =
       value as {
@@ -679,7 +403,9 @@ function cellToString(
       typeof candidate.text ===
       "string"
     ) {
-      return candidate.text.trim();
+      return candidate
+        .text
+        .trim();
     }
 
     if (
@@ -708,46 +434,248 @@ function cellToString(
     }
   }
 
-  return String(value).trim();
+  return String(
+    value,
+  ).trim();
 }
 
-function getNumericValueFromRow(
+/*
+ * ==========================================
+ * ADAPTIVE SUMMARY ROW DETECTION
+ * ==========================================
+ */
+
+function findEmployeeMarkerColumn(
   row: ExcelJS.Row,
+  worksheet:
+    ExcelJS.Worksheet,
 ) {
+  const maxColumn =
+    Math.min(
+      Math.max(
+        worksheet.columnCount,
+        20,
+      ),
+      40,
+    );
+
   for (
-    let column = 19;
-    column >= 7;
-    column -= 1
+    let column = 1;
+    column <= maxColumn;
+    column += 1
+  ) {
+    const text =
+      normalizeWhitespace(
+        cellToString(
+          row.getCell(
+            column,
+          ).value,
+        ),
+      ).toLowerCase();
+
+    if (
+      text ===
+      "employee name"
+    ) {
+      return column;
+    }
+  }
+
+  return null;
+}
+
+function findEmployeeName(
+  row: ExcelJS.Row,
+  markerColumn: number,
+  worksheet:
+    ExcelJS.Worksheet,
+) {
+  /*
+   * Compact file:
+   *
+   * Employee Name = col 4
+   * Name          = col 6
+   *
+   * Expanded file:
+   *
+   * Employee Name = col 5
+   * Name          = col 8
+   *
+   * Search several cells to the right rather
+   * than hard-coding either format.
+   */
+
+  const maximum =
+    Math.min(
+      worksheet.columnCount,
+      markerColumn + 7,
+    );
+
+  for (
+    let column =
+      markerColumn + 1;
+    column <= maximum;
+    column += 1
   ) {
     const value =
       row.getCell(
         column,
       ).value;
 
+    /*
+     * Employee names are text values in
+     * the CSL summary rows.
+     */
+    const text =
+      normalizeWhitespace(
+        cellToString(
+          value,
+        ),
+      );
+
     if (
-      typeof value ===
+      !text
+    ) {
+      continue;
+    }
+
+    const normalized =
+      text.toLowerCase();
+
+    if (
+      normalized ===
+      "employee name"
+    ) {
+      continue;
+    }
+
+    /*
+     * Ignore pure numbers.
+     */
+    if (
+      /^-?\d+(?:\.\d+)?$/.test(
+        text,
+      )
+    ) {
+      continue;
+    }
+
+    /*
+     * Ignore obvious summary labels.
+     */
+    if (
+      /by employee$/i.test(
+        text,
+      ) ||
+      normalized ===
+        "disconnects" ||
+      normalized ===
+        "resticks"
+    ) {
+      continue;
+    }
+
+    return text;
+  }
+
+  return "";
+}
+
+function getNumericValueFromSummaryRow(
+  row: ExcelJS.Row,
+  markerColumn: number,
+  worksheet:
+    ExcelJS.Worksheet,
+) {
+  /*
+   * The compact and expanded CSL exports put
+   * the summary count in different columns.
+   *
+   * We scan from the far right toward the
+   * Employee Name marker and use the first
+   * whole numeric value found.
+   */
+
+  const maximumColumn =
+    Math.min(
+      Math.max(
+        worksheet.columnCount,
+        20,
+      ),
+      40,
+    );
+
+  for (
+    let column =
+      maximumColumn;
+    column >
+      markerColumn;
+    column -= 1
+  ) {
+    const cellValue =
+      row.getCell(
+        column,
+      ).value;
+
+    if (
+      typeof cellValue ===
         "number" &&
-      Number.isFinite(value)
+      Number.isFinite(
+        cellValue,
+      )
     ) {
       return Math.max(
         0,
-        Math.trunc(value),
+        Math.trunc(
+          cellValue,
+        ),
       );
     }
 
-    if (
-      typeof value ===
-      "string"
-    ) {
-      const trimmed =
-        value.trim();
+    const text =
+      cellToString(
+        cellValue,
+      );
 
-      if (/^\d+$/.test(trimmed)) {
+    if (
+      /^\d+$/.test(
+        text,
+      )
+    ) {
+      return Math.max(
+        0,
+        Number.parseInt(
+          text,
+          10,
+        ),
+      );
+    }
+
+    /*
+     * Formula result support.
+     */
+    if (
+      typeof cellValue ===
+      "object" &&
+      cellValue !==
+        null
+    ) {
+      const candidate =
+        cellValue as {
+          result?: unknown;
+        };
+
+      if (
+        typeof candidate.result ===
+          "number" &&
+        Number.isFinite(
+          candidate.result,
+        )
+      ) {
         return Math.max(
           0,
-          Number.parseInt(
-            trimmed,
-            10,
+          Math.trunc(
+            candidate.result,
           ),
         );
       }
@@ -768,19 +696,13 @@ function parseUsReportDate(
   day: string,
   year: string,
 ) {
-  const mm =
-    month.padStart(
-      2,
-      "0",
-    );
-
-  const dd =
-    day.padStart(
-      2,
-      "0",
-    );
-
-  return `${year}-${mm}-${dd}`;
+  return `${year}-${month.padStart(
+    2,
+    "0",
+  )}-${day.padStart(
+    2,
+    "0",
+  )}`;
 }
 
 function getOperationalDateFromWorkbook(
@@ -792,7 +714,7 @@ function getOperationalDateFromWorkbook(
     rowNumber <=
     Math.min(
       worksheet.rowCount,
-      12,
+      15,
     );
     rowNumber += 1
   ) {
@@ -805,8 +727,11 @@ function getOperationalDateFromWorkbook(
       let column = 1;
       column <=
       Math.min(
-        worksheet.columnCount,
-        19,
+        Math.max(
+          worksheet.columnCount,
+          20,
+        ),
+        40,
       );
       column += 1
     ) {
@@ -817,7 +742,9 @@ function getOperationalDateFromWorkbook(
           ).value,
         );
 
-      if (!text) {
+      if (
+        !text
+      ) {
         continue;
       }
 
@@ -826,27 +753,26 @@ function getOperationalDateFromWorkbook(
           text,
         );
 
-      if (!match) {
+      if (
+        !match
+      ) {
         continue;
       }
 
-      const startDate =
-        parseUsReportDate(
-          match[1],
-          match[2],
-          match[3],
-        );
-
-      const endDate =
-        parseUsReportDate(
-          match[4],
-          match[5],
-          match[6],
-        );
-
       return {
-        startDate,
-        endDate,
+        startDate:
+          parseUsReportDate(
+            match[1],
+            match[2],
+            match[3],
+          ),
+
+        endDate:
+          parseUsReportDate(
+            match[4],
+            match[5],
+            match[6],
+          ),
       };
     }
   }
@@ -874,7 +800,7 @@ function getWorkerRoleSet(
 
   for (
     const assignment of
-      worker.roleAssignments
+    worker.roleAssignments
   ) {
     roles.add(
       assignment.role,
@@ -886,7 +812,9 @@ function getWorkerRoleSet(
       worker.role
     ];
 
-  if (legacyRole) {
+  if (
+    legacyRole
+  ) {
     roles.add(
       legacyRole,
     );
@@ -894,12 +822,6 @@ function getWorkerRoleSet(
 
   return roles;
 }
-
-/*
- * ==========================================
- * MULTI-ROLE TASK RESOLUTION
- * ==========================================
- */
 
 function resolveTaskRole(
   worker: {
@@ -909,7 +831,6 @@ function resolveTaskRole(
       role: string;
     }[];
   },
-
   definition:
     TaskDefinition,
 ): SupportedRole | null {
@@ -936,7 +857,7 @@ function resolveTaskRole(
 
   for (
     const allowedRole of
-      definition.roles
+    definition.roles
   ) {
     if (
       roleSet.has(
@@ -972,7 +893,8 @@ export async function parseWorkerTaskWorkbook(
     return {
       success: false,
       fileName: "",
-      operationalDate: null,
+      operationalDate:
+        null,
       rows: [],
       readyCount: 0,
       warningCount: 0,
@@ -997,7 +919,8 @@ export async function parseWorkerTaskWorkbook(
     return {
       success: false,
       fileName,
-      operationalDate: null,
+      operationalDate:
+        null,
       rows: [],
       readyCount: 0,
       warningCount: 0,
@@ -1021,11 +944,14 @@ export async function parseWorkerTaskWorkbook(
   const worksheet =
     workbook.worksheets[0];
 
-  if (!worksheet) {
+  if (
+    !worksheet
+  ) {
     return {
       success: false,
       fileName,
-      operationalDate: null,
+      operationalDate:
+        null,
       rows: [],
       readyCount: 0,
       warningCount: 0,
@@ -1041,11 +967,14 @@ export async function parseWorkerTaskWorkbook(
       worksheet,
     );
 
-  if (!reportDates) {
+  if (
+    !reportDates
+  ) {
     return {
       success: false,
       fileName,
-      operationalDate: null,
+      operationalDate:
+        null,
       rows: [],
       readyCount: 0,
       warningCount: 0,
@@ -1063,7 +992,8 @@ export async function parseWorkerTaskWorkbook(
     return {
       success: false,
       fileName,
-      operationalDate: null,
+      operationalDate:
+        null,
       rows: [],
       readyCount: 0,
       warningCount: 0,
@@ -1078,21 +1008,24 @@ export async function parseWorkerTaskWorkbook(
     reportDates.startDate;
 
   const workers =
-    (await prisma.collector.findMany({
-      select: {
-        id: true,
-        name: true,
-        preferredName: true,
-        role: true,
-        active: true,
+    (
+      await prisma.collector.findMany({
+        select: {
+          id: true,
+          name: true,
+          preferredName:
+            true,
+          role: true,
+          active: true,
 
-        roleAssignments: {
-          select: {
-            role: true,
+          roleAssignments: {
+            select: {
+              role: true,
+            },
           },
         },
-      },
-    })) as WorkerForMatching[];
+      })
+    ) as WorkerForMatching[];
 
   const parsedRows:
     TaskImportRow[] =
@@ -1123,6 +1056,12 @@ export async function parseWorkerTaskWorkbook(
         rowNumber,
       );
 
+    /*
+     * ------------------------------------------
+     * Detect task section.
+     * ------------------------------------------
+     */
+
     const firstCellText =
       cellToString(
         row.getCell(
@@ -1130,7 +1069,9 @@ export async function parseWorkerTaskWorkbook(
         ).value,
       );
 
-    if (firstCellText) {
+    if (
+      firstCellText
+    ) {
       const normalizedSection =
         normalizeSectionName(
           firstCellText,
@@ -1141,7 +1082,9 @@ export async function parseWorkerTaskWorkbook(
           normalizedSection
         ];
 
-      if (mappedSection) {
+      if (
+        mappedSection
+      ) {
         currentSection =
           firstCellText.trim();
 
@@ -1159,48 +1102,59 @@ export async function parseWorkerTaskWorkbook(
       continue;
     }
 
-    const employeeMarker =
-      normalizeWhitespace(
-        cellToString(
-          row.getCell(
-            4,
-          ).value,
-        ),
-      ).toLowerCase();
+    /*
+     * ------------------------------------------
+     * Dynamically detect the summary row.
+     * ------------------------------------------
+     */
+
+    const employeeMarkerColumn =
+      findEmployeeMarkerColumn(
+        row,
+        worksheet,
+      );
 
     if (
-      employeeMarker !==
-      "employee name"
+      employeeMarkerColumn ===
+      null
     ) {
       continue;
     }
 
     const sourceEmployeeName =
-      normalizeWhitespace(
-        cellToString(
-          row.getCell(
-            6,
-          ).value,
-        ),
+      findEmployeeName(
+        row,
+        employeeMarkerColumn,
+        worksheet,
       );
 
-    if (!sourceEmployeeName) {
+    if (
+      !sourceEmployeeName
+    ) {
       continue;
     }
 
     const value =
-      getNumericValueFromRow(
+      getNumericValueFromSummaryRow(
         row,
+        employeeMarkerColumn,
+        worksheet,
       );
 
-    if (value === null) {
+    if (
+      value === null
+    ) {
       continue;
     }
 
     const workerMatch =
-      matchWorker(
+      matchWorkerName(
         sourceEmployeeName,
         workers,
+        {
+          allowUniqueFirstName:
+            true,
+        },
       );
 
     const worker =
@@ -1215,13 +1169,15 @@ export async function parseWorkerTaskWorkbook(
 
     /*
      * ========================================
-     * AMBIGUOUS WORKER
+     * MULTI-PERSON / AMBIGUOUS
      * ========================================
      */
 
     if (
       workerMatch.matchType ===
-      "AMBIGUOUS"
+        "AMBIGUOUS" ||
+      workerMatch.matchType ===
+        "MULTI_PERSON"
     ) {
       parsedRows.push({
         rowId,
@@ -1231,17 +1187,22 @@ export async function parseWorkerTaskWorkbook(
           currentSection,
 
         taskLabel:
-          currentDefinition.taskLabel,
+          currentDefinition
+            .taskLabel,
 
         sourceEmployeeName,
 
-        collectorId: null,
-        matchedWorkerName: null,
+        collectorId:
+          null,
+
+        matchedWorkerName:
+          null,
 
         role: null,
 
         metric:
-          currentDefinition.metric,
+          currentDefinition
+            .metric,
 
         value,
 
@@ -1249,7 +1210,10 @@ export async function parseWorkerTaskWorkbook(
           "AMBIGUOUS_WORKER",
 
         message:
-          "More than one Worker Bee could match this employee name. HIVE refused to guess.",
+          workerMatch.matchType ===
+          "MULTI_PERSON"
+            ? "This source entry appears to name multiple employees or a staff group. HIVE refused to assign it to one Worker Bee."
+            : "More than one Worker Bee could match this employee name. HIVE refused to guess.",
       });
 
       continue;
@@ -1261,7 +1225,9 @@ export async function parseWorkerTaskWorkbook(
      * ========================================
      */
 
-    if (!worker) {
+    if (
+      !worker
+    ) {
       parsedRows.push({
         rowId,
         operationalDate,
@@ -1270,17 +1236,22 @@ export async function parseWorkerTaskWorkbook(
           currentSection,
 
         taskLabel:
-          currentDefinition.taskLabel,
+          currentDefinition
+            .taskLabel,
 
         sourceEmployeeName,
 
-        collectorId: null,
-        matchedWorkerName: null,
+        collectorId:
+          null,
+
+        matchedWorkerName:
+          null,
 
         role: null,
 
         metric:
-          currentDefinition.metric,
+          currentDefinition
+            .metric,
 
         value,
 
@@ -1296,7 +1267,7 @@ export async function parseWorkerTaskWorkbook(
 
     /*
      * ========================================
-     * MULTI-ROLE TASK VALIDATION
+     * ROLE VALIDATION
      * ========================================
      */
 
@@ -1306,7 +1277,9 @@ export async function parseWorkerTaskWorkbook(
         currentDefinition,
       );
 
-    if (!matchingRole) {
+    if (
+      !matchingRole
+    ) {
       parsedRows.push({
         rowId,
         operationalDate,
@@ -1315,7 +1288,8 @@ export async function parseWorkerTaskWorkbook(
           currentSection,
 
         taskLabel:
-          currentDefinition.taskLabel,
+          currentDefinition
+            .taskLabel,
 
         sourceEmployeeName,
 
@@ -1328,7 +1302,8 @@ export async function parseWorkerTaskWorkbook(
         role: null,
 
         metric:
-          currentDefinition.metric,
+          currentDefinition
+            .metric,
 
         value,
 
@@ -1356,7 +1331,8 @@ export async function parseWorkerTaskWorkbook(
         currentSection,
 
       taskLabel:
-        currentDefinition.taskLabel,
+        currentDefinition
+          .taskLabel,
 
       sourceEmployeeName,
 
@@ -1370,7 +1346,8 @@ export async function parseWorkerTaskWorkbook(
         matchingRole,
 
       metric:
-        currentDefinition.metric,
+        currentDefinition
+          .metric,
 
       value,
 
@@ -1443,12 +1420,15 @@ export async function importWorkerTaskRows(
           "READY" &&
         row.collectorId !==
           null &&
-        row.role !== null &&
-        row.metric !== null,
+        row.role !==
+          null &&
+        row.metric !==
+          null,
     );
 
   if (
-    readyRows.length === 0
+    readyRows.length ===
+    0
   ) {
     return {
       success: false,
@@ -1482,14 +1462,6 @@ export async function importWorkerTaskRows(
       "MSA",
       "PROCESSOR",
     ]);
-
-  /*
-   * ==========================================
-   * LOAD ALL RELEVANT WORKERS ONCE
-   * ==========================================
-   *
-   * This happens OUTSIDE the transaction.
-   */
 
   const collectorIds =
     Array.from(
@@ -1549,13 +1521,13 @@ export async function importWorkerTaskRows(
 
   /*
    * ==========================================
-   * FINAL SERVER-SIDE VALIDATION
+   * FINAL SERVER VALIDATION
    * ==========================================
    */
 
   for (
     const row of
-      readyRows
+    readyRows
   ) {
     if (
       !row.collectorId ||
@@ -1575,7 +1547,9 @@ export async function importWorkerTaskRows(
       ) ||
       row.value < 0
     ) {
-      skippedCount += 1;
+      skippedCount +=
+        1;
+
       continue;
     }
 
@@ -1584,8 +1558,12 @@ export async function importWorkerTaskRows(
         row.collectorId,
       );
 
-    if (!worker) {
-      skippedCount += 1;
+    if (
+      !worker
+    ) {
+      skippedCount +=
+        1;
+
       continue;
     }
 
@@ -1599,7 +1577,9 @@ export async function importWorkerTaskRows(
         row.role,
       )
     ) {
-      skippedCount += 1;
+      skippedCount +=
+        1;
+
       continue;
     }
 
@@ -1609,7 +1589,8 @@ export async function importWorkerTaskRows(
   }
 
   if (
-    validatedRows.length === 0
+    validatedRows.length ===
+    0
   ) {
     return {
       success: false,
@@ -1623,14 +1604,8 @@ export async function importWorkerTaskRows(
 
   /*
    * ==========================================
-   * FAST DATABASE TRANSACTION
+   * FAST TRANSACTION
    * ==========================================
-   *
-   * No interactive callback.
-   *
-   * Prisma receives the upserts as a transaction
-   * array, which avoids the 5-second interactive
-   * transaction timeout we hit previously.
    */
 
   await prisma.$transaction(
@@ -1695,13 +1670,9 @@ export async function importWorkerTaskRows(
   const importedCount =
     validatedRows.length;
 
-  /*
-   * ==========================================
-   * REFRESH HIVE VIEWS
-   * ==========================================
-   */
-
-  revalidatePath("/");
+  revalidatePath(
+    "/",
+  );
 
   revalidatePath(
     "/settings/workers",
