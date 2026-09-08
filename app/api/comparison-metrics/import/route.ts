@@ -1,21 +1,38 @@
-import { NextRequest, NextResponse } from "next/server";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
 
-import { requireAdmin } from "@/lib/admin-auth";
-import { prisma } from "@/lib/prisma";
+import {
+  requireAdmin,
+} from "@/lib/admin-auth";
+
+import {
+  prisma,
+} from "@/lib/prisma";
+
 import {
   parseComparisonMetricWorkbook,
 } from "@/app/lib/comparison-metrics/parseComparisonMetricWorkbook";
 
-export const dynamic = "force-dynamic";
+export const dynamic =
+  "force-dynamic";
 
-function startOfDay(dateText: string) {
+function startOfDay(
+  dateText: string,
+) {
   return new Date(
     `${dateText}T00:00:00.000Z`,
   );
 }
 
-function nextDay(dateText: string) {
-  const date = startOfDay(dateText);
+function nextDay(
+  dateText: string,
+) {
+  const date =
+    startOfDay(
+      dateText,
+    );
 
   date.setUTCDate(
     date.getUTCDate() + 1,
@@ -34,9 +51,13 @@ export async function POST(
       await request.formData();
 
     const file =
-      formData.get("file");
+      formData.get(
+        "file",
+      );
 
-    if (!(file instanceof File)) {
+    if (
+      !(file instanceof File)
+    ) {
       throw new Error(
         "An Excel file is required.",
       );
@@ -46,8 +67,12 @@ export async function POST(
       file.name.toLowerCase();
 
     if (
-      !fileName.endsWith(".xlsx") &&
-      !fileName.endsWith(".xls")
+      !fileName.endsWith(
+        ".xlsx",
+      ) &&
+      !fileName.endsWith(
+        ".xls",
+      )
     ) {
       throw new Error(
         "Comparison Metric Importer currently accepts Excel files only.",
@@ -64,6 +89,12 @@ export async function POST(
         buffer,
       );
 
+    /*
+     * ==========================================
+     * CENTER VALIDATION
+     * ==========================================
+     */
+
     if (
       parsed.centerName &&
       !/Riviera Beach\s*115/i.test(
@@ -75,70 +106,307 @@ export async function POST(
       );
     }
 
-    if (!parsed.operationalDate) {
+    /*
+     * ==========================================
+     * DATE VALIDATION
+     * ==========================================
+     */
+
+    if (
+      !parsed.operationalDate
+    ) {
       throw new Error(
         "Could not determine the operational date from this export.",
       );
     }
+
+    const operationalDate =
+      parsed.operationalDate;
+
+    const dayStart =
+      startOfDay(
+        operationalDate,
+      );
+
+    const dayEnd =
+      nextDay(
+        operationalDate,
+      );
+
+    const recordedAt =
+      new Date(
+        `${operationalDate}T12:00:00.000Z`,
+      );
+
+    /*
+     * ==========================================
+     * LOAD DASHBOARD METRIC DEFINITIONS
+     * ==========================================
+     */
 
     const activeMetrics =
       await prisma.dashboardMetric.findMany({
         where: {
           key: {
             in: parsed.metrics.map(
-              (metric) =>
+              (
+                metric,
+              ) =>
                 metric.metricKey,
             ),
           },
-          isVisible: true,
+
+          isVisible:
+            true,
         },
+
         select: {
           id: true,
           key: true,
-          publicSource: true,
+          publicSource:
+            true,
+          dataSourceKey:
+            true,
         },
       });
 
     const metricByKey =
       new Map(
         activeMetrics.map(
-          (metric) => [
+          (
+            metric,
+          ) => [
             metric.key,
             metric,
           ],
         ),
       );
 
-    const dayStart =
-      startOfDay(
-        parsed.operationalDate,
+    /*
+     * ==========================================
+     * LOCATE PRODUCTION VALUES
+     * ==========================================
+     *
+     * Gross Procedures and Gross Liters are
+     * special.
+     *
+     * They do NOT get stored as ordinary
+     * MetricReading records.
+     *
+     * They reconcile the authoritative
+     * DailyCenterProduction record:
+     *
+     * Gross Procedures
+     *   -> donors
+     *
+     * Gross Liters
+     *   -> liters
+     */
+
+    const grossProceduresItem =
+      parsed.metrics.find(
+        (
+          item,
+        ) =>
+          item.metricKey ===
+          "gross_procedures",
       );
 
-    const dayEnd =
-      nextDay(
-        parsed.operationalDate,
+    const grossLitersItem =
+      parsed.metrics.find(
+        (
+          item,
+        ) =>
+          item.metricKey ===
+          "gross_liters",
       );
 
-    const recordedAt =
-      new Date(
-        `${parsed.operationalDate}T12:00:00.000Z`,
-      );
+    const imported:
+      string[] = [];
 
-    const imported: string[] = [];
-    const needsMapping: string[] = [];
+    const needsMapping:
+      string[] = [];
+
+    const skipped:
+      string[] = [];
+
+    const reconciledProduction:
+      string[] = [];
 
     await prisma.$transaction(
-      async (tx) => {
+      async (
+        tx,
+      ) => {
+        /*
+         * ======================================
+         * RECONCILE DAILY CENTER PRODUCTION
+         * ======================================
+         *
+         * Only perform a production reconciliation
+         * when at least one production metric has
+         * a nonblank value.
+         *
+         * IMPORTANT:
+         *
+         * If only one of the two fields were ever
+         * supplied, preserve the existing value of
+         * the other field rather than resetting it.
+         */
+
+        const hasGrossProcedures =
+          grossProceduresItem
+            ?.value !==
+            null &&
+          grossProceduresItem
+            ?.value !==
+            undefined;
+
+        const hasGrossLiters =
+          grossLitersItem
+            ?.value !==
+            null &&
+          grossLitersItem
+            ?.value !==
+            undefined;
+
+        if (
+          hasGrossProcedures ||
+          hasGrossLiters
+        ) {
+          const existingProduction =
+            await tx.dailyCenterProduction.findUnique({
+              where: {
+                entryDate:
+                  dayStart,
+              },
+
+              select: {
+                donors:
+                  true,
+                liters:
+                  true,
+              },
+            });
+
+          /*
+           * Gross Procedures are whole
+           * procedures/donors.
+           */
+          const finalDonors =
+            hasGrossProcedures
+              ? Math.max(
+                  0,
+                  Math.round(
+                    grossProceduresItem!
+                      .value!,
+                  ),
+                )
+              : existingProduction
+                  ?.donors ??
+                0;
+
+          const finalLiters =
+            hasGrossLiters
+              ? Math.max(
+                  0,
+                  grossLitersItem!
+                    .value!,
+                )
+              : existingProduction
+                  ?.liters ??
+                0;
+
+          await tx.dailyCenterProduction.upsert({
+            where: {
+              entryDate:
+                dayStart,
+            },
+
+            update: {
+              donors:
+                finalDonors,
+
+              liters:
+                finalLiters,
+            },
+
+            create: {
+              entryDate:
+                dayStart,
+
+              donors:
+                finalDonors,
+
+              liters:
+                finalLiters,
+            },
+          });
+
+          if (
+            hasGrossProcedures
+          ) {
+            imported.push(
+              grossProceduresItem!
+                .sourceHeader,
+            );
+
+            reconciledProduction.push(
+              grossProceduresItem!
+                .sourceHeader,
+            );
+          }
+
+          if (
+            hasGrossLiters
+          ) {
+            imported.push(
+              grossLitersItem!
+                .sourceHeader,
+            );
+
+            reconciledProduction.push(
+              grossLitersItem!
+                .sourceHeader,
+            );
+          }
+        }
+
+        /*
+         * ======================================
+         * IMPORT OTHER COMPARISON METRICS
+         * ======================================
+         */
+
         for (
           const item of
           parsed.metrics
         ) {
+          /*
+           * Gross Procedures and Gross Liters
+           * were already handled above.
+           */
+          if (
+            item.metricKey ===
+              "gross_procedures" ||
+            item.metricKey ===
+              "gross_liters"
+          ) {
+            continue;
+          }
+
           const metric =
             metricByKey.get(
               item.metricKey,
             );
 
-          if (!metric) {
+          /*
+           * A parser mapping exists but HIVE
+           * does not have a matching active
+           * DashboardMetric definition.
+           */
+          if (
+            !metric
+          ) {
             needsMapping.push(
               item.sourceHeader,
             );
@@ -146,22 +414,46 @@ export async function POST(
             continue;
           }
 
+          /*
+           * Blank spreadsheet values never
+           * delete existing HIVE history.
+           */
           if (
             item.value ===
             null
           ) {
+            skipped.push(
+              item.sourceHeader,
+            );
+
             continue;
           }
+
+          /*
+           * ====================================
+           * ONE METRIC + ONE DATE =
+           * ONE IMPORTED VALUE
+           * ====================================
+           *
+           * Remove the existing reading for
+           * this metric/source/date, then create
+           * the finalized imported reading.
+           */
 
           await tx.metricReading.deleteMany({
             where: {
               metricId:
                 metric.id,
+
               source:
                 metric.publicSource,
+
               recordedAt: {
-                gte: dayStart,
-                lt: dayEnd,
+                gte:
+                  dayStart,
+
+                lt:
+                  dayEnd,
               },
             },
           });
@@ -170,10 +462,13 @@ export async function POST(
             data: {
               metricId:
                 metric.id,
+
               source:
                 metric.publicSource,
+
               value:
                 item.value,
+
               recordedAt,
             },
           });
@@ -185,20 +480,38 @@ export async function POST(
       },
     );
 
+    /*
+     * ==========================================
+     * SUCCESS RESPONSE
+     * ==========================================
+     */
+
     return NextResponse.json({
       ok: true,
-      fileName: file.name,
+
+      fileName:
+        file.name,
+
       centerName:
         parsed.centerName ??
         "Riviera Beach 115",
-      operationalDate:
-        parsed.operationalDate,
+
+      operationalDate,
+
       imported,
+
+      reconciledProduction,
+
       ignored:
         parsed.ignoredHeaders,
+
+      skipped,
+
       needsMapping,
     });
-  } catch (error) {
+  } catch (
+    error
+  ) {
     return NextResponse.json(
       {
         error:
@@ -206,6 +519,7 @@ export async function POST(
             ? error.message
             : "Unable to import comparison metrics.",
       },
+
       {
         status: 400,
       },
