@@ -166,12 +166,28 @@ export default async function WorkerRosterPage() {
           </p>
         </div>
 
-        <Link
-          href="/settings/workers/performance"
-          className="performance-button"
-        >
-          View Performance →
-        </Link>
+        <div className="performance-actions">
+          <Link
+            href="/settings/workers/performance"
+            className="performance-button"
+          >
+            View Performance →
+          </Link>
+
+          <Link
+            href="/settings/workers/emf"
+            className="performance-button secondary"
+          >
+            Quality / EMF Tracking →
+          </Link>
+
+          <Link
+            href="/settings/workers/emf/import"
+            className="performance-button emf-import"
+          >
+            ↑ Import EMF Report
+          </Link>
+        </div>
       </section>
 
       <section className="add-worker-section">
@@ -1053,6 +1069,14 @@ export default async function WorkerRosterPage() {
             color: #e8c75c;
           }
 
+          .performance-actions {
+            display: flex;
+            flex: 0 0 auto;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 10px;
+          }
+
           .performance-button {
             flex: 0 0 auto;
             padding: 11px 16px;
@@ -1062,6 +1086,18 @@ export default async function WorkerRosterPage() {
             font-size: .82rem;
             font-weight: 900;
             text-decoration: none;
+            text-align: center;
+          }
+
+          .performance-button.secondary {
+            border: 1px solid #e1aa19;
+            background: transparent;
+            color: #ffe48a;
+          }
+
+          .performance-button.emf-import {
+            background: #fff4c4;
+            color: #4b3508;
           }
 
           .section-heading {
@@ -1566,6 +1602,11 @@ export default async function WorkerRosterPage() {
             .worker-card-header,
             .role-heading-row {
               align-items: flex-start;
+              flex-direction: column;
+            }
+
+            .performance-actions {
+              width: 100%;
               flex-direction: column;
             }
 

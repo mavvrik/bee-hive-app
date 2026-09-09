@@ -303,6 +303,40 @@ export default async function EmfPage({
           >
             Stick Performance
           </Link>
+
+          <Link
+            href="/settings/workers/emf/import"
+            style={{
+              display:
+                "inline-flex",
+              alignItems:
+                "center",
+              gap: 7,
+              padding:
+                "9px 14px",
+              border:
+                "1px solid #c99a16",
+              borderRadius:
+                10,
+              background:
+                "linear-gradient(135deg, #f2c84b, #c9920c)",
+              color:
+                "#2f2407",
+              fontWeight:
+                950,
+              textDecoration:
+                "none",
+              boxShadow:
+                "0 5px 14px rgba(118, 81, 0, 0.16)",
+            }}
+          >
+            <span
+              aria-hidden="true"
+            >
+              ↑
+            </span>
+            Import EMF Report
+          </Link>
         </div>
 
         <div
