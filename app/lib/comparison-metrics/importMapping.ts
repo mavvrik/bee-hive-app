@@ -119,14 +119,14 @@ export const comparisonMetricImportMappings: ComparisonMetricImportMapping[] =
      */
 
     {
-      sourceHeader:
-        "Return Check in to Phleb Time",
-      metricKey:
-        "return_checkin_to_phlebotomy",
-      active: true,
-      sourcePriority:
-        "OPS_STAT",
-    },
+  sourceHeader:
+    "Return Check in to Phleb Time\n(Goal: 35 Minutes)",
+  metricKey:
+    "return_checkin_to_phlebotomy_time",
+  active: true,
+  sourcePriority:
+    "OPS_STAT",
+},
   ];
 
 /*

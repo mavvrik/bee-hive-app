@@ -400,9 +400,13 @@ function normalizeMetricValue(
    * a Date/time string to minutes.
    */
   if (
-    sourceHeader ===
-      "Return Check in to Phleb Time"
-  ) {
+  normalizeHeader(
+    sourceHeader,
+  ) ===
+    normalizeHeader(
+      "Return Check in to Phleb Time\n(Goal: 35 Minutes)",
+    )
+) {
     if (
       Math.abs(
         value,
@@ -740,15 +744,16 @@ export function parseComparisonMetricWorkbook(
       );
 
     const mapping =
-      comparisonMetricImportMappings.find(
-        (
-          candidate,
-        ) =>
-          candidate.active &&
-          candidate.sourceHeader
-            .toLowerCase() ===
-            normalizedHeader,
-      );
+  comparisonMetricImportMappings.find(
+    (
+      candidate,
+    ) =>
+      candidate.active &&
+      normalizeHeader(
+        candidate.sourceHeader,
+      ) ===
+        normalizedHeader,
+  );
 
     if (
       !mapping
