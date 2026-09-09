@@ -187,6 +187,13 @@ export default async function WorkerRosterPage() {
           >
             ↑ Import EMF Report
           </Link>
+
+          <Link
+  href="/settings/workers/recognition"
+  className="performance-button attendance-button"
+>
+  Attendance / Reliability →
+</Link>
         </div>
       </section>
 
@@ -1099,6 +1106,12 @@ export default async function WorkerRosterPage() {
             background: #fff4c4;
             color: #4b3508;
           }
+
+          .performance-button.attendance-button {
+  border: 1px solid #fff4c4;
+  background: #3f300b;
+  color: #fff4c4;
+}
 
           .section-heading {
             display: flex;
