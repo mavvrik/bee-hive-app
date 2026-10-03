@@ -197,15 +197,25 @@ export default function PhlebotomyWorkerBeeCard({
 
           <div className="bee-showcase-platform" />
 
-          {isManagement ? (
-            <ManagementBees />
-          ) : (
-            <BeeIllustration
-              primaryRole={
-                primaryRole
-              }
-            />
-          )}
+          <div className="classic-worker-creature">
+  {isManagement ? (
+    <ManagementBees />
+  ) : (
+    <BeeIllustration
+      primaryRole={
+        primaryRole
+      }
+    />
+  )}
+</div>
+
+<div className="halloween-worker-creature">
+  {isManagement ? (
+    <HalloweenManagement />
+  ) : (
+    <HalloweenPhlebotomist />
+  )}
+</div>
 
           {hasActiveStreak && (
             <div className="streak-flare">
@@ -1925,6 +1935,56 @@ function BeeIllustration({
         "Phlebotomist" && (
         <div className="bee-needle" />
       )}
+    </div>
+  );
+}
+
+function HalloweenPhlebotomist() {
+  return (
+    <div
+      className="halloween-worker"
+      aria-hidden="true"
+    >
+      <div className="vampire-wing vampire-wing-left">
+        🦇
+      </div>
+
+      <div className="vampire-wing vampire-wing-right">
+        🦇
+      </div>
+
+      <div className="vampire-body">
+        <div className="vampire-cape" />
+
+        <div className="vampire-head">
+          <div className="vampire-hair" />
+
+          <div className="vampire-eye vampire-eye-left" />
+          <div className="vampire-eye vampire-eye-right" />
+
+          <div className="vampire-mouth">
+            <span className="vampire-fang vampire-fang-left" />
+            <span className="vampire-fang vampire-fang-right" />
+          </div>
+        </div>
+
+        <div className="vampire-role-badge">
+          🩸
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HalloweenManagement() {
+  return (
+    <div
+      className="halloween-management-group"
+      aria-hidden="true"
+    >
+      <span>🧛</span>
+      <span>🦇</span>
+      <span>🧛</span>
     </div>
   );
 }

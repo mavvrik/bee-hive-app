@@ -82,16 +82,30 @@ export default function SupportWorkerBeeCard({
     >
       <div className="support-worker-left">
         <div className="support-bee-stage">
-          {isManagement ? (
-            <ManagementBees />
-          ) : (
-            <BeeIllustration
-              primaryRole={
-                primaryRole
-              }
-            />
-          )}
-        </div>
+  <div className="classic-worker-creature">
+    {isManagement ? (
+      <ManagementBees />
+    ) : (
+      <BeeIllustration
+        primaryRole={
+          primaryRole
+        }
+      />
+    )}
+  </div>
+
+  <div className="halloween-worker-creature">
+    {isManagement ? (
+      <HalloweenManagement />
+    ) : (
+      <HalloweenWorker
+        primaryRole={
+          primaryRole
+        }
+      />
+    )}
+  </div>
+</div>
 
         <div className="support-identity">
           <strong>
@@ -1098,6 +1112,88 @@ function BeeIllustration({
   );
 }
 
+function HalloweenWorker({
+  primaryRole,
+}: {
+  primaryRole: string;
+}) {
+  const isPhlebotomist =
+    primaryRole === "Phlebotomist";
+
+  const isMsa =
+    primaryRole === "MSA";
+
+  const isReception =
+    primaryRole === "Reception Tech";
+
+  const isDst =
+    primaryRole === "DST";
+
+  const isProcessor =
+    primaryRole === "Processor";
+
+  return (
+    <div
+      className="halloween-worker"
+      aria-hidden="true"
+    >
+      <div className="vampire-wing vampire-wing-left">
+        🦇
+      </div>
+
+      <div className="vampire-wing vampire-wing-right">
+        🦇
+      </div>
+
+      <div className="vampire-body">
+        <div className="vampire-cape" />
+
+        <div className="vampire-head">
+          <div className="vampire-hair" />
+
+          <div className="vampire-eye vampire-eye-left" />
+          <div className="vampire-eye vampire-eye-right" />
+
+          <div className="vampire-mouth">
+            <span className="vampire-fang vampire-fang-left" />
+            <span className="vampire-fang vampire-fang-right" />
+          </div>
+        </div>
+
+        {isProcessor && (
+          <div className="vampire-lab-coat">
+            🥼
+          </div>
+        )}
+
+        {isPhlebotomist && (
+          <div className="vampire-role-badge">
+            🩸
+          </div>
+        )}
+
+        {isMsa && (
+          <div className="vampire-role-badge">
+            🩺
+          </div>
+        )}
+
+        {isReception && (
+          <div className="vampire-role-badge">
+            👓
+          </div>
+        )}
+
+        {isDst && (
+          <div className="vampire-role-badge">
+            🧤
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ManagementBees() {
   return (
     <div
@@ -1121,6 +1217,19 @@ function ManagementBees() {
           </div>
         ),
       )}
+    </div>
+  );
+}
+
+function HalloweenManagement() {
+  return (
+    <div
+      className="halloween-management-group"
+      aria-hidden="true"
+    >
+      <span>🧛</span>
+      <span>🦇</span>
+      <span>🧛</span>
     </div>
   );
 }

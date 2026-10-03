@@ -6,6 +6,7 @@ import {
 import AdminShell from "../components/AdminShell";
 import { updateHiveMetrics } from "./actions";
 import styles from "./page.module.css";
+import HiveThemeSelector from "./HiveThemeSelector";
 
 export const dynamic = "force-dynamic";
 
@@ -131,6 +132,22 @@ export default async function HiveSettingsPage() {
           <small>Current CSL value</small>
         </article>
       </section>
+
+      <section
+  className={styles.formSection}
+  style={{ marginBottom: "24px" }}
+>
+  <div className={styles.sectionHeading}>
+    <div>
+      <p>Appearance</p>
+      <h2>HIVE Theme</h2>
+    </div>
+
+    <span>Presentation Only</span>
+  </div>
+
+  <HiveThemeSelector />
+</section>
 
       <form
         action={updateHiveMetrics}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useHiveTheme } from "./HiveThemeProvider";
 
 type HoneyPotExecutiveProps = {
   currentLiters: number;
@@ -11,6 +12,10 @@ export default function HoneyPotExecutive({
   currentLiters,
   monthlyGoal,
 }: HoneyPotExecutiveProps) {
+    const { theme } = useHiveTheme();
+
+  const isHalloween =
+    theme === "HALLOWEEN";
   const targetPercent = useMemo(() => {
     if (monthlyGoal <= 0) {
       return 0;
@@ -91,9 +96,14 @@ export default function HoneyPotExecutive({
 
   return (
     <section
-      className="honey-executive-card"
-      aria-label="Monthly production summary"
-    >
+  className={`honey-executive-card ${
+    isHalloween
+      ? "dracs-cave"
+      : ""
+  }`}
+  aria-label="Monthly production summary"
+>
+
       <div className="honey-copy">
         <header className="honey-heading">
           <div>
@@ -101,7 +111,11 @@ export default function HoneyPotExecutive({
               Monthly Production
             </p>
 
-            <h2>The Honey Pot</h2>
+            <h2>
+  {isHalloween
+    ? "Drac's Cave"
+    : "The Honey Pot"}
+</h2>
           </div>
 
           <span className="honey-status">
@@ -501,6 +515,98 @@ export default function HoneyPotExecutive({
                 ease-in-out infinite;
           }
 
+          /*
+ * DRAC'S CAVE
+ * Halloween theme only
+ */
+
+.dracs-cave .honey-progress-track {
+  border-color:
+    rgba(157, 25, 39, 0.55);
+
+  background:
+    linear-gradient(
+      180deg,
+      #24131c,
+      #10090e
+    );
+
+  box-shadow:
+    inset 0 2px 5px
+      rgba(0, 0, 0, 0.55);
+}
+
+.dracs-cave .honey-progress-fill {
+  background:
+    linear-gradient(
+      90deg,
+      #5d0712,
+      #9f1021,
+      #d52a36
+    );
+
+  box-shadow:
+    0 0 16px
+      rgba(183, 20, 38, 0.48);
+}
+
+.dracs-cave .honey-pot-lid {
+  border-color: #2a1018;
+
+  background:
+    linear-gradient(
+      180deg,
+      #5d2430,
+      #241018
+    );
+
+  box-shadow:
+    0 4px 10px
+      rgba(0, 0, 0, 0.45);
+}
+
+.dracs-cave .honey-pot-body {
+  border-color: #32111a;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(69, 31, 42, 0.9),
+      rgba(18, 10, 16, 0.96)
+    );
+
+  box-shadow:
+    inset 7px 0 12px
+      rgba(255, 255, 255, 0.06),
+    inset -6px 0 12px
+      rgba(0, 0, 0, 0.38),
+    0 11px 22px
+      rgba(0, 0, 0, 0.42);
+}
+
+.dracs-cave .honey-level {
+  background:
+    linear-gradient(
+      180deg,
+      #d52a36,
+      #9f1021 45%,
+      #620812 72%,
+      #35040b 100%
+    );
+
+  box-shadow:
+    inset 0 10px 18px
+      rgba(255, 69, 79, 0.12);
+}
+
+.dracs-cave .honey-wave {
+  background: #e33a45;
+
+  box-shadow:
+    0 0 12px
+      rgba(213, 42, 54, 0.48);
+}
+
           @keyframes honeyWave {
             0%,
             100% {
@@ -604,7 +710,152 @@ export default function HoneyPotExecutive({
             .honey-level {
               transition: none;
             }
+           }   
+
+            /*
+            * DRAC'S CAVE — SCENERY
+            * Halloween only
+            */
+
+            .honey-executive-card.dracs-cave {
+            isolation: isolate;
+            position: relative;
+              overflow: visible;
+
+            background:
+            linear-gradient(
+            90deg,
+          rgba(10, 5, 9, 0.38),
+          rgba(10, 5, 9, 0.10)
+            ),
+            url("/dracs-cave-bg.png")
+            center / cover
+            no-repeat;
+
+            border-color:
+          rgba(139, 20, 39, 0.72);
+            }
+
+          .dracs-cave .honey-copy {
+          position: relative;
+          z-index: 3;
+          grid-column: 1;
           }
+
+          .dracs-cave .honey-pot-area {
+          position: relative;
+          z-index: 3;
+          grid-column: 2;
+          }
+
+          .dracs-scenery {
+            position: absolute;
+            z-index: 1;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+          }
+
+                    .dracs-scenery .hanging-bat,
+          .dracs-scenery .flying-bat {
+            position: absolute;
+            display: block;
+            z-index: 2;
+            line-height: 1;
+            pointer-events: none;
+          }
+
+          .dracs-scenery .hanging-bat {
+            top: -3px;
+            transform: rotate(180deg);
+            filter:
+              grayscale(1)
+              brightness(0.45)
+              drop-shadow(
+                0 3px 3px
+                rgba(0, 0, 0, 0.55)
+              );
+          }
+
+          .dracs-scenery .bat-one {
+            left: 34%;
+            font-size: 25px;
+          }
+
+          .dracs-scenery .bat-two {
+            left: 48%;
+            font-size: 20px;
+          }
+
+          .dracs-scenery .bat-three {
+            left: 61%;
+            font-size: 23px;
+          }
+
+          .dracs-scenery .flying-bat {
+            top: 44px;
+            right: 185px;
+            font-size: 17px;
+            opacity: 0.68;
+            transform: rotate(-15deg);
+            filter:
+              grayscale(1)
+              brightness(0.5);
+          }
+
+          /* Drac's Cave readability */
+
+.honey-executive-card.dracs-cave
+  .honey-eyebrow {
+  color: #ff8a32 !important;
+}
+
+.honey-executive-card.dracs-cave
+  .honey-main-value strong {
+  color: #fff4df !important;
+  text-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.95),
+    0 0 12px rgba(213, 42, 54, 0.35);
+}
+
+.honey-executive-card.dracs-cave
+  .honey-main-value span {
+  color: #ffb347 !important;
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.9);
+}
+
+.honey-executive-card.dracs-cave
+  .honey-progress-copy {
+  color: #ffe5df !important;
+}
+
+.honey-executive-card.dracs-cave
+  .honey-progress-copy span {
+  color: #ffd1c9 !important;
+}
+
+/* Compact Drac's Cave vertical spacing */
+.honey-executive-card.dracs-cave
+  .honey-main-value {
+  margin-top: 6px;
+}
+
+.honey-executive-card.dracs-cave
+  .honey-progress-track {
+  margin-top: 7px;
+}
+
+.honey-executive-card.dracs-cave
+  .honey-progress-labels {
+  margin-top: 3px;
+}
+
+.honey-executive-card.dracs-cave
+  .honey-kpi-grid {
+  margin-top: 5px;
+}
+
         `}
       </style>
     </section>

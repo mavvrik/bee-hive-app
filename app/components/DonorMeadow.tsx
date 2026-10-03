@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useHiveTheme } from "./HiveThemeProvider";
 
 type DonorMeadowProps = {
   weeklyCurrentLiters: number;
@@ -23,6 +24,10 @@ export default function DonorMeadow({
   dayName,
   totalFlowers = 12,
 }: DonorMeadowProps) {
+    const { theme } = useHiveTheme();
+
+  const isHalloween =
+    theme === "HALLOWEEN";
   const percentage =
     weeklyTarget > 0
       ? (weeklyCurrentLiters /
@@ -112,9 +117,24 @@ export default function DonorMeadow({
       },
     );
 
+  const productionCreatureCount =
+    percentage >= 100
+      ? 12
+      : percentage >= 75
+        ? 10
+        : percentage >= 50
+          ? 8
+          : percentage >= 25
+            ? 6
+            : 4;
+
   return (
     <section
-      className={`liter-meadow meadow-${performanceLevel}`}
+      className={`liter-meadow meadow-${performanceLevel} ${
+  isHalloween
+    ? "halloween-production-meadow"
+    : ""
+}`}
       aria-label={`Weekly liter progress meadow at ${Math.round(
         percentage,
       )}%`}
@@ -196,23 +216,31 @@ export default function DonorMeadow({
           </strong>
         </div>
 
-        <div className="bee-flight bee-flight-one">
-          <MiniBee />
+                <div
+          className="production-creature-field"
+          aria-hidden="true"
+        >
+          {Array.from({
+            length: productionCreatureCount,
+          }).map((_, index) => (
+            <div
+              key={index}
+              className={`production-creature production-creature-${
+                (index % 12) + 1
+              }`}
+            >
+              {isHalloween ? (
+                <span className="production-bat">
+                  🦇
+                </span>
+              ) : (
+                <MiniBee />
+              )}
+            </div>
+          ))}
         </div>
 
-        {percentage >= 50 && (
-          <div className="bee-flight bee-flight-two">
-            <MiniBee />
-          </div>
-        )}
-
-        {percentage >= 75 && (
-          <div className="bee-flight bee-flight-three">
-            <MiniBee />
-          </div>
-        )}
-
-        <div className="flower-field">
+          <div className="flower-field">
           {flowerStates.map(
             (
               state,
@@ -1026,40 +1054,142 @@ export default function DonorMeadow({
               );
           }
 
-          .bee-flight {
+                    /*
+           * Production creature activity field
+           * Shared by Classic bees and Halloween bats.
+           */
+
+          .production-creature-field {
             position: absolute;
             z-index: 12;
-            width: 34px;
-            height: 24px;
-            pointer-events:
-              none;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
           }
 
-          .bee-flight-one {
-            top: 34%;
-            left: 17%;
+          .production-creature {
+            position: absolute;
+            width: 34px;
+            height: 28px;
+          }
+
+          .production-bat {
+            display: block;
+            font-size: 28px;
+            line-height: 1;
+            filter:
+              drop-shadow(
+                0 3px 4px
+                rgba(0, 0, 0, 0.65)
+              );
+          }
+
+          .production-creature-1 {
+            top: 22%;
+            left: 8%;
             animation:
               beeMissionOne
               12s ease-in-out
               infinite;
           }
 
-          .bee-flight-two {
-            top: 44%;
-            right: 20%;
+          .production-creature-2 {
+            top: 38%;
+            left: 24%;
             animation:
               beeMissionTwo
               15s ease-in-out
               infinite;
           }
 
-          .bee-flight-three {
-            top: 21%;
-            left: 48%;
+          .production-creature-3 {
+            top: 18%;
+            left: 44%;
             animation:
               beeMissionThree
               18s ease-in-out
               infinite;
+          }
+
+          .production-creature-4 {
+            top: 48%;
+            left: 67%;
+            animation:
+              beeMissionOne
+              16s ease-in-out
+              infinite reverse;
+          }
+
+          .production-creature-5 {
+            top: 30%;
+            left: 82%;
+            animation:
+              beeMissionTwo
+              13s ease-in-out
+              infinite reverse;
+          }
+
+          .production-creature-6 {
+            top: 60%;
+            left: 12%;
+            animation:
+              beeMissionThree
+              17s ease-in-out
+              infinite reverse;
+          }
+
+          .production-creature-7 {
+            top: 55%;
+            left: 38%;
+            animation:
+              beeMissionOne
+              14s ease-in-out
+              infinite;
+          }
+
+          .production-creature-8 {
+            top: 68%;
+            left: 58%;
+            animation:
+              beeMissionTwo
+              19s ease-in-out
+              infinite;
+          }
+
+          .production-creature-9 {
+            top: 16%;
+            left: 72%;
+            animation:
+              beeMissionThree
+              15s ease-in-out
+              infinite;
+          }
+
+          .production-creature-10 {
+            top: 70%;
+            left: 78%;
+            animation:
+              beeMissionOne
+              18s ease-in-out
+              infinite reverse;
+          }
+
+          .production-creature-11 {
+            top: 42%;
+            left: 51%;
+            animation:
+              beeMissionTwo
+              16s ease-in-out
+              infinite reverse;
+          }
+
+          .production-creature-12 {
+            top: 62%;
+            left: 88%;
+            animation:
+              beeMissionThree
+              20s ease-in-out
+              infinite reverse;
           }
 
           .mini-bee {
@@ -1402,6 +1532,136 @@ export default function DonorMeadow({
                 0.72
               );
           }
+
+          /*
+ * ==========================================
+ * HALLOWEEN — PRODUCTION MEADOW
+ * Presentation only.
+ * ==========================================
+ */
+
+          .liter-meadow.halloween-production-meadow {
+            border-color:
+              rgba(139, 20, 39, 0.72) !important;
+
+            background:
+              linear-gradient(
+                180deg,
+                rgba(8, 4, 8, 0.12),
+                rgba(8, 4, 8, 0.26)
+              ),
+              url("/dracs-cave-bg.png")
+              center / cover
+              no-repeat !important;
+          }
+
+/* Remove the daytime meadow scenery */
+.halloween-production-meadow
+  .meadow-sun,
+.halloween-production-meadow
+  .cloud,
+.halloween-production-meadow
+  .flower-field,
+.halloween-production-meadow
+  .meadow-ground,
+.halloween-production-meadow
+  .pollen-field {
+  display: none;
+}
+
+/* Turn the flying bees into dark silhouettes for now */
+.halloween-production-meadow
+  .bee-flight {
+  filter:
+    grayscale(1)
+    brightness(0.22);
+}
+
+/* Header */
+.halloween-production-meadow
+  .meadow-eyebrow {
+  color: #e86f19;
+}
+
+.halloween-production-meadow
+  .meadow-header h2 {
+  color: #fff1dc;
+}
+
+.halloween-production-meadow
+  .meadow-subtitle {
+  color: #e0c9dd;
+}
+
+/* Live summary cards */
+.halloween-production-meadow
+  .meadow-daily-target,
+.halloween-production-meadow
+  .meadow-progress-summary,
+.halloween-production-meadow
+  .meadow-performance-label {
+  border-color:
+    rgba(213, 42, 54, 0.48);
+
+  background:
+    rgba(18, 9, 15, 0.82);
+
+  box-shadow:
+    0 4px 14px
+    rgba(0, 0, 0, 0.35);
+}
+
+.halloween-production-meadow
+  .meadow-daily-target span,
+.halloween-production-meadow
+  .meadow-progress-summary span,
+.halloween-production-meadow
+  .meadow-performance-label span {
+  color: #d9bddc;
+}
+
+.halloween-production-meadow
+  .meadow-daily-target strong,
+.halloween-production-meadow
+  .meadow-progress-summary strong,
+.halloween-production-meadow
+  .meadow-performance-label strong {
+  color: #fff1dc;
+}
+
+/* Weekly production progress */
+.halloween-production-meadow
+  .meadow-progress-track {
+  border-color:
+    rgba(157, 25, 39, 0.58);
+
+  background:
+    rgba(17, 7, 12, 0.88);
+}
+
+.halloween-production-meadow
+  .meadow-progress-fill {
+  background:
+    linear-gradient(
+      90deg,
+      #5d0712,
+      #9f1021,
+      #d52a36
+    );
+
+  box-shadow:
+    0 0 14px
+    rgba(213, 42, 54, 0.46);
+}
+
+.halloween-production-meadow
+  .meadow-progress-labels {
+  color: #fff4df;
+  text-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.85);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
 
           @keyframes flowerSway {
             0%,
@@ -1819,6 +2079,8 @@ function Flower({
   const flowerSize =
     32 +
     (index % 3) * 5;
+
+    
 
   return (
     <div

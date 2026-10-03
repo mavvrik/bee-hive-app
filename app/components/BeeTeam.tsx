@@ -1,6 +1,10 @@
+"use client";
+
+
 import BeezyStreakTour from "./BeezyStreakTour";
 import PhlebotomyWorkerBeeCard from "./PhlebotomyWorkerBeeCard";
 import SupportWorkerBeeCard from "./SupportWorkerBeeCard";
+import { useHiveTheme } from "./HiveThemeProvider";
 
 type SupportMetric = {
   label: string;
@@ -46,6 +50,11 @@ export default function BeeTeam({
   collectors,
   mode,
 }: BeeTeamProps) {
+  const { theme } = useHiveTheme();
+
+  const isHalloween =
+    theme === "HALLOWEEN";
+
   const activeBees =
     collectors.filter(
       (collector) =>
@@ -129,12 +138,16 @@ export default function BeeTeam({
 
   return (
     <section
-      className={`bee-team-section ${
-        isPhlebotomy
-          ? "phlebotomy-meadow"
-          : "support-meadow"
-      }`}
-    >
+  className={`bee-team-section ${
+    isPhlebotomy
+      ? "phlebotomy-meadow"
+      : "support-meadow"
+  } ${
+    isHalloween
+      ? "halloween-hive"
+      : "classic-hive"
+  }`}
+>
       {/* =====================================
           PHLEBOTOMY BACKGROUND
          ===================================== */}
@@ -213,12 +226,12 @@ export default function BeeTeam({
           <div className="flight-trail flight-trail-two" />
 
           <div className="tiny-flight-bee tiny-flight-bee-one">
-            🐝
-          </div>
+  {isHalloween ? "🦇" : "🐝"}
+</div>
 
-          <div className="tiny-flight-bee tiny-flight-bee-two">
-            🐝
-          </div>
+<div className="tiny-flight-bee tiny-flight-bee-two">
+  {isHalloween ? "🦇" : "🐝"}
+</div>
 
           <div className="pollen pollen-1" />
           <div className="pollen pollen-2" />
@@ -444,6 +457,784 @@ export default function BeeTeam({
 
       <style>
         {`
+/*
+ * ==========================================
+ * HALLOWEEN HIVE — ENVIRONMENT
+ * Presentation only.
+ * ==========================================
+ */
+
+.halloween-hive {
+  color: #f7edf8;
+}
+
+.halloween-hive.phlebotomy-meadow,
+.halloween-hive.support-meadow {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(8, 4, 8, 0.12),
+      rgba(8, 4, 8, 0.28)
+    ),
+    url("/dracs-cave-bg.png")
+    center / cover
+    no-repeat;
+}
+
+.halloween-hive.phlebotomy-meadow {
+  border-color:
+    rgba(187, 57, 52, 0.48);
+}
+
+.halloween-hive.support-meadow {
+  border-color:
+    rgba(125, 66, 145, 0.5);
+}
+
+/*
+ * Suppress the bright daytime atmosphere
+ * when Halloween HIVE is active.
+ */
+
+.halloween-hive .support-sky {
+  opacity: 0.08;
+}
+
+.halloween-hive .support-sun,
+.halloween-hive .support-sun-glow {
+  opacity: 0;
+}
+
+.halloween-hive .honeycomb-background {
+  opacity: 0.12;
+  filter:
+    grayscale(0.75)
+    sepia(0.3)
+    hue-rotate(245deg);
+}
+
+.halloween-hive .honey-glow,
+.halloween-hive .honey-light {
+  opacity: 0.16;
+  filter:
+    hue-rotate(285deg)
+    saturate(0.7);
+}
+
+.halloween-hive .distant-hill {
+  filter:
+    brightness(0.32)
+    saturate(0.55)
+    hue-rotate(250deg);
+}
+
+.halloween-hive .hive-architecture {
+  opacity: 0.16;
+  filter:
+    grayscale(0.7)
+    hue-rotate(250deg);
+}
+/*
+ * HALLOWEEN FLYING BATS
+ */
+
+.halloween-hive .tiny-flight-bee {
+  z-index: 18;
+  font-size: 1.75rem;
+
+  filter:
+    drop-shadow(
+      0 4px 5px
+      rgba(0, 0, 0, 0.65)
+    );
+
+  opacity: 0.95;
+}
+
+.halloween-hive
+  .tiny-flight-bee-one {
+  top: 10%;
+  left: 36%;
+
+  transform:
+    rotate(-12deg);
+}
+
+.halloween-hive
+  .tiny-flight-bee-two {
+  top: 19%;
+  right: 18%;
+
+  transform:
+    scale(0.82)
+    rotate(14deg);
+}
+
+
+/*
+ * ==========================================
+ * HALLOWEEN HIVE — WORKER CARDS
+ * ==========================================
+ */
+
+.halloween-hive .north-star-worker-card {
+  border-color: rgba(222, 87, 45, 0.72);
+
+  background:
+    radial-gradient(
+      circle at 12% 18%,
+      rgba(232, 111, 25, 0.15),
+      transparent 30%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(42, 24, 49, 0.98),
+      rgba(22, 15, 28, 0.98)
+    );
+
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 177, 92, 0.12);
+}
+
+.halloween-hive
+  .north-star-worker-card::before {
+  background:
+    linear-gradient(
+      118deg,
+      rgba(255, 130, 54, 0.08),
+      transparent 38%,
+      rgba(135, 34, 53, 0.13) 76%
+    );
+}
+
+.halloween-hive .card-light-wash {
+  opacity: 0.08;
+}
+
+.halloween-hive .card-honeycomb {
+  opacity: 0.08;
+  filter:
+    grayscale(0.8)
+    hue-rotate(255deg);
+}
+
+/*
+ * Worker / bee side
+ */
+
+.halloween-hive .bee-showcase-panel {
+  border-right-color:
+    rgba(220, 86, 44, 0.34);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(55, 31, 63, 0.86),
+      rgba(25, 17, 31, 0.92)
+    );
+}
+
+.halloween-hive .bee-showcase-halo {
+  background:
+    radial-gradient(
+      circle,
+      rgba(232, 111, 25, 0.3),
+      rgba(143, 29, 42, 0.12) 48%,
+      transparent 72%
+    );
+}
+
+.halloween-hive .bee-showcase-platform {
+  background:
+    radial-gradient(
+      ellipse,
+      rgba(224, 76, 42, 0.28),
+      rgba(61, 23, 55, 0.12) 58%,
+      transparent 74%
+    );
+}
+
+.halloween-hive .showcase-identity strong {
+  color: #fff2dd;
+  text-shadow:
+    0 1px 8px rgba(0, 0, 0, 0.48);
+}
+
+.halloween-hive .showcase-identity span {
+  border-color:
+    rgba(226, 111, 47, 0.42);
+
+  background:
+    rgba(76, 32, 67, 0.72);
+
+  color: #ffc98c;
+}
+
+/*
+ * Performance side
+ */
+
+.halloween-hive .performance-panel {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(37, 23, 43, 0.94),
+      rgba(21, 15, 27, 0.97)
+    );
+}
+
+.halloween-hive .performance-heading span {
+  color: #e86f19;
+}
+
+.halloween-hive .performance-heading strong {
+  color: #fff1dc;
+}
+
+.halloween-hive .performance-metric {
+  border-color:
+    rgba(211, 81, 48, 0.42);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(78, 42, 72, 0.86),
+      rgba(39, 24, 45, 0.92)
+    );
+
+  box-shadow:
+    inset 0 1px 0
+      rgba(255, 190, 120, 0.08);
+}
+
+.halloween-hive .performance-metric span {
+  color: #d9bddc;
+}
+
+.halloween-hive .performance-metric strong {
+  color: #fff4e7;
+}
+
+/*
+ * Keep positive performance visually clear
+ * while moving it into the Halloween palette.
+ */
+
+.halloween-hive
+  .performance-metric-green
+  strong {
+  color: #a9df8e;
+}
+
+.halloween-hive
+  .performance-metric-gold
+  strong {
+  color: #ffb45e;
+}
+
+.halloween-hive
+  .performance-metric-red
+  strong {
+  color: #ff7777;
+}
+
+.halloween-hive .support-divider {
+  color: #d9a1c8;
+}
+
+.halloween-hive .showcase-streak {
+  border-color:
+    rgba(226, 91, 42, 0.35);
+
+  background:
+    rgba(34, 19, 38, 0.8);
+
+  color: #d7b8d9;
+}
+
+.halloween-hive
+  .showcase-streak-active {
+  border-color:
+    rgba(255, 113, 35, 0.7);
+
+  background:
+    rgba(110, 37, 35, 0.72);
+
+  color: #ffd29b;
+}
+
+/*
+ * ==========================================
+ * HALLOWEEN HIVE — SUPPORT WORKER CARDS
+ * ==========================================
+ */
+
+.halloween-hive .support-worker-card {
+  border-color:
+    rgba(222, 87, 45, 0.72);
+
+  background:
+    radial-gradient(
+      circle at 12% 18%,
+      rgba(232, 111, 25, 0.14),
+      transparent 28%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(48, 27, 55, 0.98),
+      rgba(20, 14, 27, 0.98)
+    );
+
+  box-shadow:
+    0 8px 22px
+      rgba(0, 0, 0, 0.4),
+    inset 0 1px 0
+      rgba(255, 177, 92, 0.1);
+}
+
+.halloween-hive .support-worker-left {
+  border-right-color:
+    rgba(220, 86, 44, 0.35);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(62, 33, 68, 0.94),
+      rgba(28, 18, 34, 0.98)
+    );
+}
+
+.halloween-hive .support-worker-right {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(38, 23, 44, 0.96),
+      rgba(20, 14, 27, 0.98)
+    );
+}
+
+.halloween-hive
+  .support-identity strong {
+  color: #fff1dc;
+}
+
+.halloween-hive
+  .support-identity span {
+  background:
+    rgba(104, 47, 77, 0.78);
+
+  color: #ffd09a;
+
+  border-color:
+    rgba(232, 111, 25, 0.38);
+}
+
+.halloween-hive
+  .support-heading small {
+  color: #e86f19;
+}
+
+.halloween-hive
+  .support-heading strong {
+  color: #fff1dc;
+}
+
+.halloween-hive .support-metric {
+  border-color:
+    rgba(211, 81, 48, 0.44);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(79, 42, 73, 0.9),
+      rgba(38, 23, 44, 0.96)
+    );
+
+  box-shadow:
+    inset 0 1px 0
+      rgba(255, 190, 120, 0.08);
+}
+
+.halloween-hive
+  .support-metric span {
+  color: #d9bddc;
+}
+
+.halloween-hive
+  .support-metric strong {
+  color: #ffbc6d;
+}
+
+.halloween-hive
+  .no-support-activity {
+  color: #d5b9d5;
+
+  background:
+    rgba(48, 29, 52, 0.72);
+
+  border-color:
+    rgba(211, 81, 48, 0.3);
+}
+
+/*
+ * ==========================================
+ * HALLOWEEN HIVE — CREATURE SWITCH
+ * ==========================================
+ */
+
+/* Classic HIVE shows the original workers. */
+.halloween-worker-creature {
+  display: none;
+}
+
+/* Halloween HIVE removes the bee completely. */
+.halloween-hive
+  .classic-worker-creature {
+  display: none;
+}
+
+.halloween-hive
+  .halloween-worker-creature {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+
+/*
+ * ==========================================
+ * HALLOWEEN VAMPIRE WORKER
+ * ==========================================
+ */
+
+.halloween-hive
+  .halloween-worker {
+  position: relative;
+
+  width: 110px;
+  height: 112px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  filter:
+    drop-shadow(
+      0 8px 7px
+      rgba(0, 0, 0, 0.5)
+    );
+}
+
+
+/* BAT WINGS */
+
+.halloween-hive
+  .vampire-wing {
+  position: absolute;
+
+  top: 20px;
+
+  font-size: 2.8rem;
+  line-height: 1;
+
+  z-index: 1;
+
+  filter:
+    brightness(0.42)
+    saturate(1.4)
+    hue-rotate(245deg);
+}
+
+.halloween-hive
+  .vampire-wing-left {
+  left: -3px;
+
+  transform:
+    rotate(-24deg);
+}
+
+.halloween-hive
+  .vampire-wing-right {
+  right: -3px;
+
+  transform:
+    scaleX(-1)
+    rotate(-24deg);
+}
+
+
+/* BODY */
+
+.halloween-hive
+  .vampire-body {
+  position: relative;
+
+  width: 62px;
+  height: 78px;
+
+  z-index: 3;
+}
+
+
+/* CAPE */
+
+.halloween-hive
+  .vampire-cape {
+  position: absolute;
+
+  left: 4px;
+  bottom: 0;
+
+  width: 54px;
+  height: 58px;
+
+  background:
+    linear-gradient(
+      90deg,
+      #1a101e 0%,
+      #6d1726 48%,
+      #1a101e 100%
+    );
+
+  clip-path:
+    polygon(
+      18% 0,
+      82% 0,
+      100% 100%,
+      50% 83%,
+      0 100%
+    );
+
+  border-radius:
+    18px 18px 8px 8px;
+
+  box-shadow:
+    inset 0 0 12px
+    rgba(208, 43, 43, 0.35);
+}
+
+
+/* HEAD */
+
+.halloween-hive
+  .vampire-head {
+  position: absolute;
+
+  top: 0;
+  left: 10px;
+
+  width: 42px;
+  height: 42px;
+
+  border:
+    2px solid #1c111e;
+
+  border-radius:
+    48% 48% 45% 45%;
+
+  background:
+    linear-gradient(
+      145deg,
+      #f5e7dd,
+      #cbb8bd
+    );
+
+  z-index: 5;
+}
+
+
+/* VAMPIRE HAIR */
+
+.halloween-hive
+  .vampire-hair {
+  position: absolute;
+
+  top: -2px;
+  left: -1px;
+
+  width: 40px;
+  height: 17px;
+
+  background: #161019;
+
+  clip-path:
+    polygon(
+      0 0,
+      100% 0,
+      100% 55%,
+      70% 42%,
+      50% 100%,
+      30% 42%,
+      0 55%
+    );
+
+  border-radius:
+    18px 18px 0 0;
+}
+
+
+/* RED EYES */
+
+.halloween-hive
+  .vampire-eye {
+  position: absolute;
+
+  top: 20px;
+
+  width: 5px;
+  height: 5px;
+
+  border-radius: 50%;
+
+  background: #d91e2b;
+
+  box-shadow:
+    0 0 5px
+    rgba(255, 34, 47, 0.9);
+}
+
+.halloween-hive
+  .vampire-eye-left {
+  left: 9px;
+}
+
+.halloween-hive
+  .vampire-eye-right {
+  right: 9px;
+}
+
+
+/* MOUTH + FANGS */
+
+.halloween-hive
+  .vampire-mouth {
+  position: absolute;
+
+  left: 13px;
+  bottom: 5px;
+
+  width: 14px;
+  height: 5px;
+
+  border-bottom:
+    2px solid #55101a;
+
+  border-radius: 50%;
+}
+
+.halloween-hive
+  .vampire-fang {
+  position: absolute;
+
+  top: 3px;
+
+  width: 0;
+  height: 0;
+
+  border-left:
+    2px solid transparent;
+
+  border-right:
+    2px solid transparent;
+
+  border-top:
+    7px solid #ffffff;
+}
+
+.halloween-hive
+  .vampire-fang-left {
+  left: 1px;
+}
+
+.halloween-hive
+  .vampire-fang-right {
+  right: 1px;
+}
+
+
+/* ROLE IDENTIFIER */
+
+.halloween-hive
+  .vampire-role-badge {
+  position: absolute;
+
+  right: -12px;
+  bottom: 7px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 27px;
+  height: 27px;
+
+  border:
+    1px solid
+    rgba(232, 111, 25, 0.65);
+
+  border-radius: 50%;
+
+  background:
+    rgba(31, 18, 34, 0.95);
+
+  font-size: 15px;
+
+  box-shadow:
+    0 3px 8px
+    rgba(0, 0, 0, 0.45);
+
+  z-index: 8;
+}
+
+.halloween-hive
+  .vampire-lab-coat {
+  position: absolute;
+
+  right: -15px;
+  bottom: 5px;
+
+  font-size: 22px;
+
+  z-index: 8;
+}
+
+
+/*
+ * HALLOWEEN MANAGEMENT
+ */
+
+.halloween-hive
+  .halloween-management-group {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 4px;
+
+  width: 100%;
+
+  font-size: 2.2rem;
+
+  filter:
+    drop-shadow(
+      0 6px 5px
+      rgba(0, 0, 0, 0.5)
+    );
+}
+
+.halloween-hive
+  .halloween-management-group
+  span:nth-child(2) {
+  transform:
+    translateY(-14px)
+    scale(0.78);
+}
+
+
           /*
            * ==================================
            * BASE MEADOW

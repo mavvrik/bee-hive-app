@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useHiveTheme } from "./HiveThemeProvider";
 
 type HoneyPotProps = {
   currentLiters: number;
@@ -11,6 +12,10 @@ export default function HoneyPot({
   currentLiters,
   monthlyGoal,
 }: HoneyPotProps) {
+    const { theme } = useHiveTheme();
+
+  const isHalloween =
+    theme === "HALLOWEEN";
   const targetPercent = useMemo(() => {
     if (monthlyGoal <= 0) {
       return 0;
@@ -98,7 +103,11 @@ export default function HoneyPot({
           Monthly Hive Progress
         </p>
 
-        <h2>The Honey Pot</h2>
+        <h2>
+  {isHalloween
+    ? "The Blood Bank"
+    : "The Honey Pot"}
+</h2>
 
         <p className="location">
           Riviera Beach 115
@@ -116,9 +125,13 @@ export default function HoneyPot({
     }`}
     viewBox="0 0 420 440"
     role="img"
-    aria-label={`The Honey Pot is ${targetPercent.toFixed(
-      1,
-    )}% full`}
+    aria-label={`${
+  isHalloween
+    ? "The Blood Bank"
+    : "The Honey Pot"
+} is ${targetPercent.toFixed(
+  1,
+)}% full`}
   >
           <defs>
             <linearGradient

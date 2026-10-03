@@ -1,10 +1,14 @@
 import PowerHourAlert from "@/app/components/PowerHourAlert";
+import HiveThemeProvider from "@/app/components/HiveThemeProvider";
+
 import type { Metadata } from "next";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "The Hive",
-  description: "Riviera Beach 115 performance dashboard",
+  description:
+    "Riviera Beach 115 performance dashboard",
 };
 
 export default function RootLayout({
@@ -15,8 +19,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <PowerHourAlert />
-        {children}
+        <HiveThemeProvider>
+          <PowerHourAlert />
+          {children}
+        </HiveThemeProvider>
       </body>
     </html>
   );
