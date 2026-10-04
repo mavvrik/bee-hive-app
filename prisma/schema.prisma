@@ -40,6 +40,7 @@ model Collector {
   employmentProfile     EmploymentProfile?
   performanceEntries    WorkerPerformanceEntry[]
   attendanceEntries     AttendanceEntry[]
+  attendanceCorrectiveActions AttendanceCorrectiveAction[]
   recognitionScores     MonthlyRecognitionScore[]
   employeeOfMonthScores EmployeeOfMonthScore[]
 
@@ -201,9 +202,31 @@ model AttendanceEntry {
   collectorId Int
   entryDate   DateTime
   eventType   AttendanceEventType
-  note        String?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+
+  // Policy classification
+  scheduledStartTime String?
+  scheduledEndTime   String?
+  actualStartTime    String?
+  actualEndTime      String?
+  minutesMissed       Int?
+  policyPoints        Float?
+  protectedAbsence    Boolean @default(false)
+  excusedByManagement Boolean @default(false)
+  exceptionReason     String?
+
+  // Occurrence handling
+  occurrenceGroupKey String?
+  sameIllnessGroup   Boolean @default(false)
+
+  // Audit / documentation
+  note              String?
+  recordedBy        String?
+  policyVersion     String?
+  managerReviewed   Boolean @default(false)
+  managerReviewedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   collector Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
 
@@ -211,6 +234,39 @@ model AttendanceEntry {
   @@index([entryDate])
   @@index([eventType])
   @@index([collectorId, entryDate])
+  @@index([collectorId, occurrenceGroupKey])
+}
+
+model AttendanceCorrectiveAction {
+  id          Int @id @default(autoincrement())
+  collectorId Int
+
+  actionLevel AttendanceCorrectiveActionLevel
+  status      AttendanceCorrectiveActionStatus @default(RECOMMENDED)
+
+  effectiveDate DateTime @db.Date
+  expiresAt     DateTime? @db.Date
+
+  activePointsAtAction Float?
+  qualifyingPeriod     Boolean @default(false)
+
+  recommendationReason String?
+  managerNote          String?
+  issuedBy             String?
+  issuedAt             DateTime?
+  voidedAt             DateTime?
+
+  policyVersion String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  collector Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+
+  @@index([collectorId])
+  @@index([effectiveDate])
+  @@index([status])
+  @@index([collectorId, effectiveDate])
 }
 
 // ======================================================
@@ -651,6 +707,21 @@ enum AttendanceEventType {
   ABSENT
   LATE_FROM_LUNCH
   LEFT_EARLY
+  NO_CALL_NO_SHOW
+}
+
+enum AttendanceCorrectiveActionLevel {
+  VERBAL_COACHING
+  WRITTEN_COACHING
+  WRITTEN_WARNING
+  FINAL_WRITTEN_WARNING
+  TERMINATION
+}
+
+enum AttendanceCorrectiveActionStatus {
+  RECOMMENDED
+  ISSUED
+  VOIDED
 }
 
 enum MetricSource {
@@ -763,6 +834,8 @@ model EmploymentProfile {
 
   employmentType  EmploymentType
   schedulePattern SchedulePatternType @default(STANDARD_8)
+
+  dateOfHire DateTime? @db.Date
 
   minPaidWeeklyHours    Float
   maxPaidWeeklyHours    Float
