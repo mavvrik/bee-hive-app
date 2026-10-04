@@ -189,7 +189,7 @@ export default async function WorkerRosterPage() {
           </Link>
 
           <Link
-  href="/settings/workers/recognition"
+  href="/settings/workers/attendance"
   className="performance-button attendance-button"
 >
   Attendance / Reliability →
@@ -620,6 +620,24 @@ export default async function WorkerRosterPage() {
                               ""
                             }
                             placeholder="Example: Phlebotomy Pro"
+                          />
+                        </label>
+                                                <label className="form-field">
+                          <span>
+                            Date of Hire
+                          </span>
+
+                          <input
+                            type="date"
+                            name="dateOfHire"
+                            defaultValue={
+                              collector
+                                .employmentProfile
+                                ?.dateOfHire
+                                ?.toISOString()
+                                .slice(0, 10) ??
+                              ""
+                            }
                           />
                         </label>
                       </div>

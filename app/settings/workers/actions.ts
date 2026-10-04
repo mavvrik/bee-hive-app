@@ -334,6 +334,19 @@ export async function updateCollector(
       "profileTitle",
     );
 
+    const dateOfHireValue =
+    readOptionalText(
+      formData,
+      "dateOfHire",
+    );
+
+  const dateOfHire =
+    dateOfHireValue
+      ? new Date(
+          `${dateOfHireValue}T00:00:00.000Z`,
+        )
+      : null;
+
   const bio =
     readOptionalText(
       formData,
@@ -432,6 +445,16 @@ export async function updateCollector(
           showOnMeetTheBees,
           isEmployeeOfMonth,
           recognitionMessage,
+        },
+      });
+
+            await tx.employmentProfile.update({
+        where: {
+          collectorId,
+        },
+
+        data: {
+          dateOfHire,
         },
       });
 
