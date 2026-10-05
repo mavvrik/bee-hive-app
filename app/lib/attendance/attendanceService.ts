@@ -19,6 +19,8 @@ export type AttendanceAssessmentRequest = {
   excusedByManagement?: boolean;
 
   occurrenceGroupKey?: string | null;
+
+  excludeAttendanceEntryId?: number | null;
 };
 
 export type AttendanceAssessmentResult = {
@@ -121,9 +123,12 @@ export async function assessAttendanceEvent(
   const historyRows =
     await prisma.attendanceEntry.findMany({
       where: {
-        collectorId: request.collectorId,
-        entryDate: {
-          lte: request.entryDate,
+  collectorId:
+    request.collectorId,
+
+  entryDate: {
+    lte:
+      request.entryDate,
         },
       },
 

@@ -321,6 +321,31 @@ export function calculateActivePoints(
   );
 }
 
+export function getAttendanceWindowSummary(
+  events: AttendanceHistoryEvent[],
+  asOfDate: Date,
+) {
+  const windowEnd =
+    startOfUtcDay(asOfDate);
+
+  const windowStart =
+    subtractUtcMonths(
+      windowEnd,
+      6,
+    );
+
+  return {
+    windowStart,
+    windowEnd,
+
+    activePoints:
+      calculateActivePoints(
+        events,
+        windowEnd,
+      ),
+  };
+}
+
 function activeCorrectiveActions(
   actions: CorrectiveActionHistory[],
   asOfDate: Date,
@@ -597,6 +622,128 @@ function ncnsRecommendation(
   }
 
   return null;
+}
+
+export function getCurrentAttendanceStanding(
+  history: AttendanceHistoryEvent[],
+  correctiveActions:
+    CorrectiveActionHistory[],
+  dateOfHire: Date | null,
+  asOfDate: Date,
+) {
+  const standingDate =
+    startOfUtcDay(asOfDate);
+
+  const qualifyingPeriod =
+    isInQualifyingPeriod(
+      dateOfHire,
+      standingDate,
+    );
+
+  const activePoints =
+    calculateActivePoints(
+      history,
+      standingDate,
+    );
+
+  const activeActions =
+    activeCorrectiveActions(
+      correctiveActions,
+      standingDate,
+    );
+
+  const ncns =
+    ncnsEvents(
+      history,
+      standingDate,
+    );
+
+  const consecutiveNcns =
+    calculateConsecutiveNcns(
+      ncns,
+    );
+
+  if (qualifyingPeriod === null) {
+    return {
+      activePoints,
+      qualifyingPeriod,
+      ncnsCount: ncns.length,
+      consecutiveNcns,
+      recommendedAction: null,
+      recommendationReason:
+        "Date of hire is missing. HIVE cannot determine the current corrective-action level needed.",
+    };
+  }
+
+  const pointRecommendation =
+    normalPointRecommendation(
+      activePoints,
+      qualifyingPeriod,
+    );
+
+  const latestActiveAction =
+  activeActions.at(-1) ?? null;
+
+const hasCountableOccurrenceAfterActiveAction =
+  latestActiveAction
+    ? history.some(
+        (event) =>
+          eventIsCountable(event) &&
+          event.entryDate.getTime() >
+            latestActiveAction.effectiveDate.getTime() &&
+          isSameOrBefore(
+            event.entryDate,
+            standingDate,
+          ),
+      )
+    : false;
+
+const pointStanding =
+  pointRecommendation &&
+  latestActiveAction &&
+  hasCountableOccurrenceAfterActiveAction
+    ? applyActiveActionEscalation(
+        pointRecommendation,
+        correctiveActions,
+        standingDate,
+      )
+    : pointRecommendation;
+
+  const ncnsStanding =
+    ncnsRecommendation(
+      ncns.length,
+      qualifyingPeriod,
+      activeActions,
+    );
+
+  let recommendedAction =
+    pointStanding;
+
+  if (
+    ncnsStanding &&
+    (
+      !recommendedAction ||
+      actionRank(ncnsStanding) >
+        actionRank(
+          recommendedAction,
+        )
+    )
+  ) {
+    recommendedAction =
+      ncnsStanding;
+  }
+
+  return {
+    activePoints,
+    qualifyingPeriod,
+    ncnsCount: ncns.length,
+    consecutiveNcns,
+    recommendedAction,
+    recommendationReason:
+      recommendedAction
+        ? `Current attendance standing indicates ${recommendedAction}.`
+        : "No corrective action is currently indicated.",
+  };
 }
 
 export function evaluateAttendance(
