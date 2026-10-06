@@ -13,6 +13,7 @@ import {
   previewAttendanceEvent,
   saveAttendanceEvent,
   saveCorrectiveAction,
+  voidCorrectiveAction,
 } from "./actions";
 
 export type AttendanceWorker = {
@@ -336,6 +337,32 @@ return result;
   },
   null,
 );
+
+    const [
+    voidCorrectiveActionResult,
+    voidCorrectiveActionSave,
+    voidCorrectiveActionPending,
+  ] = useActionState(
+    async (
+      _previousState:
+        Awaited<
+          ReturnType<
+            typeof voidCorrectiveAction
+          >
+        > | null,
+      formData: FormData,
+    ) => {
+      const result =
+        await voidCorrectiveAction(
+          formData,
+        );
+
+      router.refresh();
+
+      return result;
+    },
+    null,
+  );
 
   const requiresMinutesMissed =
     eventType === "LATE" ||
@@ -674,143 +701,364 @@ const currentCorrectiveAction =
         </div>
       ) : null}
 
-      <form
-        action={correctiveActionSave}
-        className="corrective-action-form"
-      >
-        <input
-          type="hidden"
-          name="collectorId"
-          value={selectedWorker.id}
-        />
+              {currentCorrectiveAction ? (
+        <form
+          action={voidCorrectiveActionSave}
+          className="corrective-action-form"
+          onSubmit={(event) => {
+            const confirmed =
+              window.confirm(
+                "Are you sure you want to void this corrective action? The action will remain in the audit history as VOIDED.",
+              );
 
-        <div className="ca-form-heading">
+            if (!confirmed) {
+              event.preventDefault();
+            }
+          }}
+        >
+          <input
+            type="hidden"
+            name="correctiveActionId"
+            value={
+              currentCorrectiveAction.id
+            }
+          />
+
+          <input
+            type="hidden"
+            name="confirmVoid"
+            value="YES"
+          />
+
+          <div className="ca-form-heading">
+            <strong>
+              Void Incorrect CA
+            </strong>
+
+            <span>
+              Use this only when the current
+              corrective action was entered or
+              applied incorrectly. HIVE will
+              preserve the record in the audit
+              history as VOIDED.
+            </span>
+          </div>
+
+          <div className="corrective-action-form-grid">
+            <label>
+              <span>
+                Manager Initials
+              </span>
+
+              <input
+                type="text"
+                name="voidedBy"
+                required
+                minLength={2}
+                maxLength={4}
+                placeholder="MS"
+                autoComplete="off"
+                style={{
+                  textTransform:
+                    "uppercase",
+                }}
+              />
+            </label>
+
+            <label className="ca-note-field">
+              <span>
+                Reason for Void
+              </span>
+
+              <textarea
+                name="voidReason"
+                rows={3}
+                required
+                maxLength={500}
+                placeholder="Example: Entered in error."
+              />
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            disabled={
+              voidCorrectiveActionPending
+            }
+          >
+            {voidCorrectiveActionPending
+              ? "Voiding Corrective Action..."
+              : "Void Corrective Action"}
+          </button>
+        </form>
+      ) : null}
+
+      {voidCorrectiveActionResult?.success ? (
+        <div className="save-success">
           <strong>
-            Record Corrective Action
+            Corrective Action Voided
           </strong>
 
           <span>
-            Recording a new CA preserves
-            the employee&apos;s previous
-            corrective-action history.
+            {
+              voidCorrectiveActionResult.message
+            }
+          </span>
+        </div>
+      ) : null}
+
+            <div className="corrective-action-form">
+        <div className="ca-form-heading">
+          <strong>
+            Attendance Corrective Action
+          </strong>
+
+          <span>
+            Establish an existing action
+            already in effect, or allow HIVE
+            to determine whether a new action
+            is currently due.
           </span>
         </div>
 
-        {!selectedWorker.dateOfHire ? (
-          <div className="ca-warning">
-            Date of hire is required before
-            HIVE can issue an attendance
-            corrective action.
-          </div>
-        ) : null}
-
-        <div className="corrective-action-form-grid">
-          <label>
-            <span>
-              Corrective Action Level
-            </span>
-
-            <select
-              name="actionLevel"
-              required
-              disabled={
-                !selectedWorker.dateOfHire
-              }
-              defaultValue=""
-            >
-              <option value="">
-                Select level
-              </option>
-
-              <option value="VERBAL_COACHING">
-                Verbal Coaching
-              </option>
-
-              <option value="WRITTEN_COACHING">
-                Written Coaching
-              </option>
-
-              <option value="WRITTEN_WARNING">
-                Written Warning
-              </option>
-
-              <option value="FINAL_WRITTEN_WARNING">
-                Final Written Warning
-              </option>
-
-              <option value="TERMINATION">
-                Termination
-              </option>
-            </select>
-          </label>
-
-          <label>
-            <span>
-              Effective Date / CA Began
-            </span>
-
-            <input
-              type="date"
-              name="effectiveDate"
-              required
-              disabled={
-                !selectedWorker.dateOfHire
-              }
-            />
-          </label>
-
-          <label>
-            <span>
-              Manager Initials
-            </span>
-
-            <input
-              type="text"
-              name="issuedBy"
-              required
-              minLength={2}
-              maxLength={4}
-              placeholder="MS"
-              autoComplete="off"
-              disabled={
-                !selectedWorker.dateOfHire
-              }
-              style={{
-                textTransform:
-                  "uppercase",
-              }}
-            />
-          </label>
-
-          <label className="ca-note-field">
-            <span>
-              Manager Note (Optional)
-            </span>
-
-            <textarea
-              name="managerNote"
-              rows={3}
-              maxLength={500}
-              placeholder="Add relevant corrective-action details."
-              disabled={
-                !selectedWorker.dateOfHire
-              }
-            />
-          </label>
-        </div>
-
-        <button
-          type="submit"
-          disabled={
-            correctiveActionPending ||
-            !selectedWorker.dateOfHire
-          }
+        <form
+          action={correctiveActionSave}
         >
-          {correctiveActionPending
-            ? "Recording Corrective Action..."
-            : "Record Corrective Action"}
-        </button>
-      </form>
+          <input
+            type="hidden"
+            name="collectorId"
+            value={selectedWorker.id}
+          />
+
+          <input
+            type="hidden"
+            name="correctiveActionMode"
+            value="EXISTING"
+          />
+
+          <div className="ca-form-heading">
+            <strong>
+              Establish Existing CA
+            </strong>
+
+            <span>
+              Use this only to establish a
+              corrective action the employee
+              is already on. HIVE will preserve
+              it as part of the employee&apos;s
+              attendance history.
+            </span>
+          </div>
+
+          <div className="corrective-action-form-grid">
+            <label>
+              <span>
+                Existing CA Level
+              </span>
+
+              <select
+                name="actionLevel"
+                required
+                defaultValue=""
+              >
+                <option value="">
+                  Select existing level
+                </option>
+
+                <option value="VERBAL_COACHING">
+                  Verbal Coaching
+                </option>
+
+                <option value="WRITTEN_COACHING">
+                  Written Coaching
+                </option>
+
+                <option value="WRITTEN_WARNING">
+                  Written Warning
+                </option>
+
+                <option value="FINAL_WRITTEN_WARNING">
+                  Final Written Warning
+                </option>
+
+                <option value="TERMINATION">
+                  Termination
+                </option>
+              </select>
+            </label>
+
+            <label>
+              <span>
+                Effective Date / CA Began
+              </span>
+
+              <input
+                type="date"
+                name="effectiveDate"
+                required
+              />
+            </label>
+
+            <label>
+              <span>
+                Manager Initials
+              </span>
+
+              <input
+                type="text"
+                name="issuedBy"
+                required
+                minLength={2}
+                maxLength={4}
+                placeholder="MS"
+                autoComplete="off"
+                style={{
+                  textTransform:
+                    "uppercase",
+                }}
+              />
+            </label>
+
+            <label className="ca-note-field">
+              <span>
+                Manager Note (Optional)
+              </span>
+
+              <textarea
+                name="managerNote"
+                rows={3}
+                maxLength={500}
+                placeholder="Example: Existing CA established in HIVE from prior attendance record."
+              />
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            disabled={
+              correctiveActionPending
+            }
+          >
+            {correctiveActionPending
+              ? "Establishing Existing CA..."
+              : "Establish Existing CA"}
+          </button>
+        </form>
+
+        <form
+          action={correctiveActionSave}
+        >
+          <input
+            type="hidden"
+            name="collectorId"
+            value={selectedWorker.id}
+          />
+
+          <input
+            type="hidden"
+            name="correctiveActionMode"
+            value="NEW"
+          />
+
+          <input
+            type="hidden"
+            name="actionLevel"
+            value="VERBAL_COACHING"
+          />
+
+          <div className="ca-form-heading">
+            <strong>
+              Issue New CA
+            </strong>
+
+            <span>
+              HIVE determines the corrective
+              action level from the attendance
+              policy, current points, NCNS
+              rules, and active corrective-action
+              history. The level cannot be
+              manually selected.
+            </span>
+          </div>
+
+          {!selectedWorker.dateOfHire ? (
+            <div className="ca-warning">
+              Date of hire is required before
+              HIVE can determine whether a new
+              attendance corrective action is
+              due.
+            </div>
+          ) : null}
+
+          <div className="corrective-action-form-grid">
+            <label>
+              <span>
+                Effective Date
+              </span>
+
+              <input
+                type="date"
+                name="effectiveDate"
+                required
+                disabled={
+                  !selectedWorker.dateOfHire
+                }
+              />
+            </label>
+
+            <label>
+              <span>
+                Manager Initials
+              </span>
+
+              <input
+                type="text"
+                name="issuedBy"
+                required
+                minLength={2}
+                maxLength={4}
+                placeholder="MS"
+                autoComplete="off"
+                disabled={
+                  !selectedWorker.dateOfHire
+                }
+                style={{
+                  textTransform:
+                    "uppercase",
+                }}
+              />
+            </label>
+
+            <label className="ca-note-field">
+              <span>
+                Manager Note (Optional)
+              </span>
+
+              <textarea
+                name="managerNote"
+                rows={3}
+                maxLength={500}
+                placeholder="Add relevant corrective-action details."
+                disabled={
+                  !selectedWorker.dateOfHire
+                }
+              />
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            disabled={
+              correctiveActionPending ||
+              !selectedWorker.dateOfHire
+            }
+          >
+            {correctiveActionPending
+              ? "Checking Attendance Policy..."
+              : "Issue HIVE-Determined CA"}
+          </button>
+        </form>
+      </div>
 
       {correctiveActionResult?.success ? (
         <div className="save-success">

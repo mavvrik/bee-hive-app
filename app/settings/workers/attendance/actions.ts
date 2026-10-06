@@ -15,6 +15,7 @@ import {
 import {
   ATTENDANCE_POLICY_VERSION,
   calculateActivePoints,
+  getCurrentAttendanceStanding,
   isInQualifyingPeriod,
 } from "@/app/lib/attendance/attendancePolicyEngine";
 
@@ -579,6 +580,14 @@ const CORRECTIVE_ACTION_LEVELS = [
 type CorrectiveActionLevel =
   (typeof CORRECTIVE_ACTION_LEVELS)[number];
 
+  const CORRECTIVE_ACTION_MODES = [
+  "EXISTING",
+  "NEW",
+] as const;
+
+type CorrectiveActionMode =
+  (typeof CORRECTIVE_ACTION_MODES)[number];
+
 function addUtcMonths(
   value: Date,
   months: number,
@@ -641,6 +650,25 @@ export async function saveCorrectiveAction(
       "A valid employee is required.",
     );
   }
+
+  const rawMode =
+  readText(
+    formData,
+    "correctiveActionMode",
+  );
+
+if (
+  !CORRECTIVE_ACTION_MODES.includes(
+    rawMode as CorrectiveActionMode,
+  )
+) {
+  throw new Error(
+    "A valid corrective action mode is required.",
+  );
+}
+
+const correctiveActionMode =
+  rawMode as CorrectiveActionMode;
 
   const rawActionLevel =
     readText(
@@ -729,6 +757,15 @@ export async function saveCorrectiveAction(
             occurrenceGroupKey: true,
           },
         },
+
+                attendanceCorrectiveActions: {
+          select: {
+            actionLevel: true,
+            status: true,
+            effectiveDate: true,
+            expiresAt: true,
+          },
+        },
       },
     });
 
@@ -756,6 +793,47 @@ export async function saveCorrectiveAction(
           entry.occurrenceGroupKey,
       }),
     );
+
+    const correctiveActionHistory =
+    worker.attendanceCorrectiveActions.map(
+      (action) => ({
+        actionLevel:
+          action.actionLevel,
+        status:
+          action.status,
+        effectiveDate:
+          action.effectiveDate,
+        expiresAt:
+          action.expiresAt,
+      }),
+    );
+
+  const currentStanding =
+    getCurrentAttendanceStanding(
+      attendanceHistory,
+      correctiveActionHistory,
+      worker.employmentProfile
+        ?.dateOfHire ?? null,
+      effectiveDate,
+    );
+
+  let resolvedActionLevel =
+    actionLevel;
+
+  if (
+    correctiveActionMode === "NEW"
+  ) {
+        if (
+      !currentStanding.correctiveActionDue
+    ) {
+      throw new Error(
+        "HIVE does not currently indicate a new attendance corrective action for this employee.",
+      );
+    }
+
+    resolvedActionLevel =
+      currentStanding.correctiveActionDue;
+  }
 
   const activePointsAtAction =
     calculateActivePoints(
@@ -788,7 +866,8 @@ export async function saveCorrectiveAction(
     await prisma.attendanceCorrectiveAction.create({
       data: {
         collectorId,
-        actionLevel,
+        actionLevel:
+         resolvedActionLevel,
         status: "ISSUED",
 
         effectiveDate,
@@ -845,5 +924,125 @@ export async function saveCorrectiveAction(
 
     message:
       "Corrective action recorded successfully.",
+  };
+}
+export async function voidCorrectiveAction(
+  formData: FormData,
+) {
+  const correctiveActionId =
+    readInteger(
+      formData,
+      "correctiveActionId",
+    );
+
+    const confirmVoid =
+    readText(
+      formData,
+      "confirmVoid",
+    );
+
+  if (confirmVoid !== "YES") {
+    throw new Error(
+      "Corrective action voiding requires explicit confirmation.",
+    );
+  }
+
+  if (correctiveActionId <= 0) {
+    throw new Error(
+      "A valid corrective action is required.",
+    );
+  }
+
+  const voidedBy =
+    readText(
+      formData,
+      "voidedBy",
+    ).toUpperCase();
+
+  if (
+    !/^[A-Z]{2,4}$/.test(
+      voidedBy,
+    )
+  ) {
+    throw new Error(
+      "Manager initials must contain 2 to 4 letters.",
+    );
+  }
+
+  const voidReason =
+    readText(
+      formData,
+      "voidReason",
+    );
+
+  if (!voidReason) {
+    throw new Error(
+      "A reason is required to void a corrective action.",
+    );
+  }
+
+  if (voidReason.length > 500) {
+    throw new Error(
+      "Void reason cannot exceed 500 characters.",
+    );
+  }
+
+  const existing =
+    await prisma.attendanceCorrectiveAction.findUnique({
+      where: {
+        id: correctiveActionId,
+      },
+      select: {
+        id: true,
+        collectorId: true,
+        status: true,
+        managerNote: true,
+      },
+    });
+
+  if (!existing) {
+    throw new Error(
+      "Corrective action could not be found.",
+    );
+  }
+
+    if (existing.status !== "ISSUED") {
+    throw new Error(
+      "Only an issued corrective action can be voided.",
+    );
+  }
+
+  const auditNote =
+    [
+      existing.managerNote,
+      `VOIDED by ${voidedBy}: ${voidReason}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+  await prisma.attendanceCorrectiveAction.update({
+    where: {
+      id: correctiveActionId,
+    },
+    data: {
+      status: "VOIDED",
+      voidedAt: new Date(),
+      managerNote: auditNote,
+    },
+  });
+
+  revalidatePath(
+    "/settings/workers/attendance",
+  );
+
+  revalidatePath(
+    `/settings/workers/attendance/export/${existing.collectorId}`,
+  );
+
+  return {
+    success: true as const,
+    correctiveActionId,
+    message:
+      "Corrective action voided successfully.",
   };
 }

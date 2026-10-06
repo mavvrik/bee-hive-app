@@ -733,12 +733,27 @@ const pointStanding =
       ncnsStanding;
   }
 
+    const correctiveActionDue =
+    !latestActiveAction
+      ? recommendedAction
+      : hasCountableOccurrenceAfterActiveAction &&
+          recommendedAction &&
+          actionRank(
+            recommendedAction,
+          ) >
+            actionRank(
+              latestActiveAction.actionLevel,
+            )
+        ? recommendedAction
+        : null;
+
   return {
     activePoints,
     qualifyingPeriod,
     ncnsCount: ncns.length,
     consecutiveNcns,
     recommendedAction,
+    correctiveActionDue,
     recommendationReason:
       recommendedAction
         ? `Current attendance standing indicates ${recommendedAction}.`
